@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <script>
+            function sniff(data) {
+                //remove the sign
+                let num = Math.abs(data);
+                //if the number is in scientific notation remove it
+                if (/\d+\.?\d*e[\+\-]*\d+/i.test(num)) {
+                    return "Scientific Notation"
+                }
+
+                if (parseInt(data) === data) {
+                    if (data > 999999999) {
+                        return "Possible Unix Datestamp";
+                        // check if it's exactly at midnight on any date - probable date
+                        // check if it's exactly at the top of an hour on any date - probable date
+                        // check if it's exactly at a quarter hour on any date - probable date
+                        // check if it's exactly at a minute at any date - probable date
+                    }
+                    return "Integer";
+                }
+                if (parseFloat(data) === data) {
+
+                    return "Float";
+                }
+                return "String";
+            }
+            window.sniff = sniff;
+
+        </script>
+    </head>
+</html>
