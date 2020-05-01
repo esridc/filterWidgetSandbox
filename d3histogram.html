@@ -253,8 +253,6 @@
         timeSlider.widget.stop();
         timeSlider = null;
       }
-      // document.getElementById('histogramWidget').innerHTML = ''; // clear previous widget
-      // document.getElementById('timesliderWidget').innerHTML = ''; // clear previous widget
       document.getElementById('widget').innerHTML = ''; // clear previous widget
       document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
       
@@ -602,81 +600,66 @@
           coverage = 1;
         } catch(e) {
           try {
-            console.log('error:', e)
-            // try UniqueValues()
-
             // histogram generation failed with automated server call, try using features from server query
             console.log('histogram generation failed with automated server call, try using features from server query', e);
-            let features = (await layer.queryFeatures()).features;
-            debugger
-            // params.features = [];
-            // for (let x in features) {
-            //   // console.log(x)
-            //   // params.features.push(features[x]);
-            // }
-            // params.features = features;
-            // params.features = [
-            //   features['0'],
-            //   features['1'],
-            //   features['2'],
-            // ]
-            let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
-            let domain = [Math.min(...uniqueValues.map(a => a.value)),
-                          Math.max(...uniqueValues.map(a => a.value))]
-
-            // use d3 to bin histograms
-            var histogram = d3.histogram()
-              .domain(domain)  // domain = value range
-              .thresholds(29); // 30 bins
-
-            // And apply this function to data to get the bins
-            var bins = histogram(data);
-            debugger
-
-
-
-
-            // debugger
-            // params.features = [
-            //   {
-            //     attributes: {
-            //       OBJECTID: 1,
-            //       PHOTOID: "1001",
-            //       EASTING: 1214374.32,
-            //       NORTHING: 116323.13,
-            //       ELEVATION: 6924.98,
-            //       DATEUTC: 1266364800000,
-            //     }
-            //   },
-            //   {
-            //     attributes: {
-            //       OBJECTID: 2,
-            //       PHOTOID: "1001",
-            //       EASTING: 1214374.32,
-            //       NORTHING: 116323.13,
-            //       ELEVATION: 6924.98,
-            //       DATEUTC: 1266364800000,
-            //     }
-            //   }
-            // ]
-            // debugger
-            // const featureCount = await layer.queryFeatureCount();
-            const featureCount = 2;
-
-
-            // values = await generateHistogram(params);
+            params.features = (await layer.queryFeatures()).features;
+            const featureCount = await layer.queryFeatureCount();
+            if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
+            values = await generateHistogram(params);
             source = 'layerQuery';
-            // params.features = local features, featureCount = total features in layer
             coverage = params.features.length / featureCount;
           } catch(e) {
-            console.log('error:', e)
-            // histogram generation failed with server call, try using features in layer view
-            console.log('histogram generation failed with server call, try using features in layer view');
-            // params.features = (await layerView.queryFeatures()).features;
-            // const featureCount = await layer.queryFeatureCount();
-            // values = await generateHistogram(params);
+            // histogram generation failed with automated server call, try using features from server query
+            console.log('histogram generation failed with automated server call, try reconstructing from unique values', e);
+
+            try {
+              let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+              let domain = [Math.min(...uniqueValues.map(a => a.value)),
+                            Math.max(...uniqueValues.map(a => a.value))]
+              // remove nulls
+              var filtered = uniqueValues.filter(a => a.value != null);
+              // manually reconstruct a feature values array from the unique values and their counts -
+              // normalize array length to 1000, as precision isn't as important as speed here
+              const divisor = dataset.attributes.recordCount / 1000;
+              let arr = [];
+              for (let x = 0; x < filtered.length; x++) {
+                for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
+                  arr.push(filtered[x].value);
+                };
+              }
+              // use d3 to bin histograms
+              let d3bins = d3.histogram()  // create layout object
+              .domain([Math.min(...filtered.map(a => a.value)),
+              Math.max(...filtered.map(a => a.value))])  // to cover range
+              .thresholds(29) // separated into 30 bins
+              (arr);          // pass the array
+              // convert the d3 bins array to a bins object
+              bins = [];
+              for (let x = 0; x < d3bins.length; x++) {
+                bins.push({
+                  minValue: d3bins[x]['x0'],
+                  maxValue: d3bins[x]['x1'],
+                  count: d3bins[x].length,
+                });
+              }
+              // put the bins in the params object
+              values = {
+                'bins': bins,
+                'minValue': Math.min(...filtered.map(a => a.value)),
+                'maxValue': Math.max(...filtered.map(a => a.value)),
+              }
+              const featureCount = arr.length;
+              source = 'layerQuery';
+              coverage = 1;
+            } catch(e) {
+            // histogram generation failed with unique values, try using features in layer view
+            console.log('histogram generation failed with unique values, try using features in layer view', e);
+            params.features = (await layerView.queryFeatures()).features;
+            const featureCount = await layer.queryFeatureCount();
+            values = await generateHistogram(params);
             source = 'layerView';
-            // coverage = params.features.length / featureCount;
+            coverage = params.features.length / featureCount;
+            }
           }
         }
         
@@ -710,20 +693,13 @@
           });
         } else {
           // plain histogram, for miniHistogram nested in timeSlider
-          console.log('widget, no slider')
-          // debugger
           widget = new Histogram({
-            bins: params.bins,
-            min: params.minValue,
-            max: params.maxValue,
-            // use same calculation as TimeSlider to make sure ranges match
-            // min: new Date(field.statistics.values.min),
-            // max: new Date(field.statistics.values.max),
+            bins: values.bins,
+            min: values.minValue,
+            max: values.maxValue,
             container: container,
             rangeType: "between",
           });
-          // console.log('minihistogram min:', new Date(widget.min), 'max:', new Date(widget.max));
-          console.log('widget:', widget)
         }
         window.widget = widget;
 
@@ -941,8 +917,7 @@
       const date = new Date(timestamp);
       return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;      
     }
-    
-    makeWidget(null, 'DATEUTC');
+
   })();
 </script>
 </head>
