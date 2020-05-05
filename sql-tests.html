@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Filters</title>
+
+<style>
+  /* aloglia autocomplete.js styles */
+  
+  .algolia-autocomplete {
+    width: 100%;
+  }
+  .algolia-autocomplete .aa-input, .algolia-autocomplete .aa-hint {
+    width: 100%;
+  }
+  .algolia-autocomplete .aa-hint {
+    color: #999;
+  }
+  .algolia-autocomplete .aa-dropdown-menu {
+    width: 100%;
+    background-color: #fff;
+    border: 1px solid #999;
+    border-top: none;
+  }
+  .algolia-autocomplete .aa-dropdown-menu .aa-suggestion {
+    cursor: pointer;
+    padding: 5px 4px;
+  }
+  .algolia-autocomplete .aa-dropdown-menu .aa-suggestion.aa-cursor {
+    background-color: #B2D7FF;
+  }
+  .algolia-autocomplete .aa-dropdown-menu .aa-suggestion em {
+    font-weight: bold;
+    font-style: normal;
+  }
+  
+  /* main styles */
+  
+  body {
+    display: flex;
+    font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+  }
+  
+  html,
+  body,
+  #viewDiv {
+    height: 100vh;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    flex: auto;
+    overflow: hidden;
+  }
+  
+  #sidebar {
+    width: 325px;
+    min-width: 325px;
+    height: 100%;
+    padding: 10px;
+    flex: auto;
+    overflow: auto;
+  }
+    
+  #sidebarItems {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #sidebarItems > * {
+    flex: auto;
+    padding-bottom: 10px;
+  }
+
+  #sidebarItems:first-child {
+    padding-top: 10px;
+  }
+  
+  .sidebarItemHeader {
+    font-weight: bold;
+  }
+  
+  #datasetName {
+    font-size: 24px;
+  }
+  
+  #recordCount {
+    margin-left: 12px;
+    color: #828282;
+  }
+
+  #widget {
+/*     height: 200px; */
+  }
+
+  .histogramWidget {
+    height: 100px;
+    margin-bottom: 16px;
+  }
+  .subhistogramWidget {
+    width: 80%;
+    height: 100px;
+    align: right;
+    margin-bottom: 16px;
+  }
+
+  #widgetMessage {
+    font-size: 14px;
+    font-style: italic;
+    display: none;
+  }
+  
+  .timesliderWidget {
+    min-width: 325px !important; /* override to allow slightly narrower time slider */
+    margin-bottom: 16px;
+  }
+
+  .valueListWidget label {
+    display: block;
+    padding: 4px;
+  }
+  
+  .valueListWidget label > .subText {
+/*     display: none; */
+    margin-left: 8px;
+    color: #828282; 
+    font-size: 14px;
+  }
+
+  .valueListWidget label:hover .subText {
+/*     display: inline; */
+  }
+  
+  .valueListSearchBox {
+    font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    margin-top: 4px;
+    margin-left: 4px;
+    width: calc(100% - 4px);
+  }
+
+  *:focus {
+     outline: none !important;
+  }
+
+  .miniHistogramWidget {
+    position: absolute;
+    top: 13px;
+    width: 100%;
+    height: 40px;
+  }
+
+</style>
+
+<script src="https://unpkg.com/lodash@4.17.15/lodash.js"></script>
+<script src="https://cdn.jsdelivr.net/autocomplete.js/0/autocomplete.min.js"></script>
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+    
+<!-- <link rel="stylesheet" href="https://s3-us-west-1.amazonaws.com/patterns.esri.com/files/calcite-web/1.2.5/css/calcite-web.min.css"> -->
+<!-- <script src="https://s3-us-west-1.amazonaws.com/patterns.esri.com/files/calcite-web/1.2.5/js/calcite-web.min.js"></script> -->
+
+<!-- calcite components -->
+<script
+  type="module"
+  src="https://unpkg.com/@esri/calcite-components@1.0.0-beta.24/dist/calcite/calcite.esm.js"
+></script>
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="https://unpkg.com/@esri/calcite-components@1.0.0-beta.24/dist/calcite/calcite.css"
+/>
+    
+<script type="module">
+
+  import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/dist/esm/esri-loader.js';
+  
+  (async () => {
+
+    setDefaultOptions({
+      css: true,
+      // url: 'http://localhost:8000/buildOutput/init.js',
+      // version: 'next',
+    });
+
+    const [
+      Map, 
+      MapView, 
+      FeatureLayer, 
+      generateHistogram, 
+      Histogram, 
+      HistogramRangeSlider, 
+      TimeSlider, 
+      uniqueValues,
+      webMercatorUtils
+    ] = await loadModules([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/FeatureLayer",
+      "esri/renderers/smartMapping/statistics/histogram",
+      "esri/widgets/Histogram",
+      "esri/widgets/HistogramRangeSlider",
+      "esri/widgets/TimeSlider",
+      "esri/renderers/smartMapping/statistics/uniqueValues",
+      "esri/geometry/support/webMercatorUtils"
+    ]);
+
+    // URL params
+    const params = new URLSearchParams(window.location.search);
+    const datasetId = params.get('dataset');
+    const datasetSlug = params.get('slug');
+    const env = params.get('env') || 'prod';
+
+    const { layer, dataset } = await loadDataset({ datasetId, datasetSlug, env });
+    
+    const map = new Map({
+      basemap: "dark-gray-vector",
+      layers: [layer]
+    });
+
+    const view = new MapView({
+      container: "viewDiv",
+      map: map,
+      extent: getDatasetExtent(dataset)
+    });
+    
+    const layerView = await view.whenLayerView(layer);
+    let subHistogram = null;
+    
+    // update layerview filter based on histogram widget, debounced
+    const updateLayerViewWithHistogram = _.throttle(
+      (layerView, fieldName, histogramWidget) => {
+          let whereClause = histogramWidget.generateWhereClause(fieldName);
+          // debugger
+          updateWidgetWhere(histogramWidget.container, layerView, whereClause);
+          updateSubWhere(subHistogram, layerView, fieldName);
+      },
+      50
+    );
+    
+    // Dataset info
+    document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
+    document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
+    document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
+    
+    const attributeList = updateAttributeList(dataset);
+    
+    // widget state tracking
+    let timeSlider;
+    window.histogram = null;
+    const makeWidget = async (event, fieldName) => {
+      // allow a fieldName to be passed in for testing – normally it's just the current value of the fields dropdown
+      
+      fieldName = (fieldName === undefined) ? event.target.getAttribute('data-field') : fieldName;
+      const field = getDatasetField(dataset, fieldName);
+      document.querySelector('#attributeListButton').innerHTML = fieldName;
+      
+      // stop timeSlider playback
+      if (timeSlider && timeSlider.widget) {
+        timeSlider.widget.stop();
+        timeSlider = null;
+      }
+
+      // document.getElementById('widgets').innerHTML = ''; // clear previous widget
+      document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
+      
+      // clear previous filters
+      updateLayerViewEffect(layerView, { updateExtent: true });
+      
+      if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
+        // Histogram
+        const title = document.createElement('div');
+        title.innerHTML = `<small>${fieldName}</small>`;
+        document.getElementById('widgets').appendChild(title);
+
+        const container = document.createElement('div');
+        container.classList.add('histogramWidget');
+        document.getElementById('widgets').appendChild(container);
+        
+        const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
+        if (histogramSlider.widget) {
+          if (histogramSlider.coverage < 1) {
+            widgetMessage.innerText = 'Graph values are approximate';
+          }
+
+          histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
+            updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
+          });
+        }
+      }
+
+      if (field.simpleType === 'date') {
+        // Time slider
+        const container = document.createElement('div');
+        container.classList.add('timesliderWidget');
+        document.getElementById('widgets').appendChild(container);
+        
+        timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
+        // set widget state
+        if (timeSlider.widget) {
+
+          // add a nested histogram
+          const histogramContainer = document.createElement('div');
+          histogramContainer.classList.add('miniHistogramWidget');
+          container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
+          
+          const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+
+          const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
+          window.histogram = miniHistogram;
+
+          timeSlider.widget.watch("timeExtent", function(value){
+              // convert Date to unix time stamp with unary + operator
+              const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
+              // update layer view filter to reflect current timeExtent
+              updateLayerViewEffect(layerView, { where });
+          });
+          container.innerHTML = fieldName + container.innerHTML;
+        }
+      }
+    };
+
+    const makeSubHistogram = async (fieldName) => {
+      // make a new histogram widget
+      // add it under the last one
+      // connect it to the results of the previous two, to show only a histogram of the results
+      fieldName = (fieldName === undefined) ? event.target.getAttribute('data-field') : fieldName;
+      const field = getDatasetField(dataset, fieldName);
+
+      // make Histogram
+      const title = document.createElement('div');
+      title.innerHTML = `Sub: <small>${fieldName}</small>`;
+      document.getElementById('widgets').appendChild(title);
+
+      const container = document.createElement('div');
+      container.classList.add('subhistogramWidget');
+      document.getElementById('widgets').appendChild(container);
+      
+      const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true, where: concatWheres() });
+      if (histogramSlider.widget) {
+        histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
+          updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
+        });
+      }
+      subHistogram = histogramSlider;
+
+    }    
+
+    // add event listener to dropdown, to create visualizations
+    attributeList.addEventListener('calciteDropdownItemSelected', makeWidget);
+
+    
+        
+    // put vars on window for debugging
+    Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
+
+    
+    async function loadDataset ({ datasetId, datasetSlug, env }) {
+      let dataset = {};
+      
+      if (datasetId) { // dataset id provided directly
+        // https://opendataqa.arcgis.com/api/v3/datasets/97a641ac39904f349fb5fc25b94207f6
+        const datasetURL = `https://opendata${env === 'qa' ? 'qa' : ''}.arcgis.com/api/v3/datasets/${datasetId}`;
+        try {
+          dataset = (await fetch(datasetURL).then(r => r.json())).data;
+        } catch(e) { console.log('failed to load dataset from id', datasetId, e); }
+      } else if (datasetSlug) { // dataset slug provided as alternate
+        // https://opendata.arcgis.com/api/v3/datasets?filter%5Bslug%5D=kingcounty%3A%3Aphoto-centers-for-2010-king-county-orthoimagery-project-ortho-image10-point
+        const filter = `${encodeURIComponent('filter[slug]')}=${encodeURIComponent(datasetSlug)}`
+        const datasetURL = `https://opendata${env === 'qa' ? 'qa' : ''}.arcgis.com/api/v3/datasets?${filter}`;
+        try {
+          dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
+        } catch(e) { console.log('failed to load dataset from slug', datasetSlug, e); }
+      }      
+      
+//       let symbol = {
+//         color: [51, 51, 204, 0.9],
+//         outline: {
+//           color: 'white',
+//           width: 0.5
+//         }
+//       }
+      
+//       if (geometryType === 'point') {
+//         symbol = { ...symbol, type: 'simple-marker', size: '8px' };
+//       }
+//       else if (geometryType === 'polyline') {
+//         symbol = { ...symbol, type: 'simple-line', width: '4px' };
+//       }
+//       else if (geometryType === 'polygon') {
+//         symbol = { ...symbol, type: 'simple-fill' };
+//       }
+      
+      
+      const layer = new FeatureLayer({
+        // renderer: { type: 'simple', symbol },
+        url: dataset.attributes.url
+      });
+
+      layer.minScale = 0; // draw at all scales
+      layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
+      
+      return { dataset, layer };
+    }
+    
+    function getDatasetExtent (dataset) {
+      const extent = dataset.attributes.extent;
+      return {
+        xmin: extent.coordinates[0][0],
+        ymin: extent.coordinates[0][1],
+        xmax: extent.coordinates[1][0],
+        ymax: extent.coordinates[1][1],
+        spatialReference: extent.spatialReference
+      };
+    }
+    
+    function getDatasetField (dataset, fieldName) {
+      fieldName = fieldName.toLowerCase();
+      const field = dataset.attributes.fields.find(f => f.name.toLowerCase() === fieldName);
+      const stats = [...Object.entries(dataset.attributes.statistics).values()].find(([, fields]) => fields[fieldName]);
+
+      // add "simple type" (numeric, date, string) and stats into rest of field definition
+      return {
+        ...field,
+        simpleType: stats && stats[0],
+        statistics: stats && stats[1][fieldName].statistics
+      }
+    }
+
+    const DATASET_FIELD_UNIQUE_VALUES = {}; // cache by field name
+    
+    async function getDatasetFieldUniqueValues (dataset, fieldName, layer) {
+      if (!DATASET_FIELD_UNIQUE_VALUES[fieldName]) {
+        const field = getDatasetField(dataset, fieldName);
+        let stats;
+        if (field.statistics && field.statistics.uniqueCount) {
+          stats = { ...field.statistics };
+        } else {
+          const uniqueValueInfos = (await uniqueValues({ layer, field: fieldName }))
+            .uniqueValueInfos
+            .sort((a, b) => a.count > b.count ? -1 : 1);
+          const count = uniqueValueInfos.reduce((count, f) => count + f.count, 0);
+          stats = {
+            count,
+            uniqueCount: uniqueValueInfos.length, 
+            values: uniqueValueInfos
+          }
+        }
+
+        // add percent of records
+        stats.values = stats.values
+          // .filter(v => v.value != null && (typeof v.value !== 'string' || v.value.trim() !== ''))
+          .map(v => ({ ...v, pct: v.count / stats.count }));
+
+        // get top values
+        const maxTopValCount = 12;
+        // stats.topValues = stats.values.slice(0, maxTopValCount);
+        stats.topValues = [];
+        if (stats.uniqueCount < maxTopValCount) {
+          stats.topValues = stats.values;
+        } else {
+          let coverage = 0;
+          for (let i=0, coverage=0; i < stats.values.length; i++) {
+            // let stat = { ...stats.values[i], pct: stats.values[i].count / recordCount };
+            const stat = stats.values[i];
+            // if (coverage >= 0.80 && stat.pct < 0.05 && stats.topValues.length >= maxTopValCount) break;
+            if (stat.pct < 0.015 || stats.topValues.length >= maxTopValCount) break;
+            stats.topValues.push(stat);
+            coverage += stat.pct;
+          }
+        }
+        DATASET_FIELD_UNIQUE_VALUES[fieldName] = stats;
+      }
+      return DATASET_FIELD_UNIQUE_VALUES[fieldName];
+    }
+    
+    // Determine if field is an integer
+    async function datasetFieldIsInteger (field) {
+      if (field.type.toLowerCase().includes('integer')) { // explicit integer type
+        return true;
+      } else { // or check the known values to see if they're all integers
+        const stats = await getDatasetFieldUniqueValues(dataset, field.name, layer);
+        return stats.values.every(v => v.value == null || Number.isInteger(v.value));
+      }      
+    }
+    
+    function updateAttributeList (dataset) {
+      // Attribute dropdown (numeric attributes only right now)
+      // create <calcite-dropdown-item> for each attribute    
+      const attributeList = document.querySelector('#attributeList > calcite-dropdown-group');
+      const attributes = [
+        ...Object.entries(dataset.attributes.statistics.numeric || {}),
+        ...Object.entries(dataset.attributes.statistics.date || {}),
+        ...Object.entries(dataset.attributes.statistics.string || {})
+      ];
+
+      attributes
+        .map(([fieldName, { statistics: fieldStats }]) => [fieldName, fieldStats]) // grab stats
+        .filter(([fieldName, fieldStats]) => { // exclude fields with one value
+          return !fieldStats || 
+            !fieldStats.values || 
+            fieldStats.uniqueCount > 1 || // unique count reported as 0 for sampled data
+            fieldStats.values.min !== fieldStats.values.max
+        })
+        .forEach(([fieldName, fieldStats]) => {
+      // dataset.attributes.fieldNames
+      //   .map(fieldName => [fieldName, getDatasetField(dataset, fieldName)])
+      //   .filter(([fieldName, field]) => !field.statistics || field.statistics.values.min !== field.statistics.values.max)
+      //   .forEach(([fieldName, field]) => {
+          const field = getDatasetField(dataset, fieldName);
+          // const fieldStats = field.statistics.values;
+          const item = document.createElement('calcite-dropdown-item');
+          item.innerHTML = `${field.alias || fieldName}`;
+          if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
+            if (field.simpleType === 'numeric') {
+              // TODO: vary precision based on value range
+              item.innerHTML += `<br><small>(${fieldStats.values.min.toFixed(2)} to ${fieldStats.values.max.toFixed(2)})</small>`;
+            } else if (field.simpleType === 'date') {
+              item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
+            }
+          } else if (fieldStats && fieldStats.uniqueCount && field.simpleType === 'string') {
+            item.innerHTML += ` (${fieldStats.uniqueCount} values)`;
+          }
+        
+          // add icon for field type
+          if (field.simpleType === 'numeric') {
+            item.iconEnd = 'number';
+          } else if (field.simpleType === 'string') {
+            item.iconEnd = 'description';
+          } else if (field.simpleType === 'date') {
+            item.iconEnd = 'calendar';
+          }
+          
+          item.setAttribute('data-field', field.name);
+          attributeList.appendChild(item);
+        });
+      return attributeList;
+    }
+
+    function updateWidgetWhere(widget, layerView, whereClause) {
+      // debugger
+      widget.setAttribute('whereClause', whereClause);
+      updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
+    }
+
+    async function updateSubWhere(widget, layerView, fieldName) {
+      let values;
+
+      let { features } = await layerView.queryFeatures( { where: concatWheres() });
+      // debugger
+      let params = {
+        layer,
+        features,
+        field: "parametersFuProcessing",
+        numBins: 30,
+        // sqlWhere: concatWheres()
+      };
+      try {
+        values = await generateHistogram(params);
+        console.log('values:', values);
+        // debugger
+        widget.widget.bins = values.bins;
+      } catch(e) {
+        console.log('e:', e)
+      }
+      // updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
+    }
+
+    // concatenate all the where clauses from all the widgets
+    function concatWheres() {
+      let whereClause = '';
+      let widgets = document.getElementById('widgets').querySelectorAll('[whereClause]');
+      // debugger
+      for (var x = 0; x < widgets.length; x++) {
+        if (x > 0) whereClause += ' AND ';
+        whereClause += '(' + widgets[x].getAttribute('whereClause') + ')';
+      }
+      console.log('whereClause:', whereClause)
+      return whereClause;
+    }
+
+    async function updateLayerViewEffect(layerView, { where = null, updateExtent = false } = {}) {
+      layerView.filter = null;
+
+      if (!where) {
+        layerView.effect = null;
+      } else {      
+        layerView.effect = {
+          filter: {
+            where,
+            // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
+          },
+          excludedEffect: 'grayscale(100%) brightness(10%)'
+        };
+      }
+
+      // adjust view extent (in or out) to fit all filtered data
+      if (updateExtent && layerView.effect && layerView.effect.filter) {
+        try {
+          const featureExtent = await layer.queryExtent({ 
+            where: layerView.effect.filter.where, 
+            outSpatialReference: layerView.view.spatialReference 
+          });
+
+          if (featureExtent.count > 0) {
+            const extent = featureExtent.extent;
+            // const extent = webMercatorUtils.project(featureExtent.extent, layerView.view.spatialReference);
+            const expanded = extent.expand(1.10);
+            // view.extent = 
+            if (!layerView.view.extent.contains(expanded) ||
+               (expanded.width * expanded.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
+              layerView.view.goTo(expanded, { duration: 350 });
+            }
+          }
+        } catch(e) {
+          console.log('could not query or project feature extent to update viewport', e);
+        }
+      }
+    }
+    
+    async function createHistogram ({dataset, fieldName, layer, layerView, container, slider = false, where = null }) {
+      // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
+      const parentContainer = container;
+      container = document.createElement('div');
+      parentContainer.appendChild(container);
+
+      try {
+        let params = {
+          layer: layer,
+          field: fieldName,
+          numBins: 30,
+        };
+        if (where) params.where = where;
+        console.log('params:', params)
+        
+        let values, bins, source, coverage;
+
+        try {
+          values = await generateHistogram(params);
+          source = 'widgets';
+          coverage = 1;
+        } catch(e) {
+          try {
+            // histogram generation failed with automated server call, try using features from server query
+            console.log('histogram generation failed with automated server call, try using features from server query', e);
+            params.features = (await layer.queryFeatures()).features;
+            const featureCount = await layer.queryFeatureCount();
+            if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
+            values = await generateHistogram(params);
+            source = 'layerQuery';
+            coverage = params.features.length / featureCount;
+          } catch(e) {
+            // histogram generation failed with automated server call, try using features from server query
+            console.log('histogram generation failed with automated server call, try reconstructing from unique values', e);
+
+            try {
+              let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+              let domain = [Math.min(...uniqueValues.map(a => a.value)),
+                            Math.max(...uniqueValues.map(a => a.value))]
+              // remove nulls
+              var filtered = uniqueValues.filter(a => a.value != null);
+              // manually reconstruct a feature values array from the unique values and their counts -
+              // normalize array length to 1000, as precision isn't as important as speed here
+              const divisor = dataset.attributes.recordCount / 1000;
+              let arr = [];
+              for (let x = 0; x < filtered.length; x++) {
+                for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
+                  arr.push(filtered[x].value);
+                };
+              }
+              // use d3 to bin histograms
+              let d3bins = d3.histogram()  // create layout object
+              .domain([Math.min(...filtered.map(a => a.value)),
+              Math.max(...filtered.map(a => a.value))])  // to cover range
+              .thresholds(29) // separated into 30 bins
+              (arr);          // pass the array
+              // convert the d3 bins array to a bins object
+              bins = [];
+              for (let x = 0; x < d3bins.length; x++) {
+                bins.push({
+                  minValue: d3bins[x]['x0'],
+                  maxValue: d3bins[x]['x1'],
+                  count: d3bins[x].length,
+                });
+              }
+              // put the bins in the params object
+              values = {
+                'bins': bins,
+                'minValue': Math.min(...filtered.map(a => a.value)),
+                'maxValue': Math.max(...filtered.map(a => a.value)),
+              }
+              const featureCount = arr.length;
+              source = 'layerQuery';
+              coverage = 1;
+            } catch(e) {
+            // histogram generation failed with unique values, try using features in layer view
+            console.log('histogram generation failed with unique values, try using features in layer view', e);
+            params.features = (await layerView.queryFeatures()).features;
+            const featureCount = await layer.queryFeatureCount();
+            values = await generateHistogram(params);
+            source = 'layerView';
+            coverage = params.features.length / featureCount;
+            }
+          }
+        }
+        
+        // Histogram widget (graph only, no range slider)
+        // const histogram = Histogram.fromHistogramResult(values);
+        // histogram.container = container;
+
+        // Determine if field is an integer
+        const field = getDatasetField(dataset, fieldName);
+        const integer = await datasetFieldIsInteger(field);
+        let widget;
+
+        if (slider) {
+          // Histogram range slider widget
+          widget = new HistogramRangeSlider({
+            bins: values.bins,
+            min: values.minValue,
+            max: values.maxValue,
+            values: [values.minValue, values.maxValue],
+            precision: integer ? 0 : 2,
+            container: container,
+            excludedBarColor: "#dddddd",
+            rangeType: "between",
+            labelFormatFunction: (value, type) => {
+              // apply date formatting to histogram
+              if (field.simpleType == 'date') {
+                return formatDate(value);
+              }
+              return value;
+            }
+          });
+        } else {
+          // plain histogram, for miniHistogram nested in timeSlider
+          widget = new Histogram({
+            bins: values.bins,
+            min: values.minValue,
+            max: values.maxValue,
+            container: container,
+            rangeType: "between",
+          });
+        }
+        window.widget = widget;
+
+        return { widget, values, source, coverage };
+      }
+      catch(e) {
+        console.log('histogram generation failed', e);
+        return {};
+      }
+    }
+    
+  async function createTimeSlider ({ dataset, fieldName, layerView, container }) {
+      try {
+        const field = getDatasetField(dataset, fieldName);
+        // let {min: startDate, max: endDate } = dataset.attributes.statistics.date[fieldname.toLowerCase()].statistics.values;
+        const startDate = new Date(field.statistics.values.min);
+        const endDate = new Date(field.statistics.values.max);
+        const widget = new TimeSlider({
+          container: container,
+        //   view: view,
+          mode: "time-window",
+          fullTimeExtent: {
+            start: startDate,
+            end: endDate,
+          },
+          values: [
+            startDate,
+            endDate
+          ],
+        });
+        console.log('timeslider min:', startDate, 'max:', endDate)
+
+        // handle play button behavior
+        let selectionWasFullExtent;
+        widget.watch('viewModel.state', function(state){
+          if (state == "playing") {
+            // check values (date selection) against fullTimeExtent
+            // convert to numeric values with unary + operator to check equivalence (with a 10% tolerance)
+            if ( +this.values[0] == +this.fullTimeExtent.start &&
+                 Math.abs(+this.values[1] - +this.fullTimeExtent.end) <
+                 (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start))/ 10 ) {
+              // make a note
+              selectionWasFullExtent = true;
+              // set new selection end to 10% through the date range
+              this.values[1] = new Date(+new Date(this.fullTimeExtent.start) + (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start)) / 10);
+            }
+          }
+          else if (state == "ready" && selectionWasFullExtent) {
+            // reset note
+            selectionWasFullExtent = false;
+            this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
+          }
+        });
+
+        return { widget };
+      }
+      catch(e) {
+        console.log(e);
+        return {};
+      }
+    }
+    
+    function formatDate (timestamp) {
+      const date = new Date(timestamp);
+      return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;      
+    }
+
+    // tests
+    makeWidget(null, "locationLongitude");
+    makeWidget(null, "locationLatitude");
+    makeSubHistogram("parametersFuProcessing");
+    
+    
+  })();
+</script>
+</head>
+
+  <body>
+    <div id="sidebar">
+      <div id="sidebarItems">
+        <div id="datasetName"></div>
+        <div>
+          <span id="orgName"></span>
+          <span id="recordCount"></span>
+        </div>
+      
+        <calcite-dropdown type="hover" width="l" id="attributeList">
+         <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
+         <calcite-dropdown-group>
+         </calcite-dropdown-group>
+        </calcite-dropdown>    
+
+        <div id="widgets">
+<!--           <div id="histogramWidget"></div> -->
+<!--           <div id="timesliderWidget"></div> -->
+        </div>
+        <div id="widgetMessage"></div>
+      
+      </div>
+    </div>
+    <div id="viewDiv"></div>        
+  </body>
+</html>
+  
