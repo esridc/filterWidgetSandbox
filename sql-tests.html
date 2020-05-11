@@ -98,7 +98,7 @@
   }
 
   .histogramWidget {
-    height: 100px;
+    height: 50px;
     margin-bottom: 16px;
   }
   .subhistogramWidget {
@@ -222,6 +222,7 @@
       basemap: "dark-gray-vector",
       layers: [layer]
     });
+    // debugger
 
     const view = new MapView({
       container: "viewDiv",
@@ -231,16 +232,46 @@
     
     const layerView = await view.whenLayerView(layer);
     let subHistogram = null;
+    let widgets = [];
     
-    // update layerview filter based on histogram widget, debounced
+    // update layerview filter based on histogram widget, throttled
     const updateLayerViewWithHistogram = _.throttle(
-      (layerView, fieldName, histogramWidget) => {
-          let whereClause = histogramWidget.generateWhereClause(fieldName);
-          // debugger
-          updateWidgetWhere(histogramWidget.container, layerView, whereClause);
-          updateSubWhere(subHistogram, layerView, fieldName);
+      async (layerView, fieldName, histogramWidget) => {
+        let whereClause = histogramWidget.generateWhereClause(fieldName);
+        // set whereClause attribute
+        histogramWidget.container.setAttribute('whereClause', whereClause);
+        const where = concatWheres();
+        await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
       },
-      50
+      10,
+      {trailing: false}
+    );
+
+    // update the bins of all histograms except the current widget
+    const updateHistograms = _.throttle(
+      // update the other widgets
+      async (layerView, fieldName, histogramWidget) => {
+        try {
+          const where = concatWheres();
+          // collect other widgets' fieldNames, skipping the current widget
+          let otherWidgets = widgets.filter(w => w != histogramWidget);
+          let fieldNames = otherWidgets.map(w => w.fieldName);
+          console.log('updating fields:', JSON.stringify(fieldNames));
+          const whereClause = histogramWidget.container.getAttribute('whereClause');
+          let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
+          // debugger
+          // update widgets
+          for (var x = 0; x < otherWidgets.length; x++) {
+              var throttledUpdate = 
+              _.throttle(updateHistogram, 1000, {trailing: false});
+              throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, where, features);
+          }
+        } catch(e) {
+          throw new Error(e)
+        }
+      },
+      100,
+      {trailing: false}
     );
     
     // Dataset info
@@ -274,6 +305,55 @@
       
       if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
         // Histogram
+        makeHistogramWidget({ dataset, fieldName, layer, layerView, slider: true })
+      }
+      
+      if (field.simpleType === 'date') {
+          // Time slider
+          makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+      }
+    };
+
+    async function makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider = true }) {
+        const container = document.createElement('div');
+        container.classList.add('timesliderWidget');
+        document.getElementById('widgets').appendChild(container);
+        
+        // debugger
+        timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
+        // set widget state
+        if (timeSlider.widget) {
+          const label = document.createElement('p');
+          label.setAttribute('style', 'margin: 0; padding: 0')
+          label.innerHTML = '<small>'+fieldName+'</small>';
+          container.before(label);
+          try {
+
+            // add a nested histogram
+            const histogramContainer = document.createElement('div');
+            histogramContainer.classList.add('miniHistogramWidget');
+            container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
+            
+              // const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+            
+              const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
+              window.histogram = miniHistogram;
+            // debugger
+            timeSlider.widget.watch("timeExtent", function(value){
+              // convert Date to unix time stamp with unary + operator
+              const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
+              // update layer view filter to reflect current timeExtent
+              updateLayerViewEffect(layerView, { where });
+            });
+
+          } catch(e) {
+            throw new Error(e);
+          }
+        }
+        return container;
+    }
+
+    async function makeHistogramWidget({ dataset, fieldName, layer, layerView, slider = true }) {
         const title = document.createElement('div');
         title.innerHTML = `<small>${fieldName}</small>`;
         document.getElementById('widgets').appendChild(title);
@@ -284,73 +364,19 @@
         
         const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
         if (histogramSlider.widget) {
+          container.widget = histogramSlider.widget;
+          histogramSlider.widget.fieldName = fieldName;
           if (histogramSlider.coverage < 1) {
             widgetMessage.innerText = 'Graph values are approximate';
           }
 
           histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
             updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
+            updateHistograms(layerView, fieldName, histogramSlider.widget)
           });
+          widgets.push(histogramSlider.widget)
         }
-      }
-
-      if (field.simpleType === 'date') {
-        // Time slider
-        const container = document.createElement('div');
-        container.classList.add('timesliderWidget');
-        document.getElementById('widgets').appendChild(container);
-        
-        timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
-        // set widget state
-        if (timeSlider.widget) {
-
-          // add a nested histogram
-          const histogramContainer = document.createElement('div');
-          histogramContainer.classList.add('miniHistogramWidget');
-          container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
-          
-          const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
-
-          const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
-          window.histogram = miniHistogram;
-
-          timeSlider.widget.watch("timeExtent", function(value){
-              // convert Date to unix time stamp with unary + operator
-              const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
-              // update layer view filter to reflect current timeExtent
-              updateLayerViewEffect(layerView, { where });
-          });
-          container.innerHTML = fieldName + container.innerHTML;
-        }
-      }
-    };
-
-    const makeSubHistogram = async (fieldName) => {
-      // make a new histogram widget
-      // add it under the last one
-      // connect it to the results of the previous two, to show only a histogram of the results
-      fieldName = (fieldName === undefined) ? event.target.getAttribute('data-field') : fieldName;
-      const field = getDatasetField(dataset, fieldName);
-
-      // make Histogram
-      const title = document.createElement('div');
-      title.innerHTML = `Sub: <small>${fieldName}</small>`;
-      document.getElementById('widgets').appendChild(title);
-
-      const container = document.createElement('div');
-      container.classList.add('subhistogramWidget');
-      document.getElementById('widgets').appendChild(container);
-      
-      const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true, where: concatWheres() });
-      if (histogramSlider.widget) {
-        histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-          updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
-        });
-      }
-      subHistogram = histogramSlider;
-
-    }    
-
+    }
     // add event listener to dropdown, to create visualizations
     attributeList.addEventListener('calciteDropdownItemSelected', makeWidget);
 
@@ -378,27 +404,28 @@
         } catch(e) { console.log('failed to load dataset from slug', datasetSlug, e); }
       }      
       
-//       let symbol = {
-//         color: [51, 51, 204, 0.9],
-//         outline: {
-//           color: 'white',
-//           width: 0.5
-//         }
-//       }
+      let symbol = {
+        type: 'simple-marker', size: '5px',
+        color: [51, 51, 204, 0.0],
+        outline: {
+          color: [256, 256, 256, 1],
+          width: 0.5
+        },
+      }
       
-//       if (geometryType === 'point') {
-//         symbol = { ...symbol, type: 'simple-marker', size: '8px' };
-//       }
-//       else if (geometryType === 'polyline') {
-//         symbol = { ...symbol, type: 'simple-line', width: '4px' };
-//       }
-//       else if (geometryType === 'polygon') {
-//         symbol = { ...symbol, type: 'simple-fill' };
-//       }
+    //   if (geometryType === 'point') {
+    //    symbol = { ...symbol, type: 'simple-marker', size: '8px' };
+    //   }
+    //   else if (geometryType === 'polyline') {
+    //     symbol = { ...symbol, type: 'simple-line', width: '4px' };
+    //   }
+    //   else if (geometryType === 'polygon') {
+    //     symbol = { ...symbol, type: 'simple-fill' };
+    //   }
       
       
       const layer = new FeatureLayer({
-        // renderer: { type: 'simple', symbol },
+        renderer: { type: 'simple', symbol },
         url: dataset.attributes.url
       });
 
@@ -542,31 +569,31 @@
       return attributeList;
     }
 
-    function updateWidgetWhere(widget, layerView, whereClause) {
-      // debugger
-      widget.setAttribute('whereClause', whereClause);
-      updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
-    }
-
-    async function updateSubWhere(widget, layerView, fieldName) {
+    async function updateHistogram(widget, layerView, fieldName, where, features) {
       let values;
-
-      let { features } = await layerView.queryFeatures( { where: concatWheres() });
-      // debugger
-      let params = {
-        layer,
-        features,
-        field: "parametersFuProcessing",
-        numBins: 30,
-        // sqlWhere: concatWheres()
-      };
-      try {
-        values = await generateHistogram(params);
-        console.log('values:', values);
-        // debugger
-        widget.widget.bins = values.bins;
-      } catch(e) {
-        console.log('e:', e)
+      console.log(fieldName, ':', widget.min, widget.max, widget.values);
+      if (features) {
+        let params = {
+          layer,
+          features,
+          field: fieldName,
+          numBins: 30,
+          // minValue: widget.min,
+          // maxValue: widget.max,
+          // values: [widget.values[0], widget.values[1]]
+          // values: [widget.min, widget.max]
+          // sqlWhere: concatWheres()
+          // sqlWhere: where
+        };
+        try {
+          values = await generateHistogram(params);
+          // console.log('bins.values: [', JSON.stringify(values.minValue), JSON.stringify(values.maxValue), ']' )
+          if (values.bins) {
+            widget.bins = values.bins;
+          }
+        } catch(e) {
+          console.log('e:', e)
+        }
       }
       // updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
     }
@@ -580,7 +607,6 @@
         if (x > 0) whereClause += ' AND ';
         whereClause += '(' + widgets[x].getAttribute('whereClause') + ')';
       }
-      console.log('whereClause:', whereClause)
       return whereClause;
     }
 
@@ -595,7 +621,7 @@
             where,
             // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
           },
-          excludedEffect: 'grayscale(100%) brightness(10%)'
+          excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
         };
       }
 
@@ -636,7 +662,6 @@
           numBins: 30,
         };
         if (where) params.where = where;
-        console.log('params:', params)
         
         let values, bins, source, coverage;
 
@@ -776,7 +801,6 @@
             endDate
           ],
         });
-        console.log('timeslider min:', startDate, 'max:', endDate)
 
         // handle play button behavior
         let selectionWasFullExtent;
@@ -803,7 +827,7 @@
         return { widget };
       }
       catch(e) {
-        console.log(e);
+        throw new Error(e);
         return {};
       }
     }
@@ -816,7 +840,11 @@
     // tests
     makeWidget(null, "locationLongitude");
     makeWidget(null, "locationLatitude");
-    makeSubHistogram("parametersFuProcessing");
+    makeWidget(null, "parametersFuProcessing");
+    makeWidget(null, "sensorPropertiesViewingAngle");
+
+    // makeWidget(null, "phenomenonTime");
+    // makeWidget(null, "observationResult");
     
     
   })();
