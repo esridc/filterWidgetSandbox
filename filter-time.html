@@ -64,10 +64,6 @@
     color: #828282;
   }
 
-  #widget {
-/*     height: 200px; */
-  }
-
   .histogramWidget {
     height: 200px;
     margin-bottom: 16px;
@@ -90,16 +86,11 @@
   }
   
   .valueListWidget label > .subText {
-/*     display: none; */
     margin-left: 8px;
     color: #828282; 
     font-size: 14px;
   }
 
-  .valueListWidget label:hover .subText {
-/*     display: inline; */
-  }
-  
   .valueListSearchBox {
     font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 16px;
@@ -117,9 +108,6 @@
 <script src="https://unpkg.com/lodash@4.17.15/lodash.js"></script>
 <script src="https://cdn.jsdelivr.net/autocomplete.js/0/autocomplete.min.js"></script>
     
-<!-- <link rel="stylesheet" href="https://s3-us-west-1.amazonaws.com/patterns.esri.com/files/calcite-web/1.2.5/css/calcite-web.min.css"> -->
-<!-- <script src="https://s3-us-west-1.amazonaws.com/patterns.esri.com/files/calcite-web/1.2.5/js/calcite-web.min.js"></script> -->
-
 <!-- calcite components -->
 <script
   type="module"
@@ -259,8 +247,6 @@
         }
       }
       
-      // if (field.simpleType === 'numeric' || field.simpleType === 'string') {
-        // Value list
         const listContainer = document.createElement('div');
         listContainer.classList.add('valueListWidget');
         document.getElementById('widget').appendChild(listContainer);
@@ -293,7 +279,6 @@
         };
         
         await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
-      // }
     });
     
         
@@ -318,24 +303,6 @@
           dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
         } catch(e) { console.log('failed to load dataset from slug', datasetSlug, e); }
       }      
-      
-//       let symbol = {
-//         color: [51, 51, 204, 0.9],
-//         outline: {
-//           color: 'white',
-//           width: 0.5
-//         }
-//       }
-      
-//       if (geometryType === 'point') {
-//         symbol = { ...symbol, type: 'simple-marker', size: '8px' };
-//       }
-//       else if (geometryType === 'polyline') {
-//         symbol = { ...symbol, type: 'simple-line', width: '4px' };
-//       }
-//       else if (geometryType === 'polygon') {
-//         symbol = { ...symbol, type: 'simple-fill' };
-//       }
       
       
       const layer = new FeatureLayer({
@@ -395,7 +362,6 @@
 
         // add percent of records
         stats.values = stats.values
-          // .filter(v => v.value != null && (typeof v.value !== 'string' || v.value.trim() !== ''))
           .map(v => ({ ...v, pct: v.count / stats.count }));
 
         // get top values
@@ -429,13 +395,6 @@
         return stats.values.every(v => v.value == null || Number.isInteger(v.value));
       }      
     }
-    
-    // function valueIsNullish (value) {
-    //   // '<Null>'.match(/[^a-zA-Z0-9]*(.+)[^a-zA-Z0-9]*/)
-    //   return value == null || 
-    //     (typeof value === 'string' && 
-    //        value.trim() === '' || value.toLowerCase().
-    // }
     
     function updateAttributeList (dataset) {
       // Attribute dropdown (numeric attributes only right now)
@@ -668,9 +627,6 @@
       
       const field = getDatasetField(dataset, fieldName);
       const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
-      // if (!stats.topValues || stats.topValues.length === 0) {
-      //   return {};
-      // }
       
       function addValueListCheckbox (value, checkboxes) {
         const checkbox = document.createElement('calcite-checkbox');
@@ -728,8 +684,6 @@
               `lower(${fieldName}) LIKE lower('%${query}%')`
             
             const { features } = await layer.queryFeatures({
-              // where: `lower(${fieldName}) LIKE lower('%${query}%')`,
-              // where: `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')`,
               where,
               orderByFields: [fieldName],
               outFields: [fieldName],
@@ -739,7 +693,6 @@
             
             // de-dupe results (by turning into set)
             const vals = new Set(features
-              // .map(f => field.simpleType === 'date' ? formatDate(f.attributes[fieldName]) : f.attributes[fieldName])
              .map(f => f.attributes[fieldName])
               .filter(value => {
                 // exclude any results already selected in checkboxes
@@ -768,7 +721,6 @@
             }
           }
         }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
-          // console.log(event, suggestion, dataset, context);
           let checkbox = checkboxes
             .filter(c => !c.checked)
             .find(c => JSON.parse(c.value).value === suggestion.value);
@@ -786,19 +738,6 @@
       
       return { checkboxes };
       
-      // TODO: search box for more values
-    }
-    
-    function createSlider (field, layer, container) {
-      // <calcite-slider
-      //   min="1"
-      //   max="100"
-      //   minValue="50"
-      //   maxValue="85"
-      //   step="1"
-      //   min-label="Temperature (lower)"
-      //   max-label="Temperature (upper)"
-      // ></calcite-slider>
     }
     
     function formatDate (timestamp) {
