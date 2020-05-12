@@ -1,0 +1,132 @@
+/* aloglia autocomplete.js styles */
+  
+.algolia-autocomplete {
+  width: 100%;
+}
+.algolia-autocomplete .aa-input, .algolia-autocomplete .aa-hint {
+  width: 100%;
+}
+.algolia-autocomplete .aa-hint {
+  color: #999;
+}
+.algolia-autocomplete .aa-dropdown-menu {
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #999;
+  border-top: none;
+}
+.algolia-autocomplete .aa-dropdown-menu .aa-suggestion {
+  cursor: pointer;
+  padding: 5px 4px;
+}
+.algolia-autocomplete .aa-dropdown-menu .aa-suggestion.aa-cursor {
+  background-color: #B2D7FF;
+}
+.algolia-autocomplete .aa-dropdown-menu .aa-suggestion em {
+  font-weight: bold;
+  font-style: normal;
+}
+
+/* main styles */
+
+body {
+  display: flex;
+  font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+}
+
+html,
+body,
+#viewDiv {
+  height: 100vh;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  flex: auto;
+  overflow: hidden;
+}
+
+#sidebar {
+  width: 325px;
+  min-width: 325px;
+  height: 100%;
+  padding: 10px;
+  flex: auto;
+  overflow: auto;
+}
+  
+#sidebarItems {
+  display: flex;
+  flex-direction: column;
+}
+
+#sidebarItems > * {
+  flex: auto;
+  padding-bottom: 10px;
+}
+
+#sidebarItems:first-child {
+  padding-top: 10px;
+}
+
+.sidebarItemHeader {
+  font-weight: bold;
+}
+
+#datasetName {
+  font-size: 24px;
+}
+
+#recordCount {
+  margin-left: 12px;
+  color: #828282;
+}
+
+#widget {
+/*     height: 200px; */
+}
+
+.histogramWidget {
+  height: 50px;
+  margin-bottom: 16px;
+}
+
+.timesliderWidget {
+  min-width: 325px !important; /* override to allow slightly narrower time slider */
+  margin-bottom: 16px;
+}
+
+.valueListWidget label {
+  display: block;
+  padding: 4px;
+}
+
+.valueListWidget label > .subText {
+/*     display: none; */
+  margin-left: 8px;
+  color: #828282; 
+  font-size: 14px;
+}
+
+.valueListWidget label:hover .subText {
+/*     display: inline; */
+}
+
+.valueListSearchBox {
+  font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  margin-top: 4px;
+  margin-left: 4px;
+  width: calc(100% - 4px);
+}
+
+*:focus {
+   outline: none !important;
+}
+
+.miniHistogramWidget {
+  position: absolute;
+  top: 13px;
+  width: 100%;
+  height: 40px;
+}
