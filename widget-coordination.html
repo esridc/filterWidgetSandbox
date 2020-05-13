@@ -345,13 +345,40 @@
             histogramContainer.classList.add('miniHistogramWidget');
             container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
             const miniHistogram = await makeHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
-
-            // set event handler to update map filter whentime handles are dragged
-            timeSlider.widget.watch("timeExtent", function(value){
+            const { widget } = timeSlider;
+            // set event handler to update map filter when time handles are dragged
+            widget.watch("timeExtent", function(value) {
               // convert Date to unix time stamp with unary + operator
               const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
               // update layer view filter to reflect current timeExtent
               updateLayerViewEffect(layerView, { where });
+            });
+            // widget.on("time-extent-change", function(value){
+            //   console.log('click!')
+            // });
+
+            // handle situation where if the whole time extent is selected, the play button does nothing –
+            // modify this: select a smaller range, so the play button has room to move the selection
+            // first: watch when the widget state changes
+            widget.watch('viewModel.state', function(state){
+              if (state == "playing") {
+                // check values (date selection) against fullTimeExtent -
+                // convert to numeric values with unary + operator to check equivalence (with a 10% tolerance)
+                if ( +this.values[0] == +this.fullTimeExtent.start &&
+                      Math.abs(+this.values[1] - +this.fullTimeExtent.end) <
+                      (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start))/ 10 ) {
+                  // update selection state
+                  this.selectionWasFullExtent = true;
+                  // set new selection end to 10% through the date range
+                  this.values[1] = new Date(+new Date(this.fullTimeExtent.start) + (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start)) / 10);
+                }
+              }
+              else if (state == "ready" && this.selectionWasFullExtent) {
+                // reset selection state
+                this.selectionWasFullExtent = false;
+                // reset selection range to full extent
+                this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
+              }
             });
 
           } catch(e) {
@@ -460,10 +487,15 @@
       // updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
     }
 
+    // list all known widget DOM elements
+    function listWidgetElements() {
+      return document.getElementById('widgets').querySelectorAll('[whereClause]')
+    }
+
     // concatenate all the where clauses from all the widgets
     function concatWheres() {
       let whereClause = '';
-      let widgets = document.getElementById('widgets').querySelectorAll('[whereClause]');
+      let widgets = listWidgetElements();
       // generate master here clause with simple string concatenation
       for (var x = 0; x < widgets.length; x++) {
         if (x > 0) whereClause += ' AND ';
@@ -657,28 +689,8 @@
             startDate,
             endDate
           ],
-        });
-
-        // handle play button behavior
-        let selectionWasFullExtent;
-        widget.watch('viewModel.state', function(state){
-          if (state == "playing") {
-            // check values (date selection) against fullTimeExtent
-            // convert to numeric values with unary + operator to check equivalence (with a 10% tolerance)
-            if ( +this.values[0] == +this.fullTimeExtent.start &&
-                 Math.abs(+this.values[1] - +this.fullTimeExtent.end) <
-                 (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start))/ 10 ) {
-              // make a note
-              selectionWasFullExtent = true;
-              // set new selection end to 10% through the date range
-              this.values[1] = new Date(+new Date(this.fullTimeExtent.start) + (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start)) / 10);
-            }
-          }
-          else if (state == "ready" && selectionWasFullExtent) {
-            // reset note
-            selectionWasFullExtent = false;
-            this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
-          }
+          // track timeSlider selection state
+          selectionWasFullExtent: false
         });
 
         return { widget };
