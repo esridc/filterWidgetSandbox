@@ -297,6 +297,9 @@
       return attributeList;
     }
 
+    // add event listener to dropdown, to create visualizations
+    attributeList.addEventListener('calciteDropdownItemSelected', makeWidget);
+
     // WIDGET FUNCTIONS
     //
 
@@ -415,8 +418,6 @@
           widgets.push(histogram.widget)
         }
     }
-    // add event listener to dropdown, to create visualizations
-    attributeList.addEventListener('calciteDropdownItemSelected', makeWidget);
 
     // update layerview filter based on histogram widget, throttled
     const updateLayerViewWithHistogram = _.throttle(
@@ -719,10 +720,10 @@
     // TESTS
     //
 
-    makeWidget(null, "locationLongitude");
-    makeWidget(null, "locationLatitude");
-    makeWidget(null, "parametersFuProcessing");
-    makeWidget(null, "sensorPropertiesViewingAngle");
+    // makeWidget(null, "locationLongitude");
+    // makeWidget(null, "locationLatitude");
+    // makeWidget(null, "parametersFuProcessing");
+    // makeWidget(null, "sensorPropertiesViewingAngle");
 
     // makeWidget(null, "phenomenonTime");
     // makeWidget(null, "observationResult");
