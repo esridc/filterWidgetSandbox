@@ -300,9 +300,6 @@
     // WIDGET FUNCTIONS
     //
 
-    // widget state tracking - TODO: un-hardcode and parameterize
-    let timeSlider;
-
     // make an appropriate widget for a field's data type - fieldName may be passed in directly for testing
     async function makeWidget (event, fieldName = null) {
 
@@ -311,11 +308,8 @@
       const field = getDatasetField(dataset, fieldName);
       // document.querySelector('#attributeListButton').innerHTML = fieldName;
 
-      // stop timeSlider playback
-      if (timeSlider && timeSlider.widget) {
-        timeSlider.widget.stop();
-        timeSlider = null;
-      }
+      // stop any timeSlider playback
+      stopTimePlayback();
 
       // clear previous filters
       updateLayerViewEffect(layerView, { updateExtent: true });
@@ -338,7 +332,7 @@
         document.getElementById('widgets').appendChild(container);
 
         // debugger
-        timeSlider = await makeTimeSlider({ dataset, fieldName, layerView, container });
+        let timeSlider = await makeTimeSlider({ dataset, fieldName, layerView, container });
         // set widget state
         if (timeSlider.widget) {
           const label = document.createElement('p');
@@ -363,6 +357,8 @@
           } catch(e) {
             throw new Error(e);
           }
+          // register widget
+          widgets.push(timeSlider.widget)
         }
         return container;
     }
@@ -387,6 +383,8 @@
             updateLayerViewWithHistogram(layerView, fieldName, histogram.widget);
             updateHistograms(layerView, fieldName, histogram.widget)
           });
+
+          // register widget
           widgets.push(histogram.widget)
         }
     }
@@ -690,6 +688,16 @@
         return {};
       }
     }
+
+    // stop all timeSlider playback
+    function stopTimePlayback() {
+      for (let i in widgets) {
+        if (widgets[i].label && widgets[i].label == "TimeSlider") {
+          widgets[i].stop();
+        }
+      }
+    }
+
 
     function formatDate (timestamp) {
       const date = new Date(timestamp);
