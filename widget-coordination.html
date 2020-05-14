@@ -343,12 +343,17 @@
           label.setAttribute('style', 'margin: 0; padding: 0')
           label.innerHTML = '<small>'+fieldName+'</small>';
           container.before(label);
+
           try {
             // add a nested histogram
             const histogramContainer = document.createElement('div');
             histogramContainer.classList.add('miniHistogramWidget');
             container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
             const miniHistogram = await makeHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
+            miniHistogram.widget.fieldName = fieldName;
+            // register miniHistogram
+            widgets.push(miniHistogram.widget)
+
             const { widget } = timeSlider;
             // set event handler to update map filter when time handles are dragged
             widget.watch("timeExtent", function(value) {
@@ -391,7 +396,7 @@
           // register widget
           widgets.push(timeSlider.widget)
         }
-        return container;
+        return timeSlider.widget;
     }
 
     // make and place a histogram
