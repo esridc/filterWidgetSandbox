@@ -316,16 +316,18 @@
 
       // clear previous filters
       updateLayerViewEffect(layerView, { updateExtent: true });
-
+      let widget;
       if (field.simpleType === 'numeric') {
         // Histogram
-        makeHistogramWidget({ dataset, fieldName, layer, layerView, slider: true })
+        widget = makeHistogramWidget({ dataset, fieldName, layer, layerView, slider: true })
       }
 
       if (field.simpleType === 'date') {
           // Time slider
-          makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+          widget = makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       }
+
+      widget.fieldName = fieldName;
     };
 
     // make and place a time slider
@@ -406,7 +408,6 @@
         const histogram = await makeHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
         if (histogram.widget) {
           container.widget = histogram.widget;
-          histogram.widget.fieldName = fieldName;
 
           // set event handler to update map filter and histograms when handles are dragged
           histogram.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
@@ -417,6 +418,7 @@
           // register widget
           widgets.push(histogram.widget)
         }
+        return histogram.widget;
     }
 
     // update layerview filter based on histogram widget, throttled
@@ -441,19 +443,19 @@
         // collect other widgets' fieldNames, skipping the current widget
         let otherWidgets = widgets.filter(w => w != currentWidget);
         let fieldNames = otherWidgets.map(w => w.fieldName);
+        debugger
         try {
-          const where = concatWheres();
           const whereClause = currentWidget.container.getAttribute('whereClause');
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
 
-          // update widgets
+          // update widgets, passing in the returned features
           for (var x = 0; x < otherWidgets.length; x++) {
               var throttledUpdate =
               _.throttle(updateHistogram, 1000, {trailing: false});
-              throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, where, features);
+              throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, concatWheres(), features);
           }
         } catch(e) {
-          throw new Error('Tried to update widgets: '+e)
+          throw new Error('Tried to update other widgets: '+e)
         }
       },
       100,
@@ -722,12 +724,12 @@
     // TESTS
     //
 
-    // makeWidget(null, "locationLongitude");
+    makeWidget(null, "locationLongitude");
     // makeWidget(null, "locationLatitude");
     // makeWidget(null, "parametersFuProcessing");
     // makeWidget(null, "sensorPropertiesViewingAngle");
 
-    // makeWidget(null, "phenomenonTime");
+    makeWidget(null, "phenomenonTime");
     // makeWidget(null, "observationResult");
 
 
