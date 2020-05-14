@@ -335,7 +335,6 @@
         container.classList.add('timesliderWidget');
         document.getElementById('widgets').appendChild(container);
 
-        // debugger
         let timeSlider = await makeTimeSlider({ dataset, fieldName, layerView, container });
         // set widget state
         if (timeSlider.widget) {
@@ -362,9 +361,6 @@
               // update layer view filter to reflect current timeExtent
               updateLayerViewEffect(layerView, { where });
             });
-            // widget.on("time-extent-change", function(value){
-            //   console.log('click!')
-            // });
 
             // handle situation where if the whole time extent is selected, the play button does nothing –
             // modify this: select a smaller range, so the play button has room to move the selection
@@ -669,8 +665,6 @@
               rangeType: "between",
             })
         ;
-        window.widget = widget;
-
         return { widget, values, source, coverage };
       }
       catch(e) {
