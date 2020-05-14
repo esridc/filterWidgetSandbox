@@ -319,14 +319,13 @@
       let widget;
       if (field.simpleType === 'numeric') {
         // Histogram
-        widget = makeHistogramWidget({ dataset, fieldName, layer, layerView, slider: true })
+        widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, slider: true })
       }
 
       if (field.simpleType === 'date') {
           // Time slider
-          widget = makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+          widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       }
-
       widget.fieldName = fieldName;
     };
 
