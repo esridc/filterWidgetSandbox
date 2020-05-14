@@ -447,16 +447,14 @@
         // collect other widgets' fieldNames, skipping the current widget
         let otherWidgets = widgets.filter(w => w != currentWidget);
         let fieldNames = otherWidgets.map(w => w.fieldName);
-        debugger
+
         try {
           const whereClause = currentWidget.container.getAttribute('whereClause');
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
 
           // update widgets, passing in the returned features
           for (var x = 0; x < otherWidgets.length; x++) {
-              var throttledUpdate =
-              _.throttle(updateHistogram, 1000, {trailing: false});
-              throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, concatWheres(), features);
+            throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, concatWheres(), features);
           }
         } catch(e) {
           throw new Error('Tried to update other widgets: '+e)
@@ -495,6 +493,7 @@
       }
       // updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
     }
+    const throttledUpdate = _.throttle(updateHistogram, 1000, {trailing: false});
 
     // list all known widget DOM elements
     function listWidgetElements() {
