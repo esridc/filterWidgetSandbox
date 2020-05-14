@@ -436,11 +436,13 @@
     // update the bins of all histograms except the current widget, throttled
     const updateHistograms = _.throttle(
       async (layerView, fieldName, currentWidget) => {
+        // if there's only one widget, skip this
+        if (widgets.length === 1) return
+        // collect other widgets' fieldNames, skipping the current widget
+        let otherWidgets = widgets.filter(w => w != currentWidget);
+        let fieldNames = otherWidgets.map(w => w.fieldName);
         try {
           const where = concatWheres();
-          // collect other widgets' fieldNames, skipping the current widget
-          let otherWidgets = widgets.filter(w => w != currentWidget);
-          let fieldNames = otherWidgets.map(w => w.fieldName);
           const whereClause = currentWidget.container.getAttribute('whereClause');
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
 
@@ -451,7 +453,7 @@
               throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, where, features);
           }
         } catch(e) {
-          throw new Error(e)
+          throw new Error('Tried to update widgets: '+e)
         }
       },
       100,
