@@ -313,9 +313,9 @@
 
       // stop any timeSlider playback
       stopTimePlayback();
-
       // clear previous filters
       updateLayerViewEffect(layerView, { updateExtent: true });
+
       let widget;
       if (field.simpleType === 'numeric') {
         // Histogram
@@ -427,7 +427,7 @@
           whereClause = widget.generateWhereClause(fieldName);
         }
         if (widget.label === "TimeSlider") {
-          // convert Date to unix time stamp with unary + operator
+          // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
           whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
         }
         // set whereClause attribute
@@ -466,7 +466,6 @@
     // update the bins of a histogram
     async function updateHistogram(widget, layerView, fieldName, where, features) {
       let values;
-      // console.log(fieldName, ':', widget.min, widget.max, widget.values);
       if (features) {
         let params = {
           layer,
@@ -482,7 +481,6 @@
         };
         try {
           values = await generateHistogram(params);
-          // console.log('bins.values: [', JSON.stringify(values.minValue), JSON.stringify(values.maxValue), ']' )
           if (values.bins) {
             widget.bins = values.bins;
           }
@@ -494,9 +492,8 @@
 
     function updateOthers(otherWidgets, layerView, whereClause, features) {
       for (var x = 0; x < otherWidgets.length; x++) {
+        // can't update TimeSliders
         if (otherWidgets[x].label == "TimeSlider") continue;
-        console.log('Updating:', otherWidgets[x].label)
-        // if (otherWidgets[x].label == "Histogram") debugger
         updateHistogram(otherWidgets[x], layerView, otherWidgets[x].fieldName, whereClause, features);
       }
     }
@@ -727,11 +724,13 @@
     function formatDate (timestamp) {
       const date = new Date(timestamp);
       return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+      // => 5/15/2020
     }
 
     function formatSQLDate (timestamp) {
       const date = new Date(timestamp);
       return `'${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}'`;
+      // => 2020-05-15
     }
 
     // TESTS
