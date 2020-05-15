@@ -356,10 +356,8 @@
             const { widget } = timeSlider;
             // set event handler to update map filter when time handles are dragged
             widget.watch("timeExtent", function(value) {
-              // convert Date to unix time stamp with unary + operator
-              const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
-              // update layer view filter to reflect current timeExtent
-              updateLayerViewEffect(layerView, { where });
+              updateLayerView(layerView, fieldName, widget, value);
+              updateWidgets(layerView, fieldName, widget);
             });
 
             // handle situation where if the whole time extent is selected, the play button does nothing –
@@ -411,8 +409,8 @@
 
           // set event handler to update map filter and histograms when handles are dragged
           histogram.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-            updateLayerViewWithHistogram(layerView, fieldName, histogram.widget);
-            updateHistograms(layerView, fieldName, histogram.widget)
+            updateLayerView(layerView, fieldName, histogram.widget);
+            updateWidgets(layerView, fieldName, histogram.widget)
           });
 
           // register widget
@@ -421,13 +419,19 @@
         return histogram.widget;
     }
 
-    // update layerview filter based on histogram widget, throttled
-    const updateLayerViewWithHistogram = _.throttle(
-      async (layerView, fieldName, histogramWidget) => {
-        let whereClause = histogramWidget.generateWhereClause(fieldName);
-
+    // update layerview filter based on widget, throttled
+    const updateLayerView = _.throttle(
+      async (layerView, fieldName, widget, value = null) => {
+        let whereClause;
+        if (widget.label === "Histogram Range Slider") {
+          whereClause = widget.generateWhereClause(fieldName);
+        }
+        if (widget.label === "TimeSlider") {
+          // convert Date to unix time stamp with unary + operator
+          whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
+        }
         // set whereClause attribute
-        histogramWidget.container.setAttribute('whereClause', whereClause);
+        widget.container.setAttribute('whereClause', whereClause);
         const where = concatWheres();
         await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
       },
@@ -436,16 +440,19 @@
     );
 
     // update the bins of all histograms except the current widget, throttled
-    const updateHistograms = _.throttle(
+    const updateWidgets = _.throttle(
       async (layerView, fieldName, currentWidget) => {
         // if there's only one widget, skip this
         if (widgets.length === 1) return
         // collect other widgets' fieldNames, skipping the current widget
         let otherWidgets = widgets.filter(w => w != currentWidget);
-        let fieldNames = otherWidgets.map(w => w.fieldName);
+        // don't add current widget's fieldName to the set (nested widgets)
+        let fieldNames = otherWidgets.filter(w => w.fieldName != fieldName).map(w => w.fieldName);
+        // convert to a set to remove duplicates, then back to array
+        fieldNames = [...new Set(fieldNames)];
 
+        const whereClause = currentWidget.container.getAttribute('whereClause');
         try {
-          const whereClause = currentWidget.container.getAttribute('whereClause');
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
 
           // update widgets, passing in the returned features
@@ -487,9 +494,8 @@
           console.log('e:', e)
         }
       }
-      // updateLayerViewEffect(layerView, {where: concatWheres(), updateExtent: false });
     }
-    const throttledUpdate = _.throttle(updateHistogram, 1000, {trailing: false});
+    const throttledUpdate = _.throttle(updateHistogram, 100, {trailing: false});
 
     // list all known widget DOM elements
     function listWidgetElements() {
