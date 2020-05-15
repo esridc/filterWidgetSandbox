@@ -454,11 +454,8 @@
         const whereClause = currentWidget.container.getAttribute('whereClause');
         try {
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
-
-          // update widgets, passing in the returned features
-          for (var x = 0; x < otherWidgets.length; x++) {
-            throttledUpdate(otherWidgets[x], layerView, otherWidgets[x].fieldName, concatWheres(), features);
-          }
+          // update other widgets, passing in the filtered feature set
+          throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
         } catch(e) {
           throw new Error('Tried to update other widgets: '+e)
         }
@@ -495,7 +492,16 @@
         }
       }
     }
-    const throttledUpdate = _.throttle(updateHistogram, 100, {trailing: false});
+
+    function updateOthers(otherWidgets, layerView, whereClause, features) {
+      for (var x = 0; x < otherWidgets.length; x++) {
+        if (otherWidgets[x].label == "TimeSlider") continue;
+        console.log('Updating:', otherWidgets[x].label)
+        // if (otherWidgets[x].label == "Histogram") debugger
+        updateHistogram(otherWidgets[x], layerView, otherWidgets[x].fieldName, whereClause, features);
+      }
+    }
+    const throttledUpdateOthers = _.throttle(updateOthers, 100, {trailing: false});
 
     // list all known widget DOM elements
     function listWidgetElements() {
