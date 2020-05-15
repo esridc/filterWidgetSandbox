@@ -444,11 +444,10 @@
       async (layerView, fieldName, currentWidget) => {
         // if there's only one widget, skip this
         if (widgets.length === 1) return
-        // collect other widgets' fieldNames, skipping the current widget
-        let otherWidgets = widgets.filter(w => w != currentWidget);
-        // don't add current widget's fieldName to the set (nested widgets)
-        let fieldNames = otherWidgets.filter(w => w.fieldName != fieldName).map(w => w.fieldName);
-        // convert to a set to remove duplicates, then back to array
+        // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
+        let otherWidgets = widgets.filter(w => w.fieldName != fieldName);
+        let fieldNames = otherWidgets.map(w => w.fieldName);
+        // convert to a set to remove any duplicates (nested widgets), then back to array
         fieldNames = [...new Set(fieldNames)];
 
         const whereClause = currentWidget.container.getAttribute('whereClause');
