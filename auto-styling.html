@@ -1,3 +1,13 @@
+<!--
+
+  This is an experiment in auto-styling dataset visualizations based on auto-detected datatypes.
+
+  Example dataset:
+  http://192.168.1.108:8080/auto-styling.html?dataset=8581a7460e144ae09ad25d47f8e82af8_0
+
+
+ -->
+
 <!DOCTYPE html>
 <html>
   <head>
@@ -424,14 +434,14 @@
       }
 
       const geometryType = dataset.attributes.geometryType;
-
+// debugger
       if (geometryType === 'esriGeometryPoint') {
         symbol = { ...symbol, type: 'simple-marker', size: '4px' };
       }
-      else if (geometryType === 'polyline') {
+      else if (geometryType === 'esriGeometryPolyline') {
         symbol = { ...symbol, type: 'simple-line', width: '4px' };
       }
-      else if (geometryType === 'polygon') {
+      else if (geometryType === 'esriGeometryPolygon') {
         symbol = { ...symbol, type: 'simple-fill' };
       }
 
