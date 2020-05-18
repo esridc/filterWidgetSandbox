@@ -82,18 +82,16 @@ body,
   color: #828282;
 }
 
-#widget {
-/*     height: 200px; */
+.widget {
+  margin-bottom: 48px;
 }
 
 .histogramWidget {
-  height: 50px;
-  margin-bottom: 16px;
+  height: 70px;
 }
 
 .timesliderWidget {
   min-width: 325px !important; /* override to allow slightly narrower time slider */
-  margin-bottom: 16px;
 }
 
 .valueListWidget label {
@@ -129,4 +127,10 @@ body,
   top: 13px;
   width: 100%;
   height: 40px;
+}
+
+.widgetLabel {
+  margin: 0;
+  padding: 0;
+  font-size: .9em;
 }

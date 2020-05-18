@@ -323,10 +323,17 @@
       }
 
       if (field.simpleType === 'date') {
-          // Time slider
-          widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+        // Time slider
+        widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       }
       widget.fieldName = fieldName;
+      widget.container.classList.add('widget');
+
+      // label widget
+      const label = document.createElement('div');
+      label.classList.add('widgetLabel');
+      label.innerHTML = fieldName;
+      widget.container.before(label);
     };
 
     // make and place a time slider
@@ -338,11 +345,6 @@
         let timeSlider = await makeTimeSlider({ dataset, fieldName, layerView, container });
         // set widget state
         if (timeSlider.widget) {
-          const label = document.createElement('p');
-          label.setAttribute('style', 'margin: 0; padding: 0')
-          label.innerHTML = '<small>'+fieldName+'</small>';
-          container.before(label);
-
           try {
             // add a nested histogram
             const histogramContainer = document.createElement('div');
@@ -395,10 +397,6 @@
 
     // make and place a histogram
     async function makeHistogramWidget({ dataset, fieldName, layer, layerView, slider = true }) {
-        const title = document.createElement('div');
-        title.innerHTML = `<small>${fieldName}</small>`;
-        document.getElementById('widgets').appendChild(title);
-
         const container = document.createElement('div');
         container.classList.add('histogramWidget');
         document.getElementById('widgets').appendChild(container);
