@@ -430,27 +430,29 @@
         } catch(e) { console.log('failed to load dataset from slug', datasetSlug, e); }
       }
 
+      let predefinedStyle = dataset.attributes.layer.drawingInfo;
+
       try {
-      let symbol = {
-        color: [51, 51, 204, 0.9],
-        outline: {
-          color: 'white',
-          width: 0.5
+        let symbol = {
+          color: [51, 51, 204, 0.9],
+          outline: {
+            color: 'white',
+            width: 0.5
+          }
         }
-      }
 
-      const geometryType = dataset.attributes.geometryType;
-// debugger
-      if (geometryType === 'esriGeometryPoint') {
-        symbol = { ...symbol, type: 'simple-marker', size: '4px' };
-      }
-      else if (geometryType === 'esriGeometryPolyline') {
-        symbol = { ...symbol, type: 'simple-line', width: '4px' };
-      }
-      else if (geometryType === 'esriGeometryPolygon') {
-        symbol = { ...symbol, type: 'simple-fill' };
-      }
+        const geometryType = dataset.attributes.geometryType;
+        console.log('geometryType:', geometryType)
 
+        if (geometryType === 'esriGeometryPoint') {
+          symbol = { ...symbol, type: 'simple-marker', size: '4px' };
+        }
+        else if (geometryType === 'esriGeometryPolyline') {
+          symbol = { ...symbol, type: 'simple-line', width: '4px' };
+        }
+        else if (geometryType === 'esriGeometryPolygon') {
+          symbol = { ...symbol, type: 'simple-fill' };
+        }
 
         const layer = await new FeatureLayer({
             renderer: { type: 'simple', symbol },
