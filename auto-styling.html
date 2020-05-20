@@ -212,8 +212,10 @@
       Histogram,
       HistogramRangeSlider,
       TimeSlider,
+      SimpleMarker,
       uniqueValues,
-      webMercatorUtils
+      webMercatorUtils,
+      Legend,
     ] = await loadModules([
       "esri/Map",
       "esri/views/MapView",
@@ -224,7 +226,8 @@
       "esri/widgets/TimeSlider",
       "esri/symbols/SimpleMarkerSymbol",
       "esri/renderers/smartMapping/statistics/uniqueValues",
-      "esri/geometry/support/webMercatorUtils"
+      "esri/geometry/support/webMercatorUtils",
+      "esri/widgets/Legend",
     ]);
 
     // URL params
@@ -247,6 +250,16 @@
     });
 
     const layerView = await view.whenLayerView(layer);
+
+    var legend = await new Legend({
+      view: view,
+      layerInfos: [{
+        layer: layer,
+        title: "Legend"
+      }]
+    });
+
+    view.ui.add(legend, "bottom-right");
 
     // update layerview filter based on histogram widget, debounced
     const updateLayerViewWithHistogram = _.throttle(
