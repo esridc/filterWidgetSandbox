@@ -153,7 +153,7 @@
 
 
       const layer = new FeatureLayer({
-        renderer: { type: 'simple', symbol },
+        // renderer: { type: 'simple', symbol },
         url: dataset.attributes.url
       });
 
@@ -326,7 +326,6 @@
 
     // add item to styling attribute dropdown
     function updateStylingAttributeList (widget) {
-      // debugger
       const list = document.querySelector('#stylingAttributeList > calcite-dropdown-group');
 
       const item = document.createElement('calcite-dropdown-item');
@@ -338,24 +337,51 @@
     // add event listener to dropdown, to create visualizations
     stylingAttributeList.addEventListener('calciteDropdownItemSelected', updateStyle);
 
+    // from is-numeric-field-type.js
+    function isNumericFieldType (type) {
+      // NOTE: type can be one of the following:
+      // "esriFieldTypeSmallInteger", "esriFieldTypeInteger", "esriFieldTypeSingle", "esriFieldTypeDouble",
+      // "esriFieldTypeString",
+      // "esriFieldTypeDate",
+      // "esriFieldTypeOID", "esriFieldTypeGlobalID",
+      // "esriFieldTypeGeometry", "esriFieldTypeBlob", "esriFieldTypeRaster", "esriFieldTypeGUID", "esriFieldTypeXML"
+      const numericTypes = ['esriFieldTypeSmallInteger', 'esriFieldTypeInteger', 'esriFieldTypeSingle', 'esriFieldTypeDouble', 'esriFieldTypeFloat'];
+      return numericTypes.indexOf(type) > -1;
+    }
+
+    function isSmappable(dataset, field) {
+      const fieldType = field.type;
+
+      if (dataset.attributes.content !== 'Feature Service') {
+        return false;
+      }
+
+      if (fieldType !== 'esriFieldTypeString' && !isNumericFieldType(fieldType) && fieldType !== 'esriFieldTypeDate') {
+        // if it is NOT a string or a number or a date we can't smap it
+        return false;
+      }
+
+      const stats = dataset.attributes.statistics;
+      if (!stats || (!!stats.duration && stats.duration === 0)) {
+        return false;
+      }
+      return true;
+    }
+
     function updateStyle(event) {
       const fieldName = event.target.getAttribute('data-field');
       const index = dataset.attributes.fieldNames.indexOf(fieldName);
       const field = dataset.attributes.fields[index];
-      const type = field.type;
+      const fieldType = field.type;
+      // from opendata-ui is-field-smappable.js
 
-      if (type === 'esriFieldTypeDate') {
-        symbol = { ...symbol, type: 'simple-marker', size: '8px' };
+      if (isSmappable(dataset, field)) {
+        applySmartMapRender(field);
+      } else {
+        _applyDefaultRenderer();
       }
-      else if (type === 'esriFieldTypeString') {
-        symbol = { ...symbol, type: 'simple-line', width: '4px' };
-      }
-      else if (type === 'esriFieldTypeDouble') {
-        symbol = { ...symbol, type: 'simple-fill' };
-      }
-      else if (type === 'esriFieldTypeInteger') {
-        symbol = { ...symbol, type: 'simple-fill' };
-      }
+
+      return;
 
       let symbol = {
         type: 'simple-marker', size: '5px',
@@ -365,6 +391,34 @@
           width: 0.5
         },
       }
+
+      if (fieldType === 'esriFieldTypeDate') {
+        symbol = { ...symbol, type: 'simple-marker', size: '8px' };
+      }
+      // else if (fieldType === 'esriFieldTypeString') {
+      //   symbol = { ...symbol, type: 'simple-line', width: '4px' };
+      // }
+      // else if (fieldType === 'esriFieldTypeDouble') {
+      //   symbol = { ...symbol, type: 'simple-fill' };
+      // }
+      // else if (fieldType === 'esriFieldTypeInteger') {
+      //   symbol = { ...symbol, type: 'simple-fill' };
+      // }
+
+
+    //   if (geometryType === 'point') {
+    //    symbol = { ...symbol, type: 'simple-marker', size: '8px' };
+    //   }
+    //   else if (geometryType === 'polyline') {
+    //     symbol = { ...symbol, type: 'simple-line', width: '4px' };
+    //   }
+    //   else if (geometryType === 'polygon') {
+    //     symbol = { ...symbol, type: 'simple-fill' };
+    //   }
+
+
+      layer.renderer = { type: 'simple', symbol };
+
 
     }
 
@@ -767,7 +821,6 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
     // stop all timeSlider playback
     function stopTimePlayback() {
-      // debugger
       for (let i in widgetsList) {
         if (widgetsList[i].label && widgetsList[i].label == "TimeSlider") {
           widgetsList[i].stop();
@@ -798,7 +851,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
   }
 
-  window.getDefaultRenderer = getDefaultRenderer;
+    window.getDefaultRenderer = getDefaultRenderer;
     function getDefaultRenderer (geometryType) {
       switch (geometryType) {
         case 'polygon':
@@ -832,7 +885,27 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       return fieldTypes[fieldType] || '';
     }
 
-    window.createSmartMapRenderer = createSmartMapRenderer;
+    async function applySmartMapRender (field) {
+      // const layerView = this.getLayerView();
+      const layer = layerView && layerView.layer;
+      const view = layerView.view;
+      try {
+        // apply a smart map renderer for the selected field
+        const renderer = await createSmartMapRenderer(layer, field, view);
+        layer.renderer = renderer;
+        // tryInvoke(this, 'onRendererChange', [layer.renderer]);
+      } catch (e) {
+        console.log('and i', e)
+        // if (this.isDestroying || this.isDestroyed) {
+        //   return;
+        // }
+        // reset renderer to default
+        this._applyDefaultRenderer();
+        // relay error
+        tryInvoke(this, 'onSmartMapError', [e]);
+      }
+    }
+
     function createSmartMapRenderer (layer, field, view) {
       // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
       // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
