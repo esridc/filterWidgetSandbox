@@ -501,6 +501,13 @@
         // Time slider
         widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       }
+
+      if (field.simpleType === 'string') {
+        // TODO: TBD
+        return false
+        // widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+      }
+
       widget.fieldName = fieldName;
       widget.container.classList.add('widget');
 
