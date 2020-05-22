@@ -528,7 +528,6 @@
     let widgetsList = [];
 
 async function makeTimeSlider ({ dataset, fieldName, layerView, container }) {
-  console.log('TimeSlider:', TimeSlider);
   try {
     const field = getDatasetField(dataset, fieldName);
     // let {min: startDate, max: endDate } = dataset.attributes.statistics.date[fieldname.toLowerCase()].statistics.values;
@@ -875,9 +874,6 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     const container = document.createElement('div');
     container.classList.add('stylingWidget');
     document.getElementById('widgets').appendChild(container);
-
-
-
   }
 
     window.getDefaultRenderer = getDefaultRenderer;
