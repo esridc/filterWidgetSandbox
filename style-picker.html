@@ -474,6 +474,24 @@
       updateLayerViewEffect(layerView, { updateExtent: true });
 
       let widget;
+
+      console.log('makeWidget() fieldType:', field.simpleType);
+
+      const query = layerView.layer.createQuery();
+      query.outStatistics = {
+        onStatisticField: fieldName,
+        outStatisticFieldName: fieldName + "_TOTAL",
+        statisticType: "sum"
+      };
+
+      query.geometry = view.extent;
+
+      // query features within the view's extent on the client
+      return layerView.queryFeatures(query).then(function(response) {
+        const stats = response.features[0].attributes;
+        console.log('stats:', stats)
+      });
+
       if (field.simpleType === 'numeric') {
         // Histogram
         widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, slider: true })
