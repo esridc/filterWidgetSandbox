@@ -338,9 +338,6 @@
       list.appendChild(item);
     }
 
-    // add event listener to dropdown, to create visualizations
-    stylingAttributeList.addEventListener('calciteDropdownItemSelected', updateStyle);
-
     // from is-numeric-field-type.js
     function isNumericFieldType (type) {
       // NOTE: type can be one of the following:
@@ -1020,6 +1017,9 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       });
     }
 
+    // setup Style Attribute watcher
+    stylingAttributeList.addEventListener('calciteDropdownItemSelected', updateStyle);
+
     // TESTS
     //
 
@@ -1037,8 +1037,6 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
         makeWidget(null, "phenomenonTime");
         // makeWidget(null, "observationResult");
-
-        makeStylingWidget();
 
         // // get all the features available for drawing.
         // layerView
