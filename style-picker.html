@@ -371,8 +371,8 @@
       return true;
     }
 
-    function updateStyle(event) {
-      const fieldName = event.target.getAttribute('data-field');
+    function updateStyle(event, fieldName = null) {
+      fieldName = fieldName ? fieldName : event.target.getAttribute('data-field');
       const index = dataset.attributes.fieldNames.indexOf(fieldName);
       const field = dataset.attributes.fields[index];
       const fieldType = field.type;
@@ -518,6 +518,8 @@
 
       // update styling attribute dropdown
       updateStylingAttributeList(widget);
+
+      return widget;
     };
 
     let widgetsList = [];
@@ -976,7 +978,9 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     // TESTS
     //
 
-    makeWidget(null, "locationLongitude");
+    let widget = makeWidget(null, "locationLongitude");
+    // immediately select widget for Style by Attribute
+    updateStyle(null, "locationLongitude");
     // makeWidget(null, "locationLatitude");
     // makeWidget(null, "parametersFuProcessing");
     // makeWidget(null, "sensorPropertiesViewingAngle");
