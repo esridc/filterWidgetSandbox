@@ -962,11 +962,13 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       return loadModules(
         [`esri/renderers/smartMapping/creators/${type}`]
       ).then(([rendererCreator]) => {
-        const creatorFn = type === 'color'
-          ? 'createContinuousRenderer'
-          : type === 'size'
-            ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
-            : 'createRenderer';
+        console.log('rendererCreator:', rendererCreator);
+
+        // size: createAgeRenderer, createClassBreaksRenderer, createContinuousRenderer, createVisualVariables
+        const creatorFn =
+          type === 'color' ? 'createContinuousRenderer'
+          : type === 'size' ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
+                          : 'createRenderer';
         return rendererCreator[creatorFn](props)
           .then(response => response.renderer);
       });
