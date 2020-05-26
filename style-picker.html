@@ -357,8 +357,10 @@
         return false;
       }
 
+      // currently dead code
       if (fieldType !== 'esriFieldTypeString' && !isNumericFieldType(fieldType) && fieldType !== 'esriFieldTypeDate') {
         // if it is NOT a string or a number or a date we can't smap it
+        console.log(`Fieldtype ${fieldType} can't be smapped.`);
         return false;
       }
 
@@ -503,7 +505,6 @@
       if (field.simpleType === 'string') {
         // TODO: TBD
         return false
-        // widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       }
 
       widget.fieldName = fieldName;
@@ -829,7 +830,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       widgetsList.push(timeSlider.widget)
     }
     return timeSlider.widget;
-}
+  }
 
     // Determine if field is an integer
     async function datasetFieldIsInteger (field) {
@@ -863,29 +864,22 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       // => 2020-05-15
     }
 
-
-  function makeStylingWidget() {
-    const container = document.createElement('div');
-    container.classList.add('stylingWidget');
-    document.getElementById('widgets').appendChild(container);
-  }
-
-    window.getDefaultRenderer = getDefaultRenderer;
-    function getDefaultRenderer (geometryType) {
-      switch (geometryType) {
-        case 'polygon':
-          return POLYGON_RENDERER;
-        case 'point':
-        case 'multipoint':
-          return POINT_RENDERER;
-        case 'polyline':
-          return LINE_RENDERER;
-        case 'line':
-          return LINE_RENDERER;
-        default:
-          console.error(`Unknown geometry type (${geometryType})`);
-      }
-    }
+    // window.getDefaultRenderer = getDefaultRenderer;
+    // function getDefaultRenderer (geometryType) {
+    //   switch (geometryType) {
+    //     case 'polygon':
+    //       return POLYGON_RENDERER;
+    //     case 'point':
+    //     case 'multipoint':
+    //       return POINT_RENDERER;
+    //     case 'polyline':
+    //       return LINE_RENDERER;
+    //     case 'line':
+    //       return LINE_RENDERER;
+    //     default:
+    //       console.error(`Unknown geometry type (${geometryType})`);
+    //   }
+    // }
 
     function simpleFieldType (fieldType) {
       const fieldTypes = {
@@ -982,34 +976,13 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     // TESTS
     //
 
-    // wait for the layer view to finish updating -
-    // this slows down first widget draw but allows widgets to access layerView stats
-    let firstDraw = true;
-    layerView.watch("updating", function(value) {
-      if (!value && firstDraw) {
-        // only do this on initial load
-        firstDraw = false;
-        makeWidget(null, "locationLongitude");
-        // makeWidget(null, "locationLatitude");
-        // makeWidget(null, "parametersFuProcessing");
-        // makeWidget(null, "sensorPropertiesViewingAngle");
+    makeWidget(null, "locationLongitude");
+    // makeWidget(null, "locationLatitude");
+    // makeWidget(null, "parametersFuProcessing");
+    // makeWidget(null, "sensorPropertiesViewingAngle");
 
-        makeWidget(null, "phenomenonTime");
-        // makeWidget(null, "observationResult");
-
-        // // get all the features available for drawing.
-        // layerView
-        //   .queryFeatures({
-        //     geometry: view.extent,
-        //     returnGeometry: true
-        //   })
-        //   .then(function(results) {
-        //     // do something with the resulting graphics
-        //     graphics = results.features;
-        //   });
-        }
-    });
-
+    // makeWidget(null, "phenomenonTime");
+    // makeWidget(null, "observationResult");
 
 
   })();
