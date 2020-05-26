@@ -482,18 +482,46 @@
       console.log('makeWidget() fieldType:', field.simpleType);
 
       const query = layerView.layer.createQuery();
-      query.outStatistics = {
-        onStatisticField: fieldName,
-        outStatisticFieldName: fieldName + "_TOTAL",
-        statisticType: "sum"
-      };
+      query.outFields = [fieldName];
+      // get a test stat
+      // query.outStatistics = {
+      //   onStatisticField: fieldName,
+      //   outStatisticFieldName: fieldName + "_MAX",
+      //   statisticType: "max"
+      // };
 
-      query.geometry = view.extent;
+      // query.geometry = view.extent;
+      let features;
+      try {
+        features = (await layer.queryFeatures(query)).features;
+      } catch(e) {
+        console.log(e.details.messages)
+      }
+      // if outStatisticFieldName was defined, fieldName must match
+      const fieldData = features.map(w => w.attributes[fieldName]);
+      var jObj = jStat(fieldData);
+      const stdev = jStat.stdev(fieldData);
+      console.log('stdev:', stdev)
+
+      // find arithmentic mean (what's the average of these points?)
+      // find variance (how clumped together are these points?)
+      // find standard deviation (how different is the distribution from a bell curve?) (square root of variance)
+      // find mean absolute deviation (how spread out from the mean are these points?)
+
+      console.log('query:', query)
 
       // query features within the view's extent on the client
-      return layerView.queryFeatures(query).then(function(response) {
-        const stats = response.features[0].attributes;
-        console.log('stats:', stats)
+      // let stats = layerView.queryFeatures(query).then(function(response) { // returns max 2000 features
+      let stats = layerView.queryFeatures(query).then(async function(response) { // not ready by the time the widgets need it
+        console.log('response features:', response.features.length)
+        try {
+          // debugger
+          const stats = response.features[0].attributes;
+          console.log('stats:', stats)
+          return stats
+        } catch(e) {
+          return new Error('e:', e)
+        }
       });
 
       if (field.simpleType === 'numeric') {
