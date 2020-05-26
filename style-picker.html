@@ -482,26 +482,36 @@
       console.log('makeWidget() fieldType:', field.simpleType);
 
       const query = layerView.layer.createQuery();
+      const statquery = layerView.layer.createQuery();
       query.outFields = [fieldName];
+      statquery.outFields = [fieldName];
+      let attstats = dataset.attributes.statistics;
       // get a test stat
-      // query.outStatistics = {
-      //   onStatisticField: fieldName,
-      //   outStatisticFieldName: fieldName + "_MAX",
-      //   statisticType: "max"
-      // };
+      statquery.outStatistics = {
+        onStatisticField: fieldName,
+        outStatisticFieldName: fieldName + "_stddev",
+        statisticType: "stddev"
+      };
 
       // query.geometry = view.extent;
-      let features;
+      let features, statfeatures;
       try {
-        features = (await layer.queryFeatures(query)).features;
+        features = (await layerView.queryFeatures(query)).features;
       } catch(e) {
         console.log(e.details.messages)
       }
+      try {
+        statfeatures = (await layerView.queryFeatures(statquery)).features;
+      } catch(e) {
+        throw new Error(e)
+      }
       // if outStatisticFieldName was defined, fieldName must match
       const fieldData = features.map(w => w.attributes[fieldName]);
+      const fieldStat = statfeatures.map(w => w.attributes[fieldName + "_stddev"]);
       var jObj = jStat(fieldData);
       const stdev = jStat.stdev(fieldData);
-      console.log('stdev:', stdev)
+      console.log('query stdev:', fieldStat)
+      console.log('jStat stdev:', stdev)
 
       // find arithmentic mean (what's the average of these points?)
       // find variance (how clumped together are these points?)
@@ -1015,9 +1025,11 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
     // wait for the layer view to finish updating -
     // this slows down first widget draw but allows widgets to access layerView stats
+    let firstDraw = true;
     layerView.watch("updating", function(value) {
-      if (!value) {
-
+      if (!value && firstDraw) {
+        // only do this on initial load
+        firstDraw = false;
         makeWidget(null, "locationLongitude");
         // makeWidget(null, "locationLatitude");
         // makeWidget(null, "parametersFuProcessing");
