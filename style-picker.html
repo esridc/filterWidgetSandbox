@@ -985,15 +985,35 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     // TESTS
     //
 
-    makeWidget(null, "locationLongitude");
-    // makeWidget(null, "locationLatitude");
-    // makeWidget(null, "parametersFuProcessing");
-    // makeWidget(null, "sensorPropertiesViewingAngle");
+    // wait for the layer view to finish updating -
+    // this slows down first widget draw but allows widgets to access layerView stats
+    layerView.watch("updating", function(value) {
+      if (!value) {
 
-    makeWidget(null, "phenomenonTime");
-    // makeWidget(null, "observationResult");
+        makeWidget(null, "locationLongitude");
+        // makeWidget(null, "locationLatitude");
+        // makeWidget(null, "parametersFuProcessing");
+        // makeWidget(null, "sensorPropertiesViewingAngle");
 
-    makeStylingWidget();
+        makeWidget(null, "phenomenonTime");
+        // makeWidget(null, "observationResult");
+
+        makeStylingWidget();
+
+        // // get all the features available for drawing.
+        // layerView
+        //   .queryFeatures({
+        //     geometry: view.extent,
+        //     returnGeometry: true
+        //   })
+        //   .then(function(results) {
+        //     // do something with the resulting graphics
+        //     graphics = results.features;
+        //   });
+        }
+    });
+
+
 
   })();
 </script>
