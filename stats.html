@@ -338,6 +338,9 @@
       list.appendChild(item);
     }
 
+    // add event listener to dropdown, to create visualizations
+    stylingAttributeList.addEventListener('calciteDropdownItemSelected', updateStyle);
+
     // from is-numeric-field-type.js
     function isNumericFieldType (type) {
       // NOTE: type can be one of the following:
@@ -489,6 +492,22 @@
         outStatisticFieldName: fieldName + "_stddev",
         statisticType: "stddev"
       };
+
+      // query features from the server, returns max 2000 features
+      // let stats = layer.queryFeatures(query).then(function(response) {
+
+      // query within the view's extent on the client once everything's loaded
+      let stats = layerView.queryFeatures(query).then(async function(response) {
+        console.log('response features:', response.features.length)
+        try {
+          // debugger
+          const stats = response.features[0].attributes;
+          console.log('stats:', stats)
+          return stats
+        } catch(e) {
+          return new Error('e:', e)
+        }
+      });
 
       if (field.simpleType === 'numeric') {
         // Histogram
@@ -976,9 +995,6 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       });
     }
 
-    // setup Style Attribute watcher
-    stylingAttributeList.addEventListener('calciteDropdownItemSelected', updateStyle);
-
     // TESTS
     //
 
@@ -996,6 +1012,8 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
         makeWidget(null, "phenomenonTime");
         // makeWidget(null, "observationResult");
+
+        makeStylingWidget();
 
         // // get all the features available for drawing.
         // layerView
