@@ -930,7 +930,8 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
         layer,
         field: field.name,
         statistics,
-        view
+        view,
+        // sizeOptimizationEnabled: true
       };
       // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
       const geomType = layer.geometryType;
@@ -963,7 +964,8 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
         [`esri/renderers/smartMapping/creators/${type}`]
       ).then(([rendererCreator]) => {
         console.log('rendererCreator:', rendererCreator);
-
+        console.log('props:', props);
+        props.sizeOptimizationEnabled = true;
         // size: createAgeRenderer, createClassBreaksRenderer, createContinuousRenderer, createVisualVariables
         const creatorFn =
           type === 'color' ? 'createContinuousRenderer'
