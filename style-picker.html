@@ -420,8 +420,7 @@
     //   }
 
 
-      layer.renderer = { type: 'simple', symbol };
-
+      // layer.renderer = { type: 'simple', symbol };
 
     }
 
@@ -901,23 +900,17 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     }
 
     async function applySmartMapRender (field) {
-      // const layerView = this.getLayerView();
       const layer = layerView && layerView.layer;
       const view = layerView.view;
       try {
         // apply a smart map renderer for the selected field
         const renderer = await createSmartMapRenderer(layer, field, view);
         layer.renderer = renderer;
-        // tryInvoke(this, 'onRendererChange', [layer.renderer]);
+        adjustSize();
+
       } catch (e) {
-        console.log('and i', e)
-        // if (this.isDestroying || this.isDestroyed) {
-        //   return;
-        // }
-        // reset renderer to default
+        console.log(e)
         this._applyDefaultRenderer();
-        // relay error
-        tryInvoke(this, 'onSmartMapError', [e]);
       }
     }
 
@@ -992,6 +985,26 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     // makeWidget(null, "phenomenonTime");
     // makeWidget(null, "observationResult");
 
+    function adjustSize() {
+      layer.renderer.visualVariables = [
+          {
+            type: "size",
+            // valueExpression: "$view.scale",
+            field: "locationLongitude",
+            stops: [
+              {
+                size: 7.5,
+                value: 180
+              },
+              {
+                size: 1.5,
+                value: -180
+              }
+            ]
+          }
+        ];
+
+    }
 
   })();
 </script>
