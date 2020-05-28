@@ -350,28 +350,8 @@
       return numericTypes.indexOf(type) > -1;
     }
 
-    function isSmappable(dataset, field) {
-      const fieldType = field.type;
-
-      if (dataset.attributes.content !== 'Feature Service') {
-        return false;
-      }
-
-      // currently dead code
-      if (fieldType !== 'esriFieldTypeString' && !isNumericFieldType(fieldType) && fieldType !== 'esriFieldTypeDate') {
-        // if it is NOT a string or a number or a date we can't smap it
-        console.log(`Fieldtype ${fieldType} can't be smapped.`);
-        return false;
-      }
-
-      const stats = dataset.attributes.statistics;
-      if (!stats || (!!stats.duration && stats.duration === 0)) {
-        return false;
-      }
-      return true;
-    }
-
     function updateStyle(event, fieldName = null) {
+      // get fieldname either from the event or passed in manually
       fieldName = fieldName ? fieldName : event.target.getAttribute('data-field');
       const index = dataset.attributes.fieldNames.indexOf(fieldName);
       const field = dataset.attributes.fields[index];
@@ -385,14 +365,12 @@
 
       // from opendata-ui is-field-smappable.js
 
-      if (isSmappable(dataset, field)) {
-        applySmartMapRender(field);
-      } else {
-        _applyDefaultRenderer();
-      }
+      // apply automatic symbolization
+      applySmartMapRender(field);
 
       return;
 
+      // alternately, apply manual symbolization
       let symbol = {
         type: 'simple-marker', size: '5px',
         color: [51, 51, 204, 0.0],
@@ -910,14 +888,15 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       const layer = layerView && layerView.layer;
       const view = layerView.view;
       try {
-        // apply a smart map renderer for the selected field
+        // create a smart map renderer for the selected field
         const renderer = await createSmartMapRenderer(layer, field, view);
+        // apply it to the layer
         layer.renderer = renderer;
-        adjustSize();
+        // adjust size of smapped symbology after the fact
+        // adjustSize();
 
       } catch (e) {
         console.log(e)
-        this._applyDefaultRenderer();
       }
     }
 
