@@ -493,7 +493,6 @@
 
       if (widget) {
         widget.fieldName = fieldName;
-        widget.container.classList.add('widget');
 
         // modify slider bar behavior to expand to full range on double-click
         // force slider bar render to make the dom element available
@@ -506,11 +505,16 @@
         });
         // debugger
 
+        // make a container for the container, because the timeSlider doesn't like sharing
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('widget');
+        document.getElementById('widgets').appendChild(wrapper);
+        wrapper.prepend(widget.container);
         // label widget
         const label = document.createElement('div');
         label.classList.add('widgetLabel');
         label.innerHTML = fieldName;
-        widget.container.prepend(label);
+        wrapper.prepend(label);
 
         // update styling attribute dropdown
         updateStylingAttributeList(widget);
@@ -989,7 +993,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     // makeWidget(null, "parametersFuProcessing");
     // makeWidget(null, "sensorPropertiesViewingAngle");
 
-    // makeWidget(null, "phenomenonTime");
+    makeWidget(null, "phenomenonTime");
     // makeWidget(null, "observationResult");
 
     // manually adjust symbology
