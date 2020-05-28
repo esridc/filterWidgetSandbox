@@ -502,6 +502,7 @@
         bar[0].addEventListener('dblclick', e => {
           // set selection range (aka "values") to widget's maximum value range
           widget.values = [widget.min, widget.max];
+          updateAllNow(layerView, fieldName, widget);
         });
         // debugger
 
@@ -572,49 +573,55 @@ async function makeHistogramWidget({ dataset, fieldName, layer, layerView, slide
     return histogram.widget;
 }
 
-// update layerview filter based on widget, throttled
-const updateLayerView = _.throttle(
-  async (layerView, fieldName, widget, value = null) => {
-    let whereClause;
-    if (widget.label === "Histogram Range Slider") {
-      whereClause = widget.generateWhereClause(fieldName);
-    }
-    if (widget.label === "TimeSlider") {
-      // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
-      whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
-    }
-    // set whereClause attribute
-    widget.container.setAttribute('whereClause', whereClause);
-    const where = concatWheres();
-    await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
-  },
-  100,
-  {trailing: false}
-);
+function updateAll(layerView, fieldName, widget) {
+  throttledUpdateLayerView(layerView, fieldName, widget);
+  throttledUpdateWidgets(layerView, fieldName, widget)
+}
 
-// update the bins of all histograms except the current widget, throttled
-const updateWidgets = _.throttle(
-  async (layerView, fieldName, currentWidget) => {
-    // if there's only one widget, skip this
-    if (widgetsList.length === 1) return
-    // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
-    let otherWidgets = widgetsList.filter(w => w.fieldName != fieldName);
-    let fieldNames = otherWidgets.map(w => w.fieldName);
-    // convert to a set to remove any duplicates (nested widgets), then back to array
-    fieldNames = [...new Set(fieldNames)];
+function updateAllNow(layerView, fieldName, widget) {
+  updateLayerView(layerView, fieldName, widget);
+  updateWidgets(layerView, fieldName, widget)
+}
 
-    const whereClause = currentWidget.container.getAttribute('whereClause');
-    try {
-      let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
-      // update other widgets, passing in the filtered feature set
-      throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
-    } catch(e) {
-      throw new Error('Tried to update other widgets: '+e)
-    }
-  },
-  100,
-  {trailing: false}
-);
+// update layerview filter based on widget
+async function updateLayerView (layerView, fieldName, widget, value = null) {
+  let whereClause;
+  if (widget.label === "Histogram Range Slider") {
+    whereClause = widget.generateWhereClause(fieldName);
+  }
+  if (widget.label === "TimeSlider") {
+    // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
+    whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
+  }
+  // set whereClause attribute
+  widget.container.setAttribute('whereClause', whereClause);
+  const where = concatWheres();
+  await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
+};
+
+const throttledUpdateLayerView = _.throttle(updateLayerView, 100, {trailing: false});
+
+// update the bins of all histograms except the current widget
+async function updateWidgets (layerView, fieldName, currentWidget) {
+  // if there's only one widget, skip this
+  if (widgetsList.length === 1) return
+  // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
+  let otherWidgets = widgetsList.filter(w => w.fieldName != fieldName);
+  let fieldNames = otherWidgets.map(w => w.fieldName);
+  // convert to a set to remove any duplicates (nested widgets), then back to array
+  fieldNames = [...new Set(fieldNames)];
+
+  const whereClause = currentWidget.container.getAttribute('whereClause');
+  try {
+    let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
+    // update other widgets, passing in the filtered feature set
+    throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
+  } catch(e) {
+    throw new Error('Tried to update other widgets: '+e)
+  }
+}
+
+const throttledUpdateWidgets = _.throttle(updateWidgets, 100, {trailing: false});
 
 // update the bins of a histogram
 async function updateHistogram(widget, layerView, fieldName, where, features) {
