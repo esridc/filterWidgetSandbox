@@ -52,7 +52,7 @@ body,
   height: 100%;
   padding: 20px;
   flex: auto;
-  overflow: auto;
+  overflow: hidden;
   border-right: 2px solid gray;
 }
 
