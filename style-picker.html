@@ -1012,10 +1012,13 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
         <div id="widgets"></div>
 
+        <div class="widget">
         <calcite-dropdown type="hover" width="l" id="stylingAttributeList">
           <calcite-button id="stylingAttributeListButton" slot="dropdown-trigger">Style by attribute:</calcite-button>
           <calcite-dropdown-group></calcite-dropdown-group>
         </calcite-dropdown>
+        <div id="stylingAttribute"></div>
+      </div>
 
       </div>
     </div>
