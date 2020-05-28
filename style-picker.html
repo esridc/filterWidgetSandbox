@@ -405,7 +405,7 @@
     //   }
 
 
-      // layer.renderer = { type: 'simple', symbol };
+      layer.renderer = { type: 'simple', symbol };
 
     }
 
@@ -491,8 +491,19 @@
         return false
       }
 
-      widget.fieldName = fieldName;
-      widget.container.classList.add('widget');
+      if (widget) {
+        widget.fieldName = fieldName;
+        widget.container.classList.add('widget');
+
+        // modify slider bar behavior to expand to full range on double-click
+        // force slider bar render to make the dom element available
+        widget._slider.renderNow();
+        const bar = widget.container.getElementsByClassName('esri-slider__segment--interactive');
+        bar[0].addEventListener('dblclick', e => {
+          // set selection range (aka "values") to widget's maximum value range
+          widget.values = [widget.min, widget.max];
+        });
+        // debugger
 
       // label widget
       const label = document.createElement('div');
