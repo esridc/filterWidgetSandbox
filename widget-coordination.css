@@ -47,8 +47,7 @@ body,
 }
 
 #sidebar {
-  width: 375px;
-  /* min-width: 325px; */
+  min-width: 325px;
   height: 100%;
   padding: 20px;
   /* margin: 0px 12px; */
@@ -88,11 +87,10 @@ body,
   margin: 0;
 }
 
-  .widget {
+.widget {
   outline: 2px solid gray;
   padding: 10px;
   margin: 12px 0px;
-  min-width: 325px;
 }
 
 /* histogram height limiter */
@@ -100,8 +98,8 @@ body,
   max-height: 50px;
 }
 
-.timesliderWidget {
-  min-width: 325px !important; /* override to allow slightly narrower time slider */
+.esri-time-slider {
+  min-width: 0px !important;
 }
 
 .esri-time-slider__slider {
