@@ -376,6 +376,13 @@
       const index = dataset.attributes.fieldNames.indexOf(fieldName);
       const field = dataset.attributes.fields[index];
       const fieldType = field.type;
+
+      // label the displayed attribute
+      const label = document.querySelector('#stylingAttribute');
+      label.style.display = 'list-item';
+
+      label.innerHTML = fieldName;
+
       // from opendata-ui is-field-smappable.js
 
       if (isSmappable(dataset, field)) {

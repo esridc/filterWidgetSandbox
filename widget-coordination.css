@@ -133,3 +133,8 @@ body,
 .widgetLabel {
   font-size: .9em;
 }
+
+#stylingAttribute {
+  margin: 10px;
+  list-style-position: inside;
+}
