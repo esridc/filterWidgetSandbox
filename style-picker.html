@@ -137,11 +137,11 @@
 
       // set default renderer
       let symbol = {
-        type: 'simple-marker', size: '5px',
-        color: [51, 51, 204, 0.0],
+        type: 'simple-marker', size: '4px',
+        color: [78, 159, 209, 1],
         outline: {
-          color: [256, 256, 256, 1],
-          width: 0.5
+          color: [0, 124, 191, 1],
+          width: 1
         },
       }
 
@@ -157,7 +157,7 @@
 
 
       const layer = new FeatureLayer({
-        // renderer: { type: 'simple', symbol },
+        renderer: { type: 'simple', symbol },
         url: dataset.attributes.url
       });
 
