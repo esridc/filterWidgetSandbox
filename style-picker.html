@@ -505,16 +505,17 @@
         });
         // debugger
 
-      // label widget
-      const label = document.createElement('div');
-      label.classList.add('widgetLabel');
-      label.innerHTML = fieldName;
-      widget.container.before(label);
+        // label widget
+        const label = document.createElement('div');
+        label.classList.add('widgetLabel');
+        label.innerHTML = fieldName;
+        widget.container.prepend(label);
 
-      // update styling attribute dropdown
-      updateStylingAttributeList(widget);
+        // update styling attribute dropdown
+        updateStylingAttributeList(widget);
 
-      return widget;
+        return widget;
+      }
     };
 
     let widgetsList = [];
@@ -587,7 +588,7 @@ const updateLayerView = _.throttle(
     const where = concatWheres();
     await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
   },
-  10,
+  100,
   {trailing: false}
 );
 
@@ -926,6 +927,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
       const geomType = layer.geometryType;
       const fieldType = simpleFieldType(field.type);
+
       switch (fieldType) {
         case 'string':
           props.numTypes = 12;
@@ -962,7 +964,9 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
           : type === 'size' ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
                           : 'createRenderer';
         return rendererCreator[creatorFn](props)
-          .then(response => response.renderer);
+          .then(response => {
+            return response.renderer
+          });
       });
     }
 
@@ -974,7 +978,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
     let widget = makeWidget(null, "locationLongitude");
     // immediately select widget for Style by Attribute
-    updateStyle(null, "locationLongitude");
+    // updateStyle(null, "locationLongitude");
     // makeWidget(null, "locationLatitude");
     // makeWidget(null, "parametersFuProcessing");
     // makeWidget(null, "sensorPropertiesViewingAngle");
@@ -982,6 +986,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
     // makeWidget(null, "phenomenonTime");
     // makeWidget(null, "observationResult");
 
+    // manually adjust symbology
     function adjustSize() {
       layer.renderer.visualVariables = [
           {
