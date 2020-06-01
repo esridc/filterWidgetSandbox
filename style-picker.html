@@ -915,7 +915,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
         // apply it to the layer
         layer.renderer = renderer;
         // adjust size of smapped symbology after the fact
-        // adjustSize();
+        adjustSize(field);
 
       } catch (e) {
         console.log(e)
@@ -995,10 +995,28 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
     makeWidget(null, "phenomenonTime");
     // makeWidget(null, "observationResult");
+    updateStyle(null, "phenomenonTime");
 
     // manually adjust symbology
-    function adjustSize() {
+    function adjustSize(field) {
+      let f = getDatasetField(dataset, field.name)
       layer.renderer.visualVariables = [
+          {
+            type: "color",
+            field: field.name,
+            stops: [
+              {
+                value: f.statistics.values.min,
+                color: "#FFFCD4"
+              },
+              {
+                value: f.statistics.values.max,
+                color: "#0D2644"
+              }
+            ]
+          },
+
+
           {
             type: "size",
             // valueExpression: "$view.scale",
