@@ -951,7 +951,7 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
             return loadRenderer('color', props);
           }
           if (geomType === 'point' || geomType === 'multipoint' || geomType === 'polyline') {
-            return loadRenderer('size', props);
+            return loadRenderer('color', props);
           }
           // return reject('Field/geometry type not supported.');
         case 'date-time':
@@ -1017,21 +1017,21 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
           },
 
 
-          {
-            type: "size",
-            // valueExpression: "$view.scale",
-            field: "locationLongitude",
-            stops: [
-              {
-                size: 7.5,
-                value: 180
-              },
-              {
-                size: 1.5,
-                value: -180
-              }
-            ]
-          }
+          // {
+          //   type: "size",
+          //   // valueExpression: "$view.scale",
+          //   field: "locationLongitude",
+          //   stops: [
+          //     {
+          //       size: 7.5,
+          //       value: 180
+          //     },
+          //     {
+          //       size: 1.5,
+          //       value: -180
+          //     }
+          //   ]
+          // }
         ];
 
     }
