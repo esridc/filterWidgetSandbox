@@ -1,0 +1,174 @@
+<!-- https://developers.arcgis.com/javascript/latest/sample-code/sandbox/index.html?sample=visualization-sm-location-scale -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Vary point sizes by scale - 4.15</title>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.15/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.15/"></script>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #infoDiv {
+        background: white;
+        padding: 10px;
+      }
+    </style>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/renderers/SimpleRenderer",
+        "esri/renderers/smartMapping/creators/location"
+      ], function(
+        Map,
+        MapView,
+        FeatureLayer,
+        SimpleRenderer,
+        locationRendererCreator
+      ) {
+        const renderer = new SimpleRenderer({
+          symbol: {
+            type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+            color: "dodgerblue",
+            outline: {
+              color: [255, 255, 255, 0.7],
+              width: 0.5
+            },
+            size: 7.5
+          }
+        });
+
+        const layer = new FeatureLayer({
+          portalItem: {
+            id: "cb1886ff0a9d4156ba4d2fadd7e8a139"
+          },
+          renderer: renderer
+        });
+
+        const baseLayer = new FeatureLayer({
+          portalItem: {
+            id: "2b93b06dc0dc4e809d3c8db5cb96ba69"
+          },
+          legendEnabled: false,
+          popupEnabled: false,
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [200, 200, 200, 0.75],
+              outline: {
+                color: "white",
+                width: 0.5
+              }
+            }
+          },
+          spatialReference: {
+            wkid: 54035
+          }
+        });
+
+        const map = new Map({
+          layers: [baseLayer, layer]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: {
+            x: 0,
+            y: 0,
+            spatialReference: baseLayer.spatialReference
+          },
+          scale: 100000000,
+          constraints: {
+            rotationEnabled: false
+          },
+          graphics: [
+            {
+              symbol: {
+                type: "simple-fill",
+                color: null,
+                outline: {
+                  width: 1,
+                  color: [200, 200, 200, 0.75]
+                }
+              },
+              geometry: {
+                type: "extent",
+                xmin: -180,
+                xmax: 180,
+                ymin: -90,
+                ymax: 90,
+                spatialReference: { wkid: 4326 }
+              }
+            }
+          ]
+        });
+
+        const infoDiv = document.getElementById("infoDiv");
+        view.ui.add(infoDiv, "top-right");
+
+        const toggleButton = document.getElementById("toggle-auto-size");
+        toggleButton.addEventListener("click", toggleAutoSize);
+
+        function toggleAutoSize() {
+          let sizeOptimizationEnabled = false;
+
+          if (toggleButton.innerText === "Enable auto size by scale") {
+            toggleButton.innerText = "Disable auto size by scale";
+            sizeOptimizationEnabled = true;
+          } else {
+            toggleButton.innerText = "Enable auto size by scale";
+          }
+
+          // generates a new renderer with a scale-dependent
+          // size visual variable to vary icon size by scale
+          locationRendererCreator
+            .createRenderer({
+              layer: layer,
+              view: view,
+              sizeOptimizationEnabled: sizeOptimizationEnabled
+            })
+            .then(function(rendererResponse) {
+              // the renderer contains a size variable with stops
+              // mapping icon sizes to scale values
+              const renderer = rendererResponse.renderer;
+              renderer.symbol.color = "dodgerblue";
+              layer.renderer = renderer;
+            })
+            .catch(function(error) {
+              console.error(error);
+            });
+        }
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div id="infoDiv" class="esri-widget">
+      <button id="toggle-auto-size" class="esri-button">
+        Enable auto size by scale
+      </button>
+    </div>
+  </body>
+</html>

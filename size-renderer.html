@@ -1,0 +1,64 @@
+<!-- https://developers.arcgis.com/javascript/3/jssamples/renderer_unique_value.html -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>Unique Value Renderer</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/3.32/esri/css/esri.css">
+    <style>
+      html, body, #map{
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script src="https://js.arcgis.com/3.32/"></script>
+    <script>
+
+require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/renderers/SimpleRenderer",
+        "esri/renderers/smartMapping/creators/location"
+      ], function(
+        Map,
+        MapView,
+        FeatureLayer,
+        SimpleRenderer,
+        locationRendererCreator
+      ) {
+
+
+const layer = new FeatureLayer({
+  url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/311_Service_Requests_from_2015_50k/FeatureServer/0"
+});
+
+// visualization based age of incidents closed passed their due date
+// or the number of days an incident was overdue at the time of closure.
+
+const ageParams = {
+  layer: layer,
+  view: view,
+  startTime: "Due_Date",
+  endTime: "Closed_Date",
+  unit: "days"
+};
+
+// when the promise resolves, apply the renderer to the layer
+sizeRendererCreator.createAgeRenderer(ageParams)
+  .then(function(response){
+    layer.renderer = response.renderer;
+  });
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="map"></div>
+  </body>
+
+</html>
