@@ -61,7 +61,9 @@
       HistogramRangeSlider,
       TimeSlider,
       uniqueValues,
-      webMercatorUtils
+      webMercatorUtils,
+      colorRamps,
+      colorSchemes,
     ] = await loadModules([
       "esri/Map",
       "esri/views/MapView",
@@ -71,7 +73,9 @@
       "esri/widgets/HistogramRangeSlider",
       "esri/widgets/TimeSlider",
       "esri/renderers/smartMapping/statistics/uniqueValues",
-      "esri/geometry/support/webMercatorUtils"
+      "esri/geometry/support/webMercatorUtils",
+      "esri/renderers/smartMapping/symbology/support/colorRamps",
+      "esri/renderers/smartMapping/symbology/color",
     ]);
 
     // SCENE SETUP
@@ -999,7 +1003,19 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
     // manually adjust symbology
     function adjustSize(field) {
-      let f = getDatasetField(dataset, field.name)
+      let f = getDatasetField(dataset, field.name);
+      // Returns the Galaxy Berries scheme
+      // debugger
+      // var galaxyBerriesScheme = colorSchemes.getSchemeByName({
+      var galaxyBerriesScheme = colorSchemes.getScheme({
+        basemap: map.basemap,
+        geometryType: "point",
+        theme: "high-to-low",
+        // name: "Galaxy Berries"
+      });
+      console.log('berries:', galaxyBerriesScheme)
+      const ramp = colorRamps.byName("Galaxy Berries");
+      console.log('ramp:', ramp)
       layer.renderer.visualVariables = [
           {
             type: "color",
