@@ -54,7 +54,8 @@
               width: 0.5
             },
             size: 7.5
-          }
+          },
+          sizeOptimizationEnabled: true
         });
 
         const layer = new FeatureLayer({
@@ -124,21 +125,9 @@
           ]
         });
 
-        const infoDiv = document.getElementById("infoDiv");
-        view.ui.add(infoDiv, "top-right");
-
-        const toggleButton = document.getElementById("toggle-auto-size");
-        toggleButton.addEventListener("click", toggleAutoSize);
 
         function toggleAutoSize() {
-          let sizeOptimizationEnabled = false;
-
-          if (toggleButton.innerText === "Enable auto size by scale") {
-            toggleButton.innerText = "Disable auto size by scale";
-            sizeOptimizationEnabled = true;
-          } else {
-            toggleButton.innerText = "Enable auto size by scale";
-          }
+          let sizeOptimizationEnabled = true;
 
           // generates a new renderer with a scale-dependent
           // size visual variable to vary icon size by scale
@@ -146,29 +135,60 @@
             .createRenderer({
               layer: layer,
               view: view,
-              sizeOptimizationEnabled: sizeOptimizationEnabled
+              sizeOptimizationEnabled: true
             })
             .then(function(rendererResponse) {
               // the renderer contains a size variable with stops
               // mapping icon sizes to scale values
               const renderer = rendererResponse.renderer;
               renderer.symbol.color = "dodgerblue";
+              renderer.visualVariables = [
+                {
+                  type: "color",
+                  field: field.name,
+                  stops: [
+                    {
+                      value: f.statistics.values.min,
+                      color: "#FFFCD4"
+                    },
+                    {
+                      value: f.statistics.values.max,
+                      color: "#0D2644"
+                    }
+                  ]
+                },
+
+
+                {
+                  type: "size",
+                  // valueExpression: "$view.scale",
+                  field: "locationLongitude",
+                  stops: [
+                    {
+                      size: 7.5,
+                      value: 180
+                    },
+                    {
+                      size: 1.5,
+                      value: -180
+                    }
+                  ]
+                }
+              ];
+
               layer.renderer = renderer;
+              window.layer = layer;
             })
             .catch(function(error) {
               console.error(error);
             });
         }
+        // toggleAutoSize();
       });
     </script>
   </head>
 
   <body>
     <div id="viewDiv"></div>
-    <div id="infoDiv" class="esri-widget">
-      <button id="toggle-auto-size" class="esri-button">
-        Enable auto size by scale
-      </button>
-    </div>
   </body>
 </html>
