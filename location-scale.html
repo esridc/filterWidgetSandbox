@@ -2,193 +2,216 @@
 
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta
-      name="viewport"
-      content="initial-scale=1,maximum-scale=1,user-scalable=no"
-    />
-    <title>Vary point sizes by scale - 4.15</title>
+<head>
+  <meta charset="utf-8" />
+  <meta
+  name="viewport"
+  content="initial-scale=1,maximum-scale=1,user-scalable=no"
+  />
+  <title>Vary point sizes by scale - 4.15</title>
 
-    <link
-      rel="stylesheet"
-      href="https://js.arcgis.com/4.15/esri/themes/light/main.css"
-    />
-    <script src="https://js.arcgis.com/4.15/"></script>
+  <link
+  rel="stylesheet"
+  href="https://js.arcgis.com/4.15/esri/themes/light/main.css"
+  />
+  <script src="https://js.arcgis.com/4.15/"></script>
 
-    <style>
-      html,
-      body,
-      #viewDiv {
-        height: 100%;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-      }
-      #infoDiv {
-        background: white;
-        padding: 10px;
-      }
-    </style>
+  <style>
+    html,
+    body,
+    #viewDiv {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #infoDiv {
+      background: white;
+      padding: 10px;
+    }
+  </style>
 
-    <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/layers/FeatureLayer",
-        "esri/renderers/SimpleRenderer",
-        "esri/renderers/smartMapping/creators/location"
-      ], function(
-        Map,
-        MapView,
-        FeatureLayer,
-        SimpleRenderer,
-        locationRendererCreator
-      ) {
-        const renderer = new SimpleRenderer({
-          symbol: {
-            type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
-            color: "dodgerblue",
-            outline: {
-              color: [255, 255, 255, 0.7],
-              width: 0.5
-            },
-            size: 7.5
+  <script>
+    require([
+    "esri/Map",
+    "esri/views/MapView",
+    "esri/layers/FeatureLayer",
+    "esri/renderers/SimpleRenderer",
+    "esri/renderers/smartMapping/creators/location"
+    ], function(
+    Map,
+    MapView,
+    FeatureLayer,
+    SimpleRenderer,
+    locationRendererCreator
+    ) {
+      const renderer = new SimpleRenderer({
+        symbol: {
+          type: "simple-marker", // autocasts as new SimpleMarkerSymbol()
+          color: "dodgerblue",
+          outline: {
+            color: [255, 255, 255, 0.7],
+            width: 0.5
           },
-          sizeOptimizationEnabled: true
-        });
-
-        const layer = new FeatureLayer({
-          portalItem: {
-            id: "cb1886ff0a9d4156ba4d2fadd7e8a139"
-          },
-          renderer: renderer
-        });
-
-        const baseLayer = new FeatureLayer({
-          portalItem: {
-            id: "2b93b06dc0dc4e809d3c8db5cb96ba69"
-          },
-          legendEnabled: false,
-          popupEnabled: false,
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-fill",
-              color: [200, 200, 200, 0.75],
-              outline: {
-                color: "white",
-                width: 0.5
-              }
-            }
-          },
-          spatialReference: {
-            wkid: 54035
-          }
-        });
-
-        const map = new Map({
-          layers: [baseLayer, layer]
-        });
-
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: {
-            x: 0,
-            y: 0,
-            spatialReference: baseLayer.spatialReference
-          },
-          scale: 100000000,
-          constraints: {
-            rotationEnabled: false
-          },
-          graphics: [
-            {
-              symbol: {
-                type: "simple-fill",
-                color: null,
-                outline: {
-                  width: 1,
-                  color: [200, 200, 200, 0.75]
-                }
-              },
-              geometry: {
-                type: "extent",
-                xmin: -180,
-                xmax: 180,
-                ymin: -90,
-                ymax: 90,
-                spatialReference: { wkid: 4326 }
-              }
-            }
-          ]
-        });
-
-
-        function toggleAutoSize() {
-          let sizeOptimizationEnabled = true;
-
-          // generates a new renderer with a scale-dependent
-          // size visual variable to vary icon size by scale
-          locationRendererCreator
-            .createRenderer({
-              layer: layer,
-              view: view,
-              sizeOptimizationEnabled: true
-            })
-            .then(function(rendererResponse) {
-              // the renderer contains a size variable with stops
-              // mapping icon sizes to scale values
-              const renderer = rendererResponse.renderer;
-              renderer.symbol.color = "dodgerblue";
-              renderer.visualVariables = [
-                {
-                  type: "color",
-                  field: field.name,
-                  stops: [
-                    {
-                      value: f.statistics.values.min,
-                      color: "#FFFCD4"
-                    },
-                    {
-                      value: f.statistics.values.max,
-                      color: "#0D2644"
-                    }
-                  ]
-                },
-
-
-                {
-                  type: "size",
-                  // valueExpression: "$view.scale",
-                  field: "locationLongitude",
-                  stops: [
-                    {
-                      size: 7.5,
-                      value: 180
-                    },
-                    {
-                      size: 1.5,
-                      value: -180
-                    }
-                  ]
-                }
-              ];
-
-              layer.renderer = renderer;
-              window.layer = layer;
-            })
-            .catch(function(error) {
-              console.error(error);
-            });
-        }
-        // toggleAutoSize();
+          size: 7.5
+        },
+        sizeOptimizationEnabled: true
       });
-    </script>
-  </head>
 
-  <body>
-    <div id="viewDiv"></div>
-  </body>
+      const layer = new FeatureLayer({
+        portalItem: {
+          id: "cb1886ff0a9d4156ba4d2fadd7e8a139"
+        },
+        renderer: renderer
+      })
+
+      layer.on("load", function(e){
+        console.log("layer loaded with: " + layer.graphics.length + " features");
+        console.log("Load event object properties: ",e);
+      });
+
+      layer.on("update-end", function(e) {
+        console.log("layer update-end with: " + layer.graphics.length + " features");
+        console.log("Update-end object properties: ", e);
+      });
+
+      const baseLayer = new FeatureLayer({
+        portalItem: {
+          id: "2b93b06dc0dc4e809d3c8db5cb96ba69"
+        },
+        legendEnabled: false,
+        popupEnabled: false,
+        renderer: {
+          type: "simple",
+          symbol: {
+            type: "simple-fill",
+            color: [200, 200, 200, 0.75],
+            outline: {
+              color: "white",
+              width: 0.5
+            }
+          }
+        },
+        spatialReference: {
+          wkid: 54035
+        }
+      });
+
+      const map = new Map({
+        layers: [baseLayer, layer]
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: {
+          x: 0,
+          y: 0,
+          spatialReference: baseLayer.spatialReference
+        },
+        scale: 100000000,
+        constraints: {
+          rotationEnabled: false
+        },
+        graphics: [
+        {
+          symbol: {
+            type: "simple-fill",
+            color: null,
+            outline: {
+              width: 1,
+              color: [200, 200, 200, 0.75]
+            }
+          },
+          geometry: {
+            type: "extent",
+            xmin: -180,
+            xmax: 180,
+            ymin: -90,
+            ymax: 90,
+            spatialReference: { wkid: 4326 }
+          }
+        }
+        ]
+      });
+
+      // wait for layer to load
+      layer
+      .when(function() {
+        // This function will execute once the promise is resolved
+        console.log('layer loaded successfully:', layer.loaded);
+        let sizeOptimizationEnabled = true;
+
+        // generates a new renderer with a scale-dependent
+        // size visual variable to vary icon size by scale
+        locationRendererCreator
+        .createRenderer({
+          layer: layer,
+          view: view,
+          // sizeOptimizationEnabled: true
+        })
+        .then(function(rendererResponse) {
+          // the renderer contains a size variable with stops
+          // mapping icon sizes to scale values
+          // debugger
+          const renderer = rendererResponse.renderer;
+          renderer.symbol.color = "dodgerblue";
+          renderer.visualVariables = [
+          {
+            type: "color",
+            field: "latitude",
+            stops: [
+            {
+              value: -90,
+              color: "#FFFCD4"
+            },
+            {
+              value: 90,
+              color: "#0D2644"
+            }
+            ]
+          },
+
+
+          {
+            type: "size",
+            valueExpression: "$view.scale",
+            field: "longitude",
+            stops: [
+              {
+                size: 15,
+                value: 1155581
+              },
+              {
+                size: 6,
+                value: 9244648
+              },
+              {
+                size: 3,
+                value: 73957190
+              },
+              {
+                size: 1,
+                value: 591657527
+              }
+            ]
+          }
+          ];
+
+          layer.renderer = renderer;
+          window.layer = layer;
+          console.log('?')
+        })
+        .catch(function(error) {
+          console.error(error);
+        });
+      })
+      .catch(e => { console.log(e)});
+    });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+</body>
 </html>
