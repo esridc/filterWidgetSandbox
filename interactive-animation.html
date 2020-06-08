@@ -75,6 +75,7 @@
           title: "Building Footprints",
           minScale: 72223.819286
         });
+        window.layer = layer;
 
         var map = new Map({
           basemap: {
@@ -169,7 +170,9 @@
         view.whenLayerView(layer).then(setupHoverTooltip);
 
         // Starts the application by visualizing year 1984
-        setYear(1984);
+        layer.renderer = createRenderer(1984);
+        // debugger
+        // setYear(1984);
 
         //--------------------------------------------------------------------------
         //
@@ -183,7 +186,9 @@
         function setYear(value) {
           sliderValue.innerHTML = Math.floor(value);
           slider.viewModel.setValue(0, value);
-          layer.renderer = createRenderer(value);
+          // debugger;
+          layer.renderer.set('visualVariables', updateRenderer(value));
+          // renderer.redraw();
         }
 
         /**
@@ -193,6 +198,48 @@
          * year are visualized with a pink color. Buildings built within that
          * 20-year time frame are assigned a color interpolated between blue and pink.
          */
+        function updateRenderer(year) {
+          return [
+              {
+                type: "opacity",
+                field: "CNSTRCT_YR",
+                stops: [
+                  {
+                    opacity: 1,
+                    value: year
+                  },
+                  {
+                    opacity: 0,
+                    value: year + 1
+                  }
+                ]
+              },
+              {
+                type: "color",
+                field: "CNSTRCT_YR",
+                legendOptions: {
+                  title: "Built:"
+                },
+                stops: [
+                  {
+                    value: year,
+                    color: "#0ff",
+                    label: "in " + Math.floor(year)
+                  },
+                  {
+                    value: year - 10,
+                    color: "#f0f",
+                    label: "in " + (Math.floor(year) - 20)
+                  },
+                  {
+                    value: year - 50,
+                    color: "#404",
+                    label: "before " + (Math.floor(year) - 50)
+                  }
+                ]
+              }
+            ]
+          }
         function createRenderer(year) {
           var opacityStops = [
             {
