@@ -154,6 +154,7 @@
           // the renderer contains a size variable with stops
           // mapping icon sizes to scale values
           // debugger
+
           const renderer = rendererResponse.renderer;
           renderer.symbol.color = "dodgerblue";
           renderer.visualVariables = [
@@ -171,32 +172,13 @@
             }
             ]
           },
-
-
-          {
-            type: "size",
-            valueExpression: "$view.scale",
-            field: "longitude",
-            stops: [
-              {
-                size: 15,
-                value: 1155581
-              },
-              {
-                size: 6,
-                value: 9244648
-              },
-              {
-                size: 3,
-                value: 73957190
-              },
-              {
-                size: 1,
-                value: 591657527
-              }
-            ]
-          }
-          ];
+            {
+              type: "size",
+              // valueExpression: "10",
+              field: "longitude",
+              valueUnit: "miles"
+            },
+          ]
 
           layer.renderer = renderer;
           window.layer = layer;
