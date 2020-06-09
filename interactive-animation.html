@@ -101,6 +101,7 @@
           // of the view's container
           resizeAlign: "top-left"
         });
+        window.view = view;
 
         //--------------------------------------------------------------------------
         //
@@ -171,8 +172,6 @@
 
         // Starts the application by visualizing year 1984
         layer.renderer = createRenderer(1984);
-        // debugger
-        // setYear(1984);
 
         //--------------------------------------------------------------------------
         //
@@ -186,9 +185,8 @@
         function setYear(value) {
           sliderValue.innerHTML = Math.floor(value);
           slider.viewModel.setValue(0, value);
-          // debugger;
           layer.renderer.set('visualVariables', updateRenderer(value));
-          // renderer.redraw();
+          layer.renderer = layer.renderer.clone(); // clone to force renderer refresh
         }
 
         /**
