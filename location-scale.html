@@ -1,5 +1,7 @@
 <!-- https://developers.arcgis.com/javascript/latest/sample-code/sandbox/index.html?sample=visualization-sm-location-scale -->
 
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,7 +10,6 @@
   name="viewport"
   content="initial-scale=1,maximum-scale=1,user-scalable=no"
   />
-  <title>Vary point sizes by scale - 4.15</title>
 
   <link
   rel="stylesheet"
@@ -114,6 +115,7 @@
           rotationEnabled: false
         },
         graphics: [
+        // outline of map
         {
           symbol: {
             type: "simple-fill",
@@ -139,7 +141,6 @@
       layer
       .when(function() {
         // This function will execute once the promise is resolved
-        console.log('layer loaded successfully:', layer.loaded);
         let sizeOptimizationEnabled = true;
 
         // generates a new renderer with a scale-dependent
@@ -153,7 +154,6 @@
         .then(function(rendererResponse) {
           // the renderer contains a size variable with stops
           // mapping icon sizes to scale values
-          // debugger
 
           const renderer = rendererResponse.renderer;
           renderer.symbol.color = "dodgerblue";
@@ -174,15 +174,14 @@
           },
             {
               type: "size",
-              // valueExpression: "10",
-              field: "longitude",
+              valueExpression: "$view.scale / 1000000",
+              // field: "longitude", // enabling this field disables the valueExpression
               valueUnit: "miles"
             },
           ]
 
           layer.renderer = renderer;
           window.layer = layer;
-          console.log('?')
         })
         .catch(function(error) {
           console.error(error);
