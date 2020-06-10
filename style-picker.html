@@ -64,6 +64,8 @@
       webMercatorUtils,
       colorRamps,
       colorSchemes,
+      dotDensitySchemes,
+      typeSchemes,
     ] = await loadModules([
       "esri/Map",
       "esri/views/MapView",
@@ -76,6 +78,8 @@
       "esri/geometry/support/webMercatorUtils",
       "esri/renderers/smartMapping/symbology/support/colorRamps",
       "esri/renderers/smartMapping/symbology/color",
+      "esri/renderers/smartMapping/symbology/dotDensity",
+      "esri/renderers/smartMapping/symbology/type",
     ]);
 
     // SCENE SETUP
@@ -507,7 +511,6 @@
           widget.values = [widget.min, widget.max];
           updateAllNow(layerView, fieldName, widget);
         });
-        // debugger
 
         // make a container for the container, because the timeSlider doesn't like sharing
         const wrapper = document.createElement('div');
@@ -1003,19 +1006,50 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
 
     // manually adjust symbology
     function adjustSize(field) {
+      // console.log('adjust size:', field)
       let f = getDatasetField(dataset, field.name);
-      // Returns the Galaxy Berries scheme
+
+      // Returns the Galaxy Berries ramp
       // debugger
       // var galaxyBerriesScheme = colorSchemes.getSchemeByName({
-      var galaxyBerriesScheme = colorSchemes.getScheme({
+      // var galaxyBerriesScheme = colorSchemes.getScheme({
+
+      // DOES NOT WORK
+      var newScheme = colorSchemes.getSchemeByName({
         basemap: map.basemap,
         geometryType: "point",
-        theme: "high-to-low",
-        // name: "Galaxy Berries"
+        theme: "extremes",
+        name: "Purple and Green Extremes 4"
       });
-      console.log('berries:', galaxyBerriesScheme)
-      const ramp = colorRamps.byName("Galaxy Berries");
-      console.log('ramp:', ramp)
+      console.log('scheme:', newScheme)
+
+
+      // WORKS
+      // var galaxyBerriesScheme = dotDensitySchemes.getSchemeByName({
+      //   basemap: map.basemap,
+      //   numColors: 3,
+      //   name: "Galaxy Berries"
+      // });
+      // console.log('galaxyBerriesScheme:', galaxyBerriesScheme)
+
+
+      // WORKS
+      // var typeScheme = typeSchemes.getSchemeByName({
+      //   basemap: map.basemap,
+      //   geometryType: "point",
+      //   name: "Pastel Dreams"
+      // });
+      // console.log('typeScheme:', typeScheme)
+
+      // WORKS
+      // const ramp = colorRamps.byName("Galaxy Berries");
+      // console.log('ramp:', ramp)
+      // console.log(colorSchemes.getMatchingSchemes({
+      //   theme: "extremes",
+      //   colors: ramp.colors,
+      //   geometryType: "point"
+      // }));
+
       layer.renderer.visualVariables = [
           {
             type: "color",
