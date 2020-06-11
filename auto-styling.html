@@ -252,6 +252,11 @@
         datasetList.appendChild(opt);
       }
 
+      datasetList.addEventListener('change', event => {
+
+      });
+
+
       // URL params
       const params = new URLSearchParams(window.location.search);
       var env = 'prod';
@@ -264,179 +269,183 @@
         var datasetId = datasetList.options[datasetList.selectedIndex].value;
         var { layer, dataset } = await loadDataset({ datasetId: datasetId, env: env });
       }
-      const map = new Map({
-        basemap: "dark-gray-vector",
-        layers: layer
-      });
+      drawMap(layer, dataset)
 
-      const view = new MapView({
-        container: "viewDiv",
-        map: map,
-        extent: getDatasetExtent(dataset)
-      });
+      function drawMap(layer, dataset) {
 
-      const layerView = await view.whenLayerView(layer);
+        const map = new Map({
+          basemap: "dark-gray-vector",
+          layers: layer
+        });
 
-      var legend = await new Legend({
-        view: view,
-        layerInfos: [{
-          layer: layer,
-          title: "Legend"
-        }]
-      });
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          extent: getDatasetExtent(dataset)
+        });
 
-      view.ui.add(legend, "bottom-right");
+        const layerView = await view.whenLayerView(layer);
 
-      // update layerview filter based on histogram widget, debounced
-      const updateLayerViewWithHistogram = _.throttle(
-      (layerView, fieldName, histogramWidget) => {
-        updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: zoomToDataCheckbox.checked });
-      },
-      50
-      );
+        var legend = await new Legend({
+          view: view,
+          layerInfos: [{
+            layer: layer,
+            title: "Legend"
+          }]
+        });
 
-      // Dataset info
-      document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
-      document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
-      document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
+        view.ui.add(legend, "bottom-right");
 
-      const attributeList = updateAttributeList(dataset);
+        // update layerview filter based on histogram widget, debounced
+        const updateLayerViewWithHistogram = _.throttle(
+        (layerView, fieldName, histogramWidget) => {
+          updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: zoomToDataCheckbox.checked });
+        },
+        50
+        );
 
-      // widget state tracking
-      let timeSlider;
+        // Dataset info
+        document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
+        document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
+        document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
 
-      // add event listener to dropdown, to create visualizations
-      attributeList.addEventListener('calciteDropdownItemSelected', async event => {
-        const fieldName = event.target.getAttribute('data-field');
-        const field = getDatasetField(dataset, fieldName);
-        document.querySelector('#attributeListButton').innerHTML = fieldName;
+        const attributeList = updateAttributeList(dataset);
 
-        // Reset UI state
+        // widget state tracking
+        let timeSlider;
 
-        // stop timeSlider playback
-        if (timeSlider && timeSlider.widget) {
-          timeSlider.widget.stop();
-          timeSlider = null;
-        }
+        // add event listener to dropdown, to create visualizations
+        attributeList.addEventListener('calciteDropdownItemSelected', async event => {
+          const fieldName = event.target.getAttribute('data-field');
+          const field = getDatasetField(dataset, fieldName);
+          document.querySelector('#attributeListButton').innerHTML = fieldName;
 
-        // resetTabs(document.getElementById('widget'));
-        document.getElementById('widget').innerHTML = ''; // clear previous widget
-        document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
+          // Reset UI state
 
-        // clear previous filters
-        updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
-
-
-        // Numeric fields - histogram
-        if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
-          // Histogram
-          const container = document.createElement('div');
-          container.classList.add('histogramWidget');
-          document.getElementById('widget').appendChild(container);
-          // addTab('Graph', container, document.getElementById('widget'));
-
-          const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
-          if (histogramSlider.widget) {
-            if (histogramSlider.coverage < 1) {
-              widgetMessage.innerText = 'Graph values are approximate';
-            }
-
-            histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-              updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
-            });
+          // stop timeSlider playback
+          if (timeSlider && timeSlider.widget) {
+            timeSlider.widget.stop();
+            timeSlider = null;
           }
-        }
+
+          // resetTabs(document.getElementById('widget'));
+          document.getElementById('widget').innerHTML = ''; // clear previous widget
+          document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
+
+          // clear previous filters
+          updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
 
 
-        // Date fields - time slider
-        if (field.simpleType === 'date') {
-          // Time slider
-          const container = document.createElement('div');
-          container.classList.add('timesliderWidget');
-          document.getElementById('widget').appendChild(container);
-          // addTab('Graph', container, document.getElementById('widget'));
+          // Numeric fields - histogram
+          if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
+            // Histogram
+            const container = document.createElement('div');
+            container.classList.add('histogramWidget');
+            document.getElementById('widget').appendChild(container);
+            // addTab('Graph', container, document.getElementById('widget'));
 
-          timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
-          // set widget state
-          if (timeSlider.widget) {
-
-            // add a nested histogram
-            const histogramContainer = document.createElement('div');
-            histogramContainer.classList.add('miniHistogramWidget');
-            container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
-
-            const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
-
-            timeSlider.widget.watch("timeExtent", function(value){
-              // convert Date to unix time stamp with unary + operator
-              const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
-              // update layer view filter to reflect current timeExtent
-              updateLayerViewEffect(layerView, { where });
-            });
-          }
-        }
-
-        // All fields - value list
-        // if (field.simpleType === 'numeric' || field.simpleType === 'string') {
-          // Value list
-          const listContainer = document.createElement('div');
-          listContainer.classList.add('valueListWidget');
-
-          // Build filter/where clause and update layer
-          const onCheckboxChange = ({ checkboxes }) => {
-            let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
-            let where = '1=1';
-            if (checked.length > 0) {
-              const hasNull = checked.find(c => c.value == null) ? true : false;
-              checked = checked.filter(c => c.value != null);
-
-              let whereVals;
-              if (field.simpleType === 'date') {
-                whereVals = checked.map(c => +new Date(c.value));
-                where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
-              } else {
-                whereVals = checked.map(c => {
-                  if (typeof c.value === 'string') {
-                    return `'${c.value}'`
-                  } else {
-                    return c.value;
-                  }
-                });
-                where = `${fieldName} IN (${whereVals.join(', ')})`;
+            const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
+            if (histogramSlider.widget) {
+              if (histogramSlider.coverage < 1) {
+                widgetMessage.innerText = 'Graph values are approximate';
               }
 
-              if (hasNull) {
-                where = whereVals ? `${where} OR ` : '';
-                where = `${fieldName} IS NULL`; // need special SQL handling for null vales
-              }
+              histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
+                updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
+              });
             }
-            updateLayerViewEffect(layerView, { where, updateExtent: zoomToDataCheckbox.checked });
-          };
-
-          const { fieldStats } = await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
-
-          if (field.simpleType !== 'numeric' || // always add for strings and dates
-          fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
-          document.getElementById('widget').appendChild(listContainer);
-          // addTab('Values', listContainer, document.getElementById('widget'));
-        }
-        // }
-      });
-
-      // On-map UI widgets
-      view.ui.move('zoom', 'top-right');
-      view.ui.add('zoomToData', 'bottom-right');
-      const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
-      zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
-        updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
-      });
+          }
 
 
+          // Date fields - time slider
+          if (field.simpleType === 'date') {
+            // Time slider
+            const container = document.createElement('div');
+            container.classList.add('timesliderWidget');
+            document.getElementById('widget').appendChild(container);
+            // addTab('Graph', container, document.getElementById('widget'));
+
+            timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
+            // set widget state
+            if (timeSlider.widget) {
+
+              // add a nested histogram
+              const histogramContainer = document.createElement('div');
+              histogramContainer.classList.add('miniHistogramWidget');
+              container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
+
+              const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
+
+              timeSlider.widget.watch("timeExtent", function(value){
+                // convert Date to unix time stamp with unary + operator
+                const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
+                // update layer view filter to reflect current timeExtent
+                updateLayerViewEffect(layerView, { where });
+              });
+            }
+          }
+
+          // All fields - value list
+          // if (field.simpleType === 'numeric' || field.simpleType === 'string') {
+            // Value list
+            const listContainer = document.createElement('div');
+            listContainer.classList.add('valueListWidget');
+
+            // Build filter/where clause and update layer
+            const onCheckboxChange = ({ checkboxes }) => {
+              let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
+              let where = '1=1';
+              if (checked.length > 0) {
+                const hasNull = checked.find(c => c.value == null) ? true : false;
+                checked = checked.filter(c => c.value != null);
+
+                let whereVals;
+                if (field.simpleType === 'date') {
+                  whereVals = checked.map(c => +new Date(c.value));
+                  where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
+                } else {
+                  whereVals = checked.map(c => {
+                    if (typeof c.value === 'string') {
+                      return `'${c.value}'`
+                    } else {
+                      return c.value;
+                    }
+                  });
+                  where = `${fieldName} IN (${whereVals.join(', ')})`;
+                }
+
+                if (hasNull) {
+                  where = whereVals ? `${where} OR ` : '';
+                  where = `${fieldName} IS NULL`; // need special SQL handling for null vales
+                }
+              }
+              updateLayerViewEffect(layerView, { where, updateExtent: zoomToDataCheckbox.checked });
+            };
+
+            const { fieldStats } = await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
+
+            if (field.simpleType !== 'numeric' || // always add for strings and dates
+            fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
+            document.getElementById('widget').appendChild(listContainer);
+            // addTab('Values', listContainer, document.getElementById('widget'));
+          }
+          // }
+        });
+
+        // On-map UI widgets
+        view.ui.move('zoom', 'top-right');
+        view.ui.add('zoomToData', 'bottom-right');
+        const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
+        zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
+          updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
+        });
 
 
-      // put vars on window for debugging
-      Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
 
+
+        // put vars on window for debugging
+        Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
+      }
 
       async function loadDataset (args) {
         let dataset = {};
