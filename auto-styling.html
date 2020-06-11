@@ -456,12 +456,10 @@
             dataset = {attributes: {url: args.url}}
           } catch(e) { console.log('failed to load dataset from url:', args.url, e); }
         } else if (args.datasetId) { // dataset id provided directly
-          console.log('dataset')
           // https://opendataqa.arcgis.com/api/v3/datasets/97a641ac39904f349fb5fc25b94207f6
           const datasetURL = `https://opendata${args.env === 'qa' ? 'qa' : ''}.arcgis.com/api/v3/datasets/${args.datasetId}`;
           try {
             dataset = (await fetch(datasetURL).then(r => r.json())).data;
-            console.log(dataset)
           } catch(e) { console.log('failed to load dataset from id', args.datasetId, e); }
         } else if (args.datasetSlug) { // dataset slug provided as alternate
           // https://opendata.arcgis.com/api/v3/datasets?filter%5Bslug%5D=kingcounty%3A%3Aphoto-centers-for-2010-king-county-orthoimagery-project-ortho-image10-point
@@ -486,7 +484,6 @@
             }
 
             const geometryType = dataset.attributes.geometryType;
-            console.log('geometryType:', geometryType)
 
             if (geometryType === 'esriGeometryPoint') {
               symbol = { ...symbol, type: 'simple-marker', size: '4px' };
@@ -686,9 +683,6 @@
                       return;
                     }
 
-                    // const extent = webMercatorUtils.project(featureExtent.extent, layerView.view.spatialReference);
-                    // view.extent =
-                    // console.log(layerView.view.extent.contains(featureExtent), (featureExtent.width * featureExtent.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20);
                     if (!layerView.view.extent.contains(featureExtent) ||
                     (featureExtent.width * featureExtent.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
                       layerView.view.goTo(featureExtent, { duration: 350 });
