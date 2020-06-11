@@ -470,7 +470,7 @@
 
       let widget;
 
-      console.log('makeWidget() fieldType:', field.simpleType);
+      // console.log('makeWidget() fieldType:', field.simpleType);
 
       const query = layerView.layer.createQuery();
       const statquery = layerView.layer.createQuery();
@@ -972,8 +972,8 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       return loadModules(
         [`esri/renderers/smartMapping/creators/${type}`]
       ).then(([rendererCreator]) => {
-        console.log('rendererCreator:', rendererCreator);
-        console.log('props:', props);
+        // console.log('rendererCreator:', rendererCreator);
+        // console.log('props:', props);
         props.sizeOptimizationEnabled = true;
         // size: createAgeRenderer, createClassBreaksRenderer, createContinuousRenderer, createVisualVariables
         const creatorFn =
@@ -1014,15 +1014,30 @@ async function makeHistogram ({dataset, fieldName, layer, layerView, container, 
       // var galaxyBerriesScheme = colorSchemes.getSchemeByName({
       // var galaxyBerriesScheme = colorSchemes.getScheme({
 
-      // DOES NOT WORK
-      var newScheme = colorSchemes.getSchemeByName({
-        basemap: map.basemap,
-        geometryType: "point",
-        theme: "extremes",
-        name: "Purple and Green Extremes 4"
-      });
-      console.log('scheme:', newScheme)
+        var newScheme = colorSchemes.getSchemeByName({
+          // basemap: map.basemap,
+          basemapTheme: "dark",
+          geometryType: "point",
+          theme: "extremes",
+          name: "Red Extremes 1"
+        });
+        console.log('scheme:', newScheme)
 
+      // var schemes = colorSchemes.getSchemes({
+      //   // basemap: map.basemap,
+      //   basemapTheme: "dark",
+      //   geometryType: layer.geometryType,
+      //   theme: "extremes"
+      // });
+      // console.log('schemes:', schemes)
+
+      // var themes = colorSchemes.getThemes({
+      //   basemap: map.basemap,
+      //   // basemapTheme: "light",
+      //   // geometryType: layer.geometryType,
+      //   // theme: "extremes"
+      // });
+      // console.log('themes:', themes)
 
       // WORKS
       // var galaxyBerriesScheme = dotDensitySchemes.getSchemeByName({
