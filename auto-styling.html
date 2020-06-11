@@ -252,10 +252,10 @@
         datasetList.appendChild(opt);
       }
 
-      datasetList.addEventListener('change', event => {
-
+      datasetList.addEventListener('change', async event => {
+        var { layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' });
+        drawMap(layer, dataset);
       });
-
 
       // URL params
       const params = new URLSearchParams(window.location.search);
@@ -271,7 +271,7 @@
       }
       drawMap(layer, dataset)
 
-      function drawMap(layer, dataset) {
+      async function drawMap(layer, dataset) {
 
         const map = new Map({
           basemap: "dark-gray-vector",
