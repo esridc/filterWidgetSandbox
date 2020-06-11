@@ -230,6 +230,23 @@
       "esri/widgets/Legend",
     ]);
 
+
+    // data urls
+    var datasets = {
+      // globalTemps: "https://services.arcgis.com/jIL9msH9OI208GCb/arcgis/rest/services/Global_Temperatures_1880_to_2018/FeatureServer/0",
+      GlobalTemps: "https://services.arcgis.com/jIL9msH9OI208GCb/arcgis/rest/services/Global_Temperatures_1880_to_2018/FeatureServer/0?f=pjson",
+      Citclops: "https://opendata.arcgis.com/api/v3/datasets/8581a7460e144ae09ad25d47f8e82af8_0",
+    }
+
+    var datasetList = document.getElementById('datasetList');
+    for (let [key, value] of Object.entries(datasets)) {
+      // create new option element and add it to the dropdown
+      var opt = document.createElement('option');
+      opt.text = key;
+      opt.value = value;
+      datasetList.appendChild(opt);
+    }
+
     // URL params
     const params = new URLSearchParams(window.location.search);
     const datasetId = params.get('dataset');
@@ -1141,6 +1158,15 @@
   <body>
     <div id="sidebar">
       <div id="sidebarItems">
+
+        <!-- <calcite-dropdown type="hover" width="l" id="datasetList">
+          <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
+          <calcite-dropdown-group>
+          </calcite-dropdown-group>
+         </calcite-dropdown> -->
+
+        <select id="datasetList"></select>
+
         <div id="datasetName"></div>
         <div>
           <span id="orgName"></span>
