@@ -233,9 +233,8 @@
 
       // data urls
       var datasets = {
-        'GlobalTemps': "f0865e64712446e8aa2c8b810509d3fa_0",
-        'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
         'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
+        'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
         'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
         'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
         'Black Cat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
@@ -243,6 +242,7 @@
         'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
       }
 
+      // dataset switcher
       var datasetList = document.getElementById('datasetList');
       for (let [key, value] of Object.entries(datasets)) {
         // create new option element and add it to the dropdown
@@ -257,6 +257,36 @@
         drawMap(layer, dataset);
       });
 
+      // ramps
+      var ramps = [
+      "seq-browns-bright",
+      "seq-dark-to-light-magenta-bright",
+      "seq-dark-to-light-purple-bright",
+      "seq-dark-to-light-blue-bright",
+      "seq-dark-to-light-green-bright",
+      "seq-brown-to-tan-bright",
+      "seq-lightgray-blue-bright",
+      "seq-lightgray-green-bright",
+      "seq-lightgray-darkmagenta-bright",
+      "seq-yellow-darkblue-bright",
+      "seq-lightred-darkgray-bright"
+      ]
+
+      // color ramp switcher
+      var rampList = document.getElementById('rampList');
+      for (let [key, value] of Object.entries(ramps)) {
+        // create new option element and add it to the dropdown
+        var opt = document.createElement('option');
+        opt.text = key;
+        opt.value = value;
+        rampList.appendChild(opt);
+      }
+
+      rampList.addEventListener('change', async event => {
+        var ramp = await loadRamp({ ramp: event.target.value });
+        updateRamp(ramp);
+      });
+
       // URL params
       const params = new URLSearchParams(window.location.search);
       var env = 'prod';
@@ -269,9 +299,141 @@
         var datasetId = datasetList.options[datasetList.selectedIndex].value;
         var { layer, dataset } = await loadDataset({ datasetId: datasetId, env: env });
       }
+
+      // track widgets and state
+      var timeSlider = null;
+      var zoomToDataCheckbox;
+      var attributeList;
+
+      // add event listener to dropdown, to create visualizations
+      attributeList.addEventListener('calciteDropdownItemSelected', switchSelected);
+      async function switchSelected () {
+        console.log('dropdown item selected')
+        const fieldName = event.target.getAttribute('data-field');
+        console.log('dropdown item selected:', fieldName)
+        const field = getDatasetField(dataset, fieldName);
+        document.querySelector('#attributeListButton').innerHTML = fieldName;
+
+        // Reset UI state
+
+        // stop timeSlider playback
+        if (timeSlider && timeSlider.widget) {
+          timeSlider.widget.stop();
+          timeSlider = null;
+        }
+
+        // resetTabs(document.getElementById('widget'));
+        document.getElementById('widget').innerHTML = ''; // clear previous widget
+        document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
+
+        // clear previous filters
+        updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
+        console.log(1)
+
+        // Numeric fields - histogram
+        if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
+          // Histogram
+          const container = document.createElement('div');
+          container.classList.add('histogramWidget');
+          document.getElementById('widget').appendChild(container);
+          // addTab('Graph', container, document.getElementById('widget'));
+
+          const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
+          if (histogramSlider.widget) {
+            if (histogramSlider.coverage < 1) {
+              widgetMessage.innerText = 'Graph values are approximate';
+            }
+
+            histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
+              updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
+            });
+          }
+        }
+
+        console.log(2)
+
+        // Date fields - time slider
+        if (field.simpleType === 'date') {
+          // Time slider
+          const container = document.createElement('div');
+          container.classList.add('timesliderWidget');
+          document.getElementById('widget').appendChild(container);
+          // addTab('Graph', container, document.getElementById('widget'));
+
+          timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
+          // set widget state
+          if (timeSlider.widget) {
+
+            // add a nested histogram
+            const histogramContainer = document.createElement('div');
+            histogramContainer.classList.add('miniHistogramWidget');
+            container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
+
+            const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
+
+            timeSlider.widget.watch("timeExtent", function(value){
+              // convert Date to unix time stamp with unary + operator
+              const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
+              // update layer view filter to reflect current timeExtent
+              updateLayerViewEffect(layerView, { where });
+            });
+          }
+        }
+
+        // All fields - value list
+        // if (field.simpleType === 'numeric' || field.simpleType === 'string') {
+          // Value list
+          const listContainer = document.createElement('div');
+          listContainer.classList.add('valueListWidget');
+
+          // Build filter/where clause and update layer
+          const onCheckboxChange = ({ checkboxes }) => {
+            let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
+            let where = '1=1';
+            if (checked.length > 0) {
+              const hasNull = checked.find(c => c.value == null) ? true : false;
+              checked = checked.filter(c => c.value != null);
+
+              let whereVals;
+              if (field.simpleType === 'date') {
+                whereVals = checked.map(c => +new Date(c.value));
+                where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
+              } else {
+                whereVals = checked.map(c => {
+                  if (typeof c.value === 'string') {
+                    return `'${c.value}'`
+                  } else {
+                    return c.value;
+                  }
+                });
+                where = `${fieldName} IN (${whereVals.join(', ')})`;
+              }
+
+              if (hasNull) {
+                where = whereVals ? `${where} OR ` : '';
+                where = `${fieldName} IS NULL`; // need special SQL handling for null vales
+              }
+            }
+            updateLayerViewEffect(layerView, { where, updateExtent: zoomToDataCheckbox.checked });
+          };
+          console.log(3)
+
+          const { fieldStats } = await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
+          console.log(4)
+
+          if (field.simpleType !== 'numeric' || // always add for strings and dates
+          fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
+          document.getElementById('widget').appendChild(listContainer);
+          // addTab('Values', listContainer, document.getElementById('widget'));
+        }
+        // }
+      };
+
+
       drawMap(layer, dataset)
 
       async function drawMap(layer, dataset) {
+        console.log('drawmap')
 
         const map = new Map({
           basemap: "dark-gray-vector",
@@ -286,6 +448,14 @@
 
         const layerView = await view.whenLayerView(layer);
 
+        // On-map UI widgets
+        view.ui.move('zoom', 'top-right');
+        view.ui.add('zoomToData', 'bottom-right');
+        zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
+        zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
+          updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
+        });
+
         var legend = await new Legend({
           view: view,
           layerInfos: [{
@@ -293,8 +463,12 @@
             title: "Legend"
           }]
         });
-
         view.ui.add(legend, "bottom-right");
+
+        // put vars on window for debugging
+        Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
+
+
 
         // update layerview filter based on histogram widget, debounced
         const updateLayerViewWithHistogram = _.throttle(
@@ -308,143 +482,6 @@
         document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
         document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
         document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
-
-        const attributeList = updateAttributeList(dataset);
-
-        // widget state tracking
-        let timeSlider;
-
-        // add event listener to dropdown, to create visualizations
-        attributeList.addEventListener('calciteDropdownItemSelected', async event => {
-          const fieldName = event.target.getAttribute('data-field');
-          const field = getDatasetField(dataset, fieldName);
-          document.querySelector('#attributeListButton').innerHTML = fieldName;
-
-          // Reset UI state
-
-          // stop timeSlider playback
-          if (timeSlider && timeSlider.widget) {
-            timeSlider.widget.stop();
-            timeSlider = null;
-          }
-
-          // resetTabs(document.getElementById('widget'));
-          document.getElementById('widget').innerHTML = ''; // clear previous widget
-          document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
-
-          // clear previous filters
-          updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
-
-
-          // Numeric fields - histogram
-          if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
-            // Histogram
-            const container = document.createElement('div');
-            container.classList.add('histogramWidget');
-            document.getElementById('widget').appendChild(container);
-            // addTab('Graph', container, document.getElementById('widget'));
-
-            const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
-            if (histogramSlider.widget) {
-              if (histogramSlider.coverage < 1) {
-                widgetMessage.innerText = 'Graph values are approximate';
-              }
-
-              histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-                updateLayerViewWithHistogram(layerView, fieldName, histogramSlider.widget);
-              });
-            }
-          }
-
-
-          // Date fields - time slider
-          if (field.simpleType === 'date') {
-            // Time slider
-            const container = document.createElement('div');
-            container.classList.add('timesliderWidget');
-            document.getElementById('widget').appendChild(container);
-            // addTab('Graph', container, document.getElementById('widget'));
-
-            timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
-            // set widget state
-            if (timeSlider.widget) {
-
-              // add a nested histogram
-              const histogramContainer = document.createElement('div');
-              histogramContainer.classList.add('miniHistogramWidget');
-              container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
-
-              const miniHistogram = await createHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
-
-              timeSlider.widget.watch("timeExtent", function(value){
-                // convert Date to unix time stamp with unary + operator
-                const where = `${fieldName} BETWEEN ${+new Date(value.start)} AND ${+new Date(value.end)}`;
-                // update layer view filter to reflect current timeExtent
-                updateLayerViewEffect(layerView, { where });
-              });
-            }
-          }
-
-          // All fields - value list
-          // if (field.simpleType === 'numeric' || field.simpleType === 'string') {
-            // Value list
-            const listContainer = document.createElement('div');
-            listContainer.classList.add('valueListWidget');
-
-            // Build filter/where clause and update layer
-            const onCheckboxChange = ({ checkboxes }) => {
-              let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
-              let where = '1=1';
-              if (checked.length > 0) {
-                const hasNull = checked.find(c => c.value == null) ? true : false;
-                checked = checked.filter(c => c.value != null);
-
-                let whereVals;
-                if (field.simpleType === 'date') {
-                  whereVals = checked.map(c => +new Date(c.value));
-                  where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
-                } else {
-                  whereVals = checked.map(c => {
-                    if (typeof c.value === 'string') {
-                      return `'${c.value}'`
-                    } else {
-                      return c.value;
-                    }
-                  });
-                  where = `${fieldName} IN (${whereVals.join(', ')})`;
-                }
-
-                if (hasNull) {
-                  where = whereVals ? `${where} OR ` : '';
-                  where = `${fieldName} IS NULL`; // need special SQL handling for null vales
-                }
-              }
-              updateLayerViewEffect(layerView, { where, updateExtent: zoomToDataCheckbox.checked });
-            };
-
-            const { fieldStats } = await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
-
-            if (field.simpleType !== 'numeric' || // always add for strings and dates
-            fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
-            document.getElementById('widget').appendChild(listContainer);
-            // addTab('Values', listContainer, document.getElementById('widget'));
-          }
-          // }
-        });
-
-        // On-map UI widgets
-        view.ui.move('zoom', 'top-right');
-        view.ui.add('zoomToData', 'bottom-right');
-        const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
-        zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
-          updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
-        });
-
-
-
-
-        // put vars on window for debugging
-        Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
       }
 
       async function loadDataset (args) {
@@ -469,6 +506,8 @@
             dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
           } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
         }
+
+        attributeList = updateAttributeList(dataset)
 
         // if (typeof dataset.attributes.layer.drawingInfo !== 'undefined') {
           let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
@@ -590,635 +629,634 @@
         }
       }
 
-      // function valueIsNullish (value) {
-        //   // '<Null>'.match(/[^a-zA-Z0-9]*(.+)[^a-zA-Z0-9]*/)
-          //   return value == null ||
-          //     (typeof value === 'string' &&
-          //        value.trim() === '' || value.toLowerCase().
-          // }
+      // Add an entry to the attribute dropdown
+      function updateAttributeList (dataset) {
+        console.log('updateAttributeList')
+        // create <calcite-dropdown-item> for each attribute
+          const attributeList = document.querySelector('#attributeList > calcite-dropdown-group');
+          // clear existing entries
+          Array.from(attributeList.children)
+          .forEach(i => attributeList.removeChild(i))
+          const attributes = [
+          ...Object.entries(dataset.attributes.statistics.numeric || {}),
+          ...Object.entries(dataset.attributes.statistics.date || {}),
+          ...Object.entries(dataset.attributes.statistics.string || {})
+          ];
 
-          function updateAttributeList (dataset) {
-            // Attribute dropdown (numeric attributes only right now)
-            // create <calcite-dropdown-item> for each attribute
-              const attributeList = document.querySelector('#attributeList > calcite-dropdown-group');
-              const attributes = [
-              ...Object.entries(dataset.attributes.statistics.numeric || {}),
-              ...Object.entries(dataset.attributes.statistics.date || {}),
-              ...Object.entries(dataset.attributes.statistics.string || {})
-              ];
+          attributes
+          .map(([fieldName, { statistics: fieldStats }]) => [fieldName, fieldStats]) // grab stats
+          .filter(([fieldName, fieldStats]) => { // exclude fields with one value
+            return !fieldStats ||
+            !fieldStats.values ||
+            fieldStats.uniqueCount > 1 || // unique count reported as 0 for sampled data
+            fieldStats.values.min !== fieldStats.values.max
+          })
+          .forEach(([fieldName, fieldStats]) => {
+            // dataset.attributes.fieldNames
+            //   .map(fieldName => [fieldName, getDatasetField(dataset, fieldName)])
+            //   .filter(([fieldName, field]) => !field.statistics || field.statistics.values.min !== field.statistics.values.max)
+            //   .forEach(([fieldName, field]) => {
+              const field = getDatasetField(dataset, fieldName);
+              // const fieldStats = field.statistics.values;
+              const item = document.createElement('calcite-dropdown-item');
+              item.innerHTML = `${field.alias || fieldName}`;
+              if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
+                if (field.simpleType === 'numeric') {
+                  // TODO: vary precision based on value range
+                  item.innerHTML += `<br><small>(${fieldStats.values.min.toFixed(2)} to ${fieldStats.values.max.toFixed(2)})</small>`;
+                } else if (field.simpleType === 'date') {
+                  item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
+                }
+              } else if (fieldStats && fieldStats.uniqueCount && field.simpleType === 'string') {
+                item.innerHTML += ` (${fieldStats.uniqueCount} values)`;
+              }
 
-              attributes
-              .map(([fieldName, { statistics: fieldStats }]) => [fieldName, fieldStats]) // grab stats
-              .filter(([fieldName, fieldStats]) => { // exclude fields with one value
-                return !fieldStats ||
-                !fieldStats.values ||
-                fieldStats.uniqueCount > 1 || // unique count reported as 0 for sampled data
-                fieldStats.values.min !== fieldStats.values.max
-              })
-              .forEach(([fieldName, fieldStats]) => {
-                // dataset.attributes.fieldNames
-                //   .map(fieldName => [fieldName, getDatasetField(dataset, fieldName)])
-                //   .filter(([fieldName, field]) => !field.statistics || field.statistics.values.min !== field.statistics.values.max)
-                //   .forEach(([fieldName, field]) => {
-                  const field = getDatasetField(dataset, fieldName);
-                  // const fieldStats = field.statistics.values;
-                  const item = document.createElement('calcite-dropdown-item');
-                  item.innerHTML = `${field.alias || fieldName}`;
-                  if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
-                    if (field.simpleType === 'numeric') {
-                      // TODO: vary precision based on value range
-                      item.innerHTML += ` (${fieldStats.values.min.toFixed(2)} to ${fieldStats.values.max.toFixed(2)})`;
-                    } else if (field.simpleType === 'date') {
-                      item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
-                    }
-                  } else if (fieldStats && fieldStats.uniqueCount && field.simpleType === 'string') {
-                    item.innerHTML += ` (${fieldStats.uniqueCount} values)`;
-                  }
+              // add icon for field type
+              if (field.simpleType === 'numeric') {
+                item.iconEnd = 'number';
+              } else if (field.simpleType === 'string') {
+                item.iconEnd = 'description';
+              } else if (field.simpleType === 'date') {
+                item.iconEnd = 'calendar';
+              }
 
-                  // add icon for field type
-                  if (field.simpleType === 'numeric') {
-                    item.iconEnd = 'number';
-                  } else if (field.simpleType === 'string') {
-                    item.iconEnd = 'description';
-                  } else if (field.simpleType === 'date') {
-                    item.iconEnd = 'calendar';
-                  }
+              item.setAttribute('data-field', field.name);
+              attributeList.appendChild(item);
+            });
+            return attributeList;
+          }
 
-                  item.setAttribute('data-field', field.name);
-                  attributeList.appendChild(item);
+          async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = false } = {}) {
+            layerView.filter = null;
+
+            if (where !== undefined) {
+              if (where === null) {
+                layerView.effect = null;
+              } else {
+                layerView.effect = {
+                  filter: {
+                    where,
+                    // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
+                  },
+                  excludedEffect: 'grayscale(100%) opacity(15%)'
+                };
+              }
+            }
+
+            // adjust view extent (in or out) to fit all filtered data
+            if (updateExtent) {
+              try {
+                let featureExtent;
+
+                const queriedExtent = await layer.queryExtent({
+                  where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
+                  outSpatialReference: layerView.view.spatialReference
                 });
-                return attributeList;
-              }
 
-              async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = false } = {}) {
-                layerView.filter = null;
-
-                if (where !== undefined) {
-                  if (where === null) {
-                    layerView.effect = null;
-                  } else {
-                    layerView.effect = {
-                      filter: {
-                        where,
-                        // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
-                      },
-                      excludedEffect: 'grayscale(100%) opacity(15%)'
-                    };
-                  }
+                if (queriedExtent.count > 0) {
+                  featureExtent = queriedExtent.extent.expand(1.10);
+                } else {
+                  return;
                 }
 
-                // adjust view extent (in or out) to fit all filtered data
-                if (updateExtent) {
-                  try {
-                    let featureExtent;
-
-                    const queriedExtent = await layer.queryExtent({
-                      where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
-                      outSpatialReference: layerView.view.spatialReference
-                    });
-
-                    if (queriedExtent.count > 0) {
-                      featureExtent = queriedExtent.extent.expand(1.10);
-                    } else {
-                      return;
-                    }
-
-                    if (!layerView.view.extent.contains(featureExtent) ||
-                    (featureExtent.width * featureExtent.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
-                      layerView.view.goTo(featureExtent, { duration: 350 });
-                    }
-                  } catch(e) {
-                    console.log('could not query or project feature extent to update viewport', e);
-                  }
+                if (!layerView.view.extent.contains(featureExtent) ||
+                (featureExtent.width * featureExtent.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
+                  layerView.view.goTo(featureExtent, { duration: 350 });
                 }
+              } catch(e) {
+                console.log('could not query or project feature extent to update viewport', e);
               }
+            }
+          }
 
-              async function createHistogram ({dataset, fieldName, layer, layerView, container, slider = false }) {
-                // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
-                const parentContainer = container;
-                container = document.createElement('div');
-                parentContainer.appendChild(container);
+          async function createHistogram ({dataset, fieldName, layer, layerView, container, slider = false }) {
+            // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
+            const parentContainer = container;
+            container = document.createElement('div');
+            parentContainer.appendChild(container);
 
+            try {
+              const params = {
+                layer: layer,
+                field: fieldName,
+                numBins: 30
+              };
+
+              let values, source, coverage;
+              try {
+                values = await generateHistogram(params);
+                source = 'widget';
+                coverage = 1;
+              } catch(e) {
                 try {
-                  const params = {
-                    layer: layer,
-                    field: fieldName,
-                    numBins: 30
-                  };
+                  // histogram generation failed with automated server call, try using features from server query
+                  console.log('histogram generation failed with automated server call, try using features from server query');
+                  params.features = (await layer.queryFeatures()).features;
+                  const featureCount = await layer.queryFeatureCount();
+                  values = await generateHistogram(params);
+                  source = 'layerQuery';
+                  coverage = params.features.length / featureCount;
+                } catch(e) {
+                  // histogram generation failed with server call, try using features in layer view
+                  console.log('histogram generation failed with server call, try using features in layer view');
+                  params.features = (await layerView.queryFeatures()).features;
+                  const featureCount = await layer.queryFeatureCount();
+                  values = await generateHistogram(params);
+                  source = 'layerView';
+                  coverage = params.features.length / featureCount;
+                }
+              }
 
-                  let values, source, coverage;
-                  try {
-                    values = await generateHistogram(params);
-                    source = 'widget';
-                    coverage = 1;
-                  } catch(e) {
-                    try {
-                      // histogram generation failed with automated server call, try using features from server query
-                      console.log('histogram generation failed with automated server call, try using features from server query');
-                      params.features = (await layer.queryFeatures()).features;
-                      const featureCount = await layer.queryFeatureCount();
-                      values = await generateHistogram(params);
-                      source = 'layerQuery';
-                      coverage = params.features.length / featureCount;
-                    } catch(e) {
-                      // histogram generation failed with server call, try using features in layer view
-                      console.log('histogram generation failed with server call, try using features in layer view');
-                      params.features = (await layerView.queryFeatures()).features;
-                      const featureCount = await layer.queryFeatureCount();
-                      values = await generateHistogram(params);
-                      source = 'layerView';
-                      coverage = params.features.length / featureCount;
+              // Histogram widget (graph only, no range slider)
+              // const histogram = Histogram.fromHistogramResult(values);
+              // histogram.container = container;
+
+              // Determine if field is an integer
+              const field = getDatasetField(dataset, fieldName);
+              const integer = await datasetFieldIsInteger(field);
+              let widget;
+              if (slider) {
+                // Histogram range slider widget
+                widget = new HistogramRangeSlider({
+                  bins: values.bins,
+                  min: values.minValue,
+                  max: values.maxValue,
+                  values: [values.minValue, values.maxValue],
+                  precision: integer ? 0 : 2,
+                  container: container,
+                  excludedBarColor: "#dddddd",
+                  rangeType: "between",
+                  labelFormatFunction: (value, type) => {
+                    // apply date formatting to histogram
+                    if (field.simpleType == 'date') {
+                      return formatDate(value);
                     }
+                    return value;
                   }
+                });
+              } else {
+                // plain histogram, for miniHistogram nested in timeSlider
+                widget = new Histogram({
+                  bins: values.bins,
+                  min: values.minValue,
+                  max: values.maxValue,
+                  container: container,
+                  rangeType: "between",
+                });
+              }
+              return { widget, values, source, coverage };
+            }
+            catch(e) {
+              console.log('histogram generation failed', e);
+              return {};
+            }
+          }
 
-                  // Histogram widget (graph only, no range slider)
-                  // const histogram = Histogram.fromHistogramResult(values);
-                  // histogram.container = container;
+          async function createTimeSlider ({ dataset, fieldName, layerView, container }) {
+            try {
+              const field = getDatasetField(dataset, fieldName);
+              // let {min: startDate, max: endDate } = dataset.attributes.statistics.date[fieldname.toLowerCase()].statistics.values;
+              const startDate = new Date(field.statistics.values.min);
+              const endDate = new Date(field.statistics.values.max);
+              const widget = new TimeSlider({
+                container: container,
+                //   view: view,
+                mode: "time-window",
+                fullTimeExtent: {
+                  start: startDate,
+                  end: endDate,
+                },
+                values: [
+                startDate,
+                endDate
+                ],
+              });
 
-                  // Determine if field is an integer
-                  const field = getDatasetField(dataset, fieldName);
-                  const integer = await datasetFieldIsInteger(field);
-                  let widget;
-                  if (slider) {
-                    // Histogram range slider widget
-                    widget = new HistogramRangeSlider({
-                      bins: values.bins,
-                      min: values.minValue,
-                      max: values.maxValue,
-                      values: [values.minValue, values.maxValue],
-                      precision: integer ? 0 : 2,
-                      container: container,
-                      excludedBarColor: "#dddddd",
-                      rangeType: "between",
-                      labelFormatFunction: (value, type) => {
-                        // apply date formatting to histogram
-                        if (field.simpleType == 'date') {
-                          return formatDate(value);
-                        }
-                        return value;
-                      }
-                    });
+              // handle play button behavior
+              let selectionWasFullExtent;
+              widget.watch('viewModel.state', function(state){
+                if (state == "playing") {
+                  // check values (date selection) against fullTimeExtent
+                  // convert to numeric values with unary + operator to check equivalence (with a 10% tolerance)
+                  if ( +this.values[0] == +this.fullTimeExtent.start &&
+                  Math.abs(+this.values[1] - +this.fullTimeExtent.end) <
+                  (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start))/ 10 ) {
+                    // make a note
+                    selectionWasFullExtent = true;
+                    // set new selection end to 10% through the date range
+                    this.values[1] = new Date(+new Date(this.fullTimeExtent.start) + (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start)) / 10);
+                  }
+                }
+                else if (state == "ready" && selectionWasFullExtent) {
+                  // reset note
+                  selectionWasFullExtent = false;
+                  this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
+                }
+              });
+
+              return { widget };
+            }
+            catch(e) {
+              console.log(e);
+              return {};
+            }
+          }
+
+          async function createValueList ({ dataset, fieldName, layer, container, onUpdateValues }) {
+            // <label>
+              //   <calcite-checkbox checked="true"></calcite-checkbox> Switch is on
+              // </label>
+
+              const list = document.createElement('div');
+
+              const header = document.createElement('div');
+              header.innerText = 'Values';
+              header.classList.add('sidebarItemHeader');
+              list.appendChild(header);
+
+              const checkboxList = document.createElement('div');
+              list.appendChild(checkboxList);
+
+              const field = getDatasetField(dataset, fieldName);
+              const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+              // if (!stats.topValues || stats.topValues.length === 0) {
+                //   return {};
+                // }
+
+                let checkboxListenerDisabled = false;
+
+                function addValueListCheckbox (value, checkboxes) {
+                  const checkbox = document.createElement('calcite-checkbox');
+                  checkbox.value = JSON.stringify(value);
+
+                  // const labelText = document.createTextNode(`${value.value} (${(value.pct * 100).toFixed(2)}% of records)`);
+                  const labelText = document.createElement('span');
+
+                  // handle null-ish, date, and other field formatting
+                  if (value.value == null || (typeof value.value === 'string' && value.value.trim() === '')) {
+                    labelText.innerHTML = '<span style="color: gray">No value</span>';
+                  } else if (field.simpleType === 'date') {
+                    labelText.innerHTML = formatDate(value.value);
                   } else {
-                    // plain histogram, for miniHistogram nested in timeSlider
-                    widget = new Histogram({
-                      bins: values.bins,
-                      min: values.minValue,
-                      max: values.maxValue,
-                      container: container,
-                      rangeType: "between",
-                    });
+                    labelText.innerHTML = value.value;
                   }
-                  return { widget, values, source, coverage };
-                }
-                catch(e) {
-                  console.log('histogram generation failed', e);
-                  return {};
-                }
-              }
 
-              async function createTimeSlider ({ dataset, fieldName, layerView, container }) {
-                try {
-                  const field = getDatasetField(dataset, fieldName);
-                  // let {min: startDate, max: endDate } = dataset.attributes.statistics.date[fieldname.toLowerCase()].statistics.values;
-                  const startDate = new Date(field.statistics.values.min);
-                  const endDate = new Date(field.statistics.values.max);
-                  const widget = new TimeSlider({
-                    container: container,
-                    //   view: view,
-                    mode: "time-window",
-                    fullTimeExtent: {
-                      start: startDate,
-                      end: endDate,
-                    },
-                    values: [
-                    startDate,
-                    endDate
-                    ],
-                  });
+                  const labelSubText = document.createElement('span');
+                  labelSubText.classList.add('subText');
+                  labelSubText.innerText = value.pct != null ? `${(value.pct * 100).toFixed(2)}%` : '';
 
-                  // handle play button behavior
-                  let selectionWasFullExtent;
-                  widget.watch('viewModel.state', function(state){
-                    if (state == "playing") {
-                      // check values (date selection) against fullTimeExtent
-                      // convert to numeric values with unary + operator to check equivalence (with a 10% tolerance)
-                      if ( +this.values[0] == +this.fullTimeExtent.start &&
-                      Math.abs(+this.values[1] - +this.fullTimeExtent.end) <
-                      (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start))/ 10 ) {
-                        // make a note
-                        selectionWasFullExtent = true;
-                        // set new selection end to 10% through the date range
-                        this.values[1] = new Date(+new Date(this.fullTimeExtent.start) + (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start)) / 10);
-                      }
-                    }
-                    else if (state == "ready" && selectionWasFullExtent) {
-                      // reset note
-                      selectionWasFullExtent = false;
-                      this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
-                    }
-                  });
+                  const onlyLink = document.createElement('a');
+                  onlyLink.classList.add('valueListSideLink');
+                  onlyLink.href = '#';
+                  onlyLink.innerText = 'only';
 
-                  return { widget };
-                }
-                catch(e) {
-                  console.log(e);
-                  return {};
-                }
-              }
+                  const label = document.createElement('label');
+                  label.classList.add('valueListCheckbox');
+                  label.appendChild(checkbox);
+                  label.appendChild(labelText);
+                  label.appendChild(labelSubText);
+                  label.appendChild(onlyLink);
 
-              async function createValueList ({ dataset, fieldName, layer, container, onUpdateValues }) {
-                // <label>
-                  //   <calcite-checkbox checked="true"></calcite-checkbox> Switch is on
-                  // </label>
-
-                  const list = document.createElement('div');
-
-                  const header = document.createElement('div');
-                  header.innerText = 'Values';
-                  header.classList.add('sidebarItemHeader');
-                  list.appendChild(header);
-
-                  const checkboxList = document.createElement('div');
-                  list.appendChild(checkboxList);
-
-                  const field = getDatasetField(dataset, fieldName);
-                  const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
-                  // if (!stats.topValues || stats.topValues.length === 0) {
-                    //   return {};
-                    // }
-
-                    let checkboxListenerDisabled = false;
-
-                    function addValueListCheckbox (value, checkboxes) {
-                      const checkbox = document.createElement('calcite-checkbox');
-                      checkbox.value = JSON.stringify(value);
-
-                      // const labelText = document.createTextNode(`${value.value} (${(value.pct * 100).toFixed(2)}% of records)`);
-                      const labelText = document.createElement('span');
-
-                      // handle null-ish, date, and other field formatting
-                      if (value.value == null || (typeof value.value === 'string' && value.value.trim() === '')) {
-                        labelText.innerHTML = '<span style="color: gray">No value</span>';
-                      } else if (field.simpleType === 'date') {
-                        labelText.innerHTML = formatDate(value.value);
-                      } else {
-                        labelText.innerHTML = value.value;
-                      }
-
-                      const labelSubText = document.createElement('span');
-                      labelSubText.classList.add('subText');
-                      labelSubText.innerText = value.pct != null ? `${(value.pct * 100).toFixed(2)}%` : '';
-
-                      const onlyLink = document.createElement('a');
-                      onlyLink.classList.add('valueListSideLink');
-                      onlyLink.href = '#';
-                      onlyLink.innerText = 'only';
-
-                      const label = document.createElement('label');
-                      label.classList.add('valueListCheckbox');
-                      label.appendChild(checkbox);
-                      label.appendChild(labelText);
-                      label.appendChild(labelSubText);
-                      label.appendChild(onlyLink);
-
-                      checkbox.addEventListener('calciteCheckboxChange', (event) => {
-                        if (!checkboxListenerDisabled) {
-                          onUpdateValues({ checkboxes, event });
-                        }
-                      });
-
-                      onlyLink.addEventListener('click', event => {
-                        // disable change listener to keep it from firing as all checkboxes are updated
-                        checkboxListenerDisabled = true;
-
-                        // check selected box and un-check all others
-                        checkboxes.forEach(c => {
-                          c.checked = c === checkbox ? true : false;
-                        });
-
-                        // re-enable listener and invoke update handler just once
-                        checkboxListenerDisabled = false;
-                        onUpdateValues({ checkboxes, event });
-                      });
-
-                      checkboxList.appendChild(label);
-                      return checkbox;
-                    }
-
-                    // clear all link
-                    const clearLink = document.createElement('a');
-                    clearLink.classList.add('valueListSideLink');
-                    clearLink.href = '#';
-                    clearLink.innerText = 'clear';
-                    header.appendChild(clearLink);
-
-                    clearLink.addEventListener('click', event => {
-                      // disable change listener to keep it from firing as all checkboxes are updated
-                      checkboxListenerDisabled = true;
-
-                      // un-check all checkboxes
-                      checkboxes.forEach(c => c.checked = false);
-
-                      // re-enable listener and invoke update handler just once
-                      checkboxListenerDisabled = false;
+                  checkbox.addEventListener('calciteCheckboxChange', (event) => {
+                    if (!checkboxListenerDisabled) {
                       onUpdateValues({ checkboxes, event });
+                    }
+                  });
+
+                  onlyLink.addEventListener('click', event => {
+                    // disable change listener to keep it from firing as all checkboxes are updated
+                    checkboxListenerDisabled = true;
+
+                    // check selected box and un-check all others
+                    checkboxes.forEach(c => {
+                      c.checked = c === checkbox ? true : false;
                     });
 
-                    const checkboxes = [];
-                    checkboxes.push(...stats.topValues.map(value => addValueListCheckbox(value, checkboxes)));
+                    // re-enable listener and invoke update handler just once
+                    checkboxListenerDisabled = false;
+                    onUpdateValues({ checkboxes, event });
+                  });
 
-                    container.appendChild(list);
+                  checkboxList.appendChild(label);
+                  return checkbox;
+                }
 
-                    // search box
-                    if (stats.uniqueCount > stats.topValues.length) {
-                      const searchBox = document.createElement('input');
-                      searchBox.classList.add('valueListSearchBox');
-                      searchBox.type = 'text';
-                      searchBox.placeholder = `Search ${fieldName} values...`;
-                      list.appendChild(searchBox);
+                // clear all link
+                const clearLink = document.createElement('a');
+                clearLink.classList.add('valueListSideLink');
+                clearLink.href = '#';
+                clearLink.innerText = 'clear';
+                header.appendChild(clearLink);
 
-                      function searchSource(params) {
-                        return async function doSearch(query, callback) {
-                          const where = field.simpleType === 'date' ?
-                          `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')` : // convert dates to strings
-                          `lower(${fieldName}) LIKE lower('%${query}%')`
+                clearLink.addEventListener('click', event => {
+                  // disable change listener to keep it from firing as all checkboxes are updated
+                  checkboxListenerDisabled = true;
 
-                          const { features } = await layer.queryFeatures({
-                            // where: `lower(${fieldName}) LIKE lower('%${query}%')`,
-                            // where: `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')`,
-                            where,
-                            orderByFields: [fieldName],
-                            outFields: [fieldName],
-                            returnDistinctValues: true,
-                            num: 10
-                          });
+                  // un-check all checkboxes
+                  checkboxes.forEach(c => c.checked = false);
 
-                          // de-dupe results (by turning into set)
-                          const vals = new Set(features
-                          .map(f => f.attributes[fieldName])
-                          .map(v => typeof v === 'string' ? v.trim() : v)
-                          .filter(value => {
-                            // exclude any results already selected in checkboxes
-                            return !checkboxes
-                            .filter(c => c.checked)
-                            .map(c => JSON.parse(c.value))
-                            .map(v => v.value)
-                            .includes(value);
-                          })
-                          );
+                  // re-enable listener and invoke update handler just once
+                  checkboxListenerDisabled = false;
+                  onUpdateValues({ checkboxes, event });
+                });
 
-                          // return values
-                          callback([...vals].map(value => ({
-                            value,
-                            label: field.simpleType === 'date' ? formatDate(value) : value
-                          })));
-                        };
-                      }
+                const checkboxes = [];
+                checkboxes.push(...stats.topValues.map(value => addValueListCheckbox(value, checkboxes)));
 
-                      autocomplete(searchBox, { hint: false, clearOnSelected: true, }, [{
-                        source: searchSource({ hitsPerPage: 5 }),
-                        displayKey: 'label',
-                        templates: {
-                          suggestion: function(suggestion) {
-                            return suggestion.label;
-                          }
-                        }
-                      }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
-                        // console.log(event, suggestion, dataset, context);
-                        let checkbox = checkboxes
-                        .filter(c => !c.checked)
-                        .find(c => JSON.parse(c.value).value === suggestion.value);
+                container.appendChild(list);
 
-                        if (!checkbox) {
-                          checkbox = addValueListCheckbox(suggestion, checkboxes);
-                          checkboxes.push(checkbox);
-                        }
+                // search box
+                if (stats.uniqueCount > stats.topValues.length) {
+                  const searchBox = document.createElement('input');
+                  searchBox.classList.add('valueListSearchBox');
+                  searchBox.type = 'text';
+                  searchBox.placeholder = `Search ${fieldName} values...`;
+                  list.appendChild(searchBox);
 
-                        checkbox.checked = true;
-                        // TODO: why is this necessary? calcite event listener doesn't fire when checkbox added and set to checked in this flow
-                        onUpdateValues({ checkboxes });
+                  function searchSource(params) {
+                    return async function doSearch(query, callback) {
+                      const where = field.simpleType === 'date' ?
+                      `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')` : // convert dates to strings
+                      `lower(${fieldName}) LIKE lower('%${query}%')`
+
+                      const { features } = await layer.queryFeatures({
+                        // where: `lower(${fieldName}) LIKE lower('%${query}%')`,
+                        // where: `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')`,
+                        where,
+                        orderByFields: [fieldName],
+                        outFields: [fieldName],
+                        returnDistinctValues: true,
+                        num: 10
                       });
-                    }
 
-                    return { checkboxes, fieldStats: stats };
-                  }
+                      // de-dupe results (by turning into set)
+                      const vals = new Set(features
+                      .map(f => f.attributes[fieldName])
+                      .map(v => typeof v === 'string' ? v.trim() : v)
+                      .filter(value => {
+                        // exclude any results already selected in checkboxes
+                        return !checkboxes
+                        .filter(c => c.checked)
+                        .map(c => JSON.parse(c.value))
+                        .map(v => v.value)
+                        .includes(value);
+                      })
+                      );
 
-                  function resetTabs (container) {
-                    // const widget = container.getElementById('widget');
-                    const template = document.querySelector('#widgetTemplate').content.cloneNode(true);
-                    container.innerHTML = '';
-                    container.appendChild(template);
-                  }
-
-                  function addTab (title, content, container) {
-                    const navContainer = container.querySelector('calcite-tab-nav');
-                    const navItem = document.createElement('calcite-tab-title');
-                    navItem.innerHTML = title;
-                    navContainer.appendChild(navItem);
-
-                    const contentContainer = container.querySelector('calcite-tabs');
-                    const contentItem = document.createElement('calcite-tab');
-                    contentItem.appendChild(content);
-                    contentContainer.appendChild(contentItem);
-                  }
-
-                  function createSlider (field, layer, container) {
-                    // <calcite-slider
-                    //   min="1"
-                    //   max="100"
-                    //   minValue="50"
-                    //   maxValue="85"
-                    //   step="1"
-                    //   min-label="Temperature (lower)"
-                    //   max-label="Temperature (upper)"
-                    // ></calcite-slider>
-                  }
-
-                  function formatDate (timestamp) {
-                    const date = new Date(timestamp);
-                    return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
-                  }
-
-                  // from ember-arcgis-layout-cards/addon/utils/esri/renderer.js
-                  const POINT_RENDERER = {
-                    type: 'simple',
-                    label: '',
-                    description: '',
-                    symbol: {
-                      color: [49, 130, 189, 0.9],
-                      size: 6,
-                      angle: 0,
-                      xoffset: 0,
-                      yoffset: 0,
-                      type: 'simple-marker',
-                      style: 'circle',
-                      outline: {
-                        color: [220, 220, 220, 1],
-                        width: 0.6,
-                        type: 'simple-line',
-                        style: 'solid'
-                      }
-                    }
-                  };
-
-                  const LINE_RENDERER = {
-                    type: 'simple',
-                    symbol: {
-                      color: [0, 122, 194, 0.9],
-                      width: 2,
-                      type: 'simple-line',
-                      style: 'solid'
-                    }
-                  };
-
-                  const POLYGON_RENDERER = {
-                    type: 'simple',
-                    symbol: {
-                      color: [49, 130, 189, 0.75],
-                      outline: {
-                        color: [220, 220, 220, 1],
-                        width: 0.6,
-                        type: 'simple-line',
-                        style: 'solid'
-                      },
-                      type: 'simple-fill',
-                      style: 'solid'
-                    }
-                  };
-
-                  window.getDefaultRenderer = getDefaultRenderer;
-                  function getDefaultRenderer (geometryType) {
-                    switch (geometryType) {
-                      case 'polygon':
-                      return POLYGON_RENDERER;
-                      case 'point':
-                      case 'multipoint':
-                      return POINT_RENDERER;
-                      case 'polyline':
-                      return LINE_RENDERER;
-                      case 'line':
-                      return LINE_RENDERER;
-                      default:
-                      console.error(`Unknown geometry type (${geometryType})`);
-                    }
-                  }
-
-                  function simpleFieldType (fieldType) {
-                    const fieldTypes = {
-                      esriFieldTypeGlobalID: 'text',
-                      esriFieldTypeGUID: 'text',
-                      esriFieldTypeDate: 'date-time',
-                      esriFieldTypeString: 'string',
-                      esriFieldTypeSingle: 'number',
-                      esriFieldTypeFloat: 'number',
-                      esriFieldTypeDouble: 'number',
-                      esriFieldTypeInteger: 'number',
-                      esriFieldTypeSmallInteger: 'number',
-                      esriFieldTypeOID: 'number',
+                      // return values
+                      callback([...vals].map(value => ({
+                        value,
+                        label: field.simpleType === 'date' ? formatDate(value) : value
+                      })));
                     };
-
-                    return fieldTypes[fieldType] || '';
                   }
 
-                  window.createSmartMapRenderer = createSmartMapRenderer;
-                  function createSmartMapRenderer (layer, field, view) {
-                    // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
-                    // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
-                    // `createClassBreaksRenderer` does not support this parameter but will ignore it.
-                    const statistics = (field.statistics && field.statistics.duration > 0) ? field.statistics : null;
-                    const props = {
-                      layer,
-                      field: field.name,
-                      statistics,
-                      view
-                    };
-                    // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
-                    const geomType = layer.geometryType;
-                    const fieldType = simpleFieldType(field.type);
-                    switch (fieldType) {
-                      case 'string':
-                      props.numTypes = 12;
-                      if (props.statistics) {
-                        // reformat stats to match `UniqueValuesResult` structure expected by `type` renderers
-                        props.statistics = { uniqueValueInfos: props.statistics.values };
+                  autocomplete(searchBox, { hint: false, clearOnSelected: true, }, [{
+                    source: searchSource({ hitsPerPage: 5 }),
+                    displayKey: 'label',
+                    templates: {
+                      suggestion: function(suggestion) {
+                        return suggestion.label;
                       }
-                      return loadRenderer('type', props);
-                      case 'number':
-                      if (geomType === 'polygon') {
-                        return loadRenderer('color', props);
-                      }
-                      if (geomType === 'point' || geomType === 'multipoint' || geomType === 'polyline') {
-                        return loadRenderer('size', props);
-                      }
-                      // return reject('Field/geometry type not supported.');
-                      case 'date-time':
-                      return loadRenderer('color', props);
-                      default:
-                      // return reject('Field type not supported.');
                     }
+                  }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
+                    // console.log(event, suggestion, dataset, context);
+                    let checkbox = checkboxes
+                    .filter(c => !c.checked)
+                    .find(c => JSON.parse(c.value).value === suggestion.value);
+
+                    if (!checkbox) {
+                      checkbox = addValueListCheckbox(suggestion, checkboxes);
+                      checkboxes.push(checkbox);
+                    }
+
+                    checkbox.checked = true;
+                    // TODO: why is this necessary? calcite event listener doesn't fire when checkbox added and set to checked in this flow
+                    onUpdateValues({ checkboxes });
+                  });
+                }
+
+                return { checkboxes, fieldStats: stats };
+              }
+
+              function resetTabs (container) {
+                // const widget = container.getElementById('widget');
+                const template = document.querySelector('#widgetTemplate').content.cloneNode(true);
+                container.innerHTML = '';
+                container.appendChild(template);
+              }
+
+              function addTab (title, content, container) {
+                const navContainer = container.querySelector('calcite-tab-nav');
+                const navItem = document.createElement('calcite-tab-title');
+                navItem.innerHTML = title;
+                navContainer.appendChild(navItem);
+
+                const contentContainer = container.querySelector('calcite-tabs');
+                const contentItem = document.createElement('calcite-tab');
+                contentItem.appendChild(content);
+                contentContainer.appendChild(contentItem);
+              }
+
+              function createSlider (field, layer, container) {
+                // <calcite-slider
+                //   min="1"
+                //   max="100"
+                //   minValue="50"
+                //   maxValue="85"
+                //   step="1"
+                //   min-label="Temperature (lower)"
+                //   max-label="Temperature (upper)"
+                // ></calcite-slider>
+              }
+
+              function formatDate (timestamp) {
+                const date = new Date(timestamp);
+                return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+              }
+
+              // from ember-arcgis-layout-cards/addon/utils/esri/renderer.js
+              const POINT_RENDERER = {
+                type: 'simple',
+                label: '',
+                description: '',
+                symbol: {
+                  color: [49, 130, 189, 0.9],
+                  size: 6,
+                  angle: 0,
+                  xoffset: 0,
+                  yoffset: 0,
+                  type: 'simple-marker',
+                  style: 'circle',
+                  outline: {
+                    color: [220, 220, 220, 1],
+                    width: 0.6,
+                    type: 'simple-line',
+                    style: 'solid'
                   }
+                }
+              };
 
-                  function loadRenderer (type, props) {
-                    return loadModules(
-                    [`esri/renderers/smartMapping/creators/${type}`]
-                    ).then(([rendererCreator]) => {
-                      const creatorFn = type === 'color'
-                      ? 'createContinuousRenderer'
-                      : type === 'size'
-                      ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
-                      : 'createRenderer';
-                      return rendererCreator[creatorFn](props)
-                      .then(response => response.renderer);
-                    });
+              const LINE_RENDERER = {
+                type: 'simple',
+                symbol: {
+                  color: [0, 122, 194, 0.9],
+                  width: 2,
+                  type: 'simple-line',
+                  style: 'solid'
+                }
+              };
+
+              const POLYGON_RENDERER = {
+                type: 'simple',
+                symbol: {
+                  color: [49, 130, 189, 0.75],
+                  outline: {
+                    color: [220, 220, 220, 1],
+                    width: 0.6,
+                    type: 'simple-line',
+                    style: 'solid'
+                  },
+                  type: 'simple-fill',
+                  style: 'solid'
+                }
+              };
+
+              window.getDefaultRenderer = getDefaultRenderer;
+              function getDefaultRenderer (geometryType) {
+                switch (geometryType) {
+                  case 'polygon':
+                  return POLYGON_RENDERER;
+                  case 'point':
+                  case 'multipoint':
+                  return POINT_RENDERER;
+                  case 'polyline':
+                  return LINE_RENDERER;
+                  case 'line':
+                  return LINE_RENDERER;
+                  default:
+                  console.error(`Unknown geometry type (${geometryType})`);
+                }
+              }
+
+              function simpleFieldType (fieldType) {
+                const fieldTypes = {
+                  esriFieldTypeGlobalID: 'text',
+                  esriFieldTypeGUID: 'text',
+                  esriFieldTypeDate: 'date-time',
+                  esriFieldTypeString: 'string',
+                  esriFieldTypeSingle: 'number',
+                  esriFieldTypeFloat: 'number',
+                  esriFieldTypeDouble: 'number',
+                  esriFieldTypeInteger: 'number',
+                  esriFieldTypeSmallInteger: 'number',
+                  esriFieldTypeOID: 'number',
+                };
+
+                return fieldTypes[fieldType] || '';
+              }
+
+              window.createSmartMapRenderer = createSmartMapRenderer;
+              function createSmartMapRenderer (layer, field, view) {
+                // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
+                // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
+                // `createClassBreaksRenderer` does not support this parameter but will ignore it.
+                const statistics = (field.statistics && field.statistics.duration > 0) ? field.statistics : null;
+                const props = {
+                  layer,
+                  field: field.name,
+                  statistics,
+                  view
+                };
+                // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
+                const geomType = layer.geometryType;
+                const fieldType = simpleFieldType(field.type);
+                switch (fieldType) {
+                  case 'string':
+                  props.numTypes = 12;
+                  if (props.statistics) {
+                    // reformat stats to match `UniqueValuesResult` structure expected by `type` renderers
+                    props.statistics = { uniqueValueInfos: props.statistics.values };
                   }
+                  return loadRenderer('type', props);
+                  case 'number':
+                  if (geomType === 'polygon') {
+                    return loadRenderer('color', props);
+                  }
+                  if (geomType === 'point' || geomType === 'multipoint' || geomType === 'polyline') {
+                    return loadRenderer('size', props);
+                  }
+                  // return reject('Field/geometry type not supported.');
+                  case 'date-time':
+                  return loadRenderer('color', props);
+                  default:
+                  // return reject('Field type not supported.');
+                }
+              }
 
-                })();
-              </script>
-            </head>
+              function loadRenderer (type, props) {
+                return loadModules(
+                [`esri/renderers/smartMapping/creators/${type}`]
+                ).then(([rendererCreator]) => {
+                  const creatorFn = type === 'color'
+                  ? 'createContinuousRenderer'
+                  : type === 'size'
+                  ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
+                  : 'createRenderer';
+                  return rendererCreator[creatorFn](props)
+                  .then(response => response.renderer);
+                });
+              }
 
-            <body>
-              <div id="sidebar">
-                <div id="sidebarItems">
+            })();
+          </script>
+        </head>
 
-                  <!-- <calcite-dropdown type="hover" width="l" id="datasetList">
-                    <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
-                    <calcite-dropdown-group>
-                    </calcite-dropdown-group>
-                  </calcite-dropdown> -->
+        <body>
+          <div id="sidebar">
+            <div id="sidebarItems">
 
-                  <select id="datasetList"></select>
+              <!-- <calcite-dropdown type="hover" width="l" id="datasetList">
+                <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
+                <calcite-dropdown-group>
+                </calcite-dropdown-group>
+              </calcite-dropdown> -->
 
-                  <div id="datasetName"></div>
-                  <div>
-                    <span id="orgName"></span>
-                    <span id="recordCount"></span>
-                  </div>
+              <select id="datasetList"></select>
+              <select id="rampList"></select>
+              <select id="themeList"></select>
 
-                  <calcite-dropdown type="hover" width="l" id="attributeList">
-                    <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
-                    <calcite-dropdown-group>
-                    </calcite-dropdown-group>
-                  </calcite-dropdown>
-
-                  <div id="widget">
-                  </div>
-
-                  <template id="widgetTemplate">
-                    <calcite-tabs>
-                      <calcite-tab-nav slot="tab-nav">
-                      </calcite-tab-nav>
-                    </calcite-tabs>
-                  </template>
-
-                  <div id="widgetMessage"></div>
-
-                </div>
+              <div id="datasetName"></div>
+              <div>
+                <span id="orgName"></span>
+                <span id="recordCount"></span>
               </div>
-              <div id="viewDiv"></div>
-              <div id="zoomToData" class="esri-widget">
-                <label>
-                  <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
-                </label>
+
+              <calcite-dropdown type="hover" width="l" id="attributeList">
+                <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
+                <calcite-dropdown-group>
+                </calcite-dropdown-group>
+              </calcite-dropdown>
+
+              <div id="widget">
               </div>
-            </body>
-            </html>
+
+              <template id="widgetTemplate">
+                <calcite-tabs>
+                  <calcite-tab-nav slot="tab-nav">
+                  </calcite-tab-nav>
+                </calcite-tabs>
+              </template>
+
+              <div id="widgetMessage"></div>
+
+            </div>
+          </div>
+          <div id="viewDiv"></div>
+          <div id="zoomToData" class="esri-widget">
+            <label>
+              <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
+            </label>
+          </div>
+        </body>
+        </html>
