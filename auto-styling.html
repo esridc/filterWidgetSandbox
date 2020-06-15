@@ -350,8 +350,6 @@
           }
         }
 
-        console.log(2)
-
         // Date fields - time slider
         if (field.simpleType === 'date') {
           // Time slider
@@ -434,9 +432,7 @@
           if (field.simpleType !== 'numeric' || // always add for strings and dates
           fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
           document.getElementById('widget').appendChild(listContainer);
-          // addTab('Values', listContainer, document.getElementById('widget'));
         }
-        // }
       };
 
 
@@ -871,400 +867,393 @@
         }
 
         async function createValueList ({ dataset, fieldName, layer, container, onUpdateValues }) {
-          // <label>
-            //   <calcite-checkbox checked="true"></calcite-checkbox> Switch is on
-            // </label>
+          const list = document.createElement('div');
 
-            const list = document.createElement('div');
+          const header = document.createElement('div');
+          header.innerText = 'Values';
+          header.classList.add('sidebarItemHeader');
+          list.appendChild(header);
 
-            const header = document.createElement('div');
-            header.innerText = 'Values';
-            header.classList.add('sidebarItemHeader');
-            list.appendChild(header);
+          const checkboxList = document.createElement('div');
+          list.appendChild(checkboxList);
 
-            const checkboxList = document.createElement('div');
-            list.appendChild(checkboxList);
+          const field = getDatasetField(dataset, fieldName);
+          const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
 
-            const field = getDatasetField(dataset, fieldName);
-            const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
-            // if (!stats.topValues || stats.topValues.length === 0) {
-              //   return {};
-              // }
+          let checkboxListenerDisabled = false;
 
-              let checkboxListenerDisabled = false;
+          function addValueListCheckbox (value, checkboxes) {
+            const checkbox = document.createElement('calcite-checkbox');
+            checkbox.value = JSON.stringify(value);
 
-              function addValueListCheckbox (value, checkboxes) {
-                const checkbox = document.createElement('calcite-checkbox');
-                checkbox.value = JSON.stringify(value);
+            // const labelText = document.createTextNode(`${value.value} (${(value.pct * 100).toFixed(2)}% of records)`);
+            const labelText = document.createElement('span');
 
-                // const labelText = document.createTextNode(`${value.value} (${(value.pct * 100).toFixed(2)}% of records)`);
-                const labelText = document.createElement('span');
+            // handle null-ish, date, and other field formatting
+            if (value.value == null || (typeof value.value === 'string' && value.value.trim() === '')) {
+              labelText.innerHTML = '<span style="color: gray">No value</span>';
+            } else if (field.simpleType === 'date') {
+              labelText.innerHTML = formatDate(value.value);
+            } else {
+              labelText.innerHTML = value.value;
+            }
 
-                // handle null-ish, date, and other field formatting
-                if (value.value == null || (typeof value.value === 'string' && value.value.trim() === '')) {
-                  labelText.innerHTML = '<span style="color: gray">No value</span>';
-                } else if (field.simpleType === 'date') {
-                  labelText.innerHTML = formatDate(value.value);
-                } else {
-                  labelText.innerHTML = value.value;
-                }
+            const labelSubText = document.createElement('span');
+            labelSubText.classList.add('subText');
+            labelSubText.innerText = value.pct != null ? `${(value.pct * 100).toFixed(2)}%` : '';
 
-                const labelSubText = document.createElement('span');
-                labelSubText.classList.add('subText');
-                labelSubText.innerText = value.pct != null ? `${(value.pct * 100).toFixed(2)}%` : '';
+            const onlyLink = document.createElement('a');
+            onlyLink.classList.add('valueListSideLink');
+            onlyLink.href = '#';
+            onlyLink.innerText = 'only';
 
-                const onlyLink = document.createElement('a');
-                onlyLink.classList.add('valueListSideLink');
-                onlyLink.href = '#';
-                onlyLink.innerText = 'only';
+            const label = document.createElement('label');
+            label.classList.add('valueListCheckbox');
+            label.appendChild(checkbox);
+            label.appendChild(labelText);
+            label.appendChild(labelSubText);
+            label.appendChild(onlyLink);
 
-                const label = document.createElement('label');
-                label.classList.add('valueListCheckbox');
-                label.appendChild(checkbox);
-                label.appendChild(labelText);
-                label.appendChild(labelSubText);
-                label.appendChild(onlyLink);
-
-                checkbox.addEventListener('calciteCheckboxChange', (event) => {
-                  if (!checkboxListenerDisabled) {
-                    onUpdateValues({ checkboxes, event });
-                  }
-                });
-
-                onlyLink.addEventListener('click', event => {
-                  // disable change listener to keep it from firing as all checkboxes are updated
-                  checkboxListenerDisabled = true;
-
-                  // check selected box and un-check all others
-                  checkboxes.forEach(c => {
-                    c.checked = c === checkbox ? true : false;
-                  });
-
-                  // re-enable listener and invoke update handler just once
-                  checkboxListenerDisabled = false;
-                  onUpdateValues({ checkboxes, event });
-                });
-
-                checkboxList.appendChild(label);
-                return checkbox;
-              }
-
-              // clear all link
-              const clearLink = document.createElement('a');
-              clearLink.classList.add('valueListSideLink');
-              clearLink.href = '#';
-              clearLink.innerText = 'clear';
-              header.appendChild(clearLink);
-
-              clearLink.addEventListener('click', event => {
-                // disable change listener to keep it from firing as all checkboxes are updated
-                checkboxListenerDisabled = true;
-
-                // un-check all checkboxes
-                checkboxes.forEach(c => c.checked = false);
-
-                // re-enable listener and invoke update handler just once
-                checkboxListenerDisabled = false;
+            checkbox.addEventListener('calciteCheckboxChange', (event) => {
+              if (!checkboxListenerDisabled) {
                 onUpdateValues({ checkboxes, event });
+              }
+            });
+
+            onlyLink.addEventListener('click', event => {
+              // disable change listener to keep it from firing as all checkboxes are updated
+              checkboxListenerDisabled = true;
+
+              // check selected box and un-check all others
+              checkboxes.forEach(c => {
+                c.checked = c === checkbox ? true : false;
               });
 
-              const checkboxes = [];
-              checkboxes.push(...stats.topValues.map(value => addValueListCheckbox(value, checkboxes)));
+              // re-enable listener and invoke update handler just once
+              checkboxListenerDisabled = false;
+              onUpdateValues({ checkboxes, event });
+            });
 
-              container.appendChild(list);
+            checkboxList.appendChild(label);
+            return checkbox;
+          }
 
-              // search box
-              if (stats.uniqueCount > stats.topValues.length) {
-                const searchBox = document.createElement('input');
-                searchBox.classList.add('valueListSearchBox');
-                searchBox.type = 'text';
-                searchBox.placeholder = `Search ${fieldName} values...`;
-                list.appendChild(searchBox);
+          // clear all link
+          const clearLink = document.createElement('a');
+          clearLink.classList.add('valueListSideLink');
+          clearLink.href = '#';
+          clearLink.innerText = 'clear';
+          header.appendChild(clearLink);
 
-                function searchSource(params) {
-                  return async function doSearch(query, callback) {
-                    const where = field.simpleType === 'date' ?
-                    `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')` : // convert dates to strings
-                    `lower(${fieldName}) LIKE lower('%${query}%')`
+          clearLink.addEventListener('click', event => {
+            // disable change listener to keep it from firing as all checkboxes are updated
+            checkboxListenerDisabled = true;
 
-                    const { features } = await layer.queryFeatures({
-                      // where: `lower(${fieldName}) LIKE lower('%${query}%')`,
-                      // where: `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')`,
-                      where,
-                      orderByFields: [fieldName],
-                      outFields: [fieldName],
-                      returnDistinctValues: true,
-                      num: 10
-                    });
+            // un-check all checkboxes
+            checkboxes.forEach(c => c.checked = false);
 
-                    // de-dupe results (by turning into set)
-                    const vals = new Set(features
-                    .map(f => f.attributes[fieldName])
-                    .map(v => typeof v === 'string' ? v.trim() : v)
-                    .filter(value => {
-                      // exclude any results already selected in checkboxes
-                      return !checkboxes
-                      .filter(c => c.checked)
-                      .map(c => JSON.parse(c.value))
-                      .map(v => v.value)
-                      .includes(value);
-                    })
-                    );
+            // re-enable listener and invoke update handler just once
+            checkboxListenerDisabled = false;
+            onUpdateValues({ checkboxes, event });
+          });
 
-                    // return values
-                    callback([...vals].map(value => ({
-                      value,
-                      label: field.simpleType === 'date' ? formatDate(value) : value
-                    })));
-                  };
-                }
+          const checkboxes = [];
+          checkboxes.push(...stats.topValues.map(value => addValueListCheckbox(value, checkboxes)));
 
-                autocomplete(searchBox, { hint: false, clearOnSelected: true, }, [{
-                  source: searchSource({ hitsPerPage: 5 }),
-                  displayKey: 'label',
-                  templates: {
-                    suggestion: function(suggestion) {
-                      return suggestion.label;
-                    }
-                  }
-                }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
-                  // console.log(event, suggestion, dataset, context);
-                  let checkbox = checkboxes
-                  .filter(c => !c.checked)
-                  .find(c => JSON.parse(c.value).value === suggestion.value);
+          container.appendChild(list);
 
-                  if (!checkbox) {
-                    checkbox = addValueListCheckbox(suggestion, checkboxes);
-                    checkboxes.push(checkbox);
-                  }
+          // search box
+          if (stats.uniqueCount > stats.topValues.length) {
+            const searchBox = document.createElement('input');
+            searchBox.classList.add('valueListSearchBox');
+            searchBox.type = 'text';
+            searchBox.placeholder = `Search ${fieldName} values...`;
+            list.appendChild(searchBox);
 
-                  checkbox.checked = true;
-                  // TODO: why is this necessary? calcite event listener doesn't fire when checkbox added and set to checked in this flow
-                  onUpdateValues({ checkboxes });
+            function searchSource(params) {
+              return async function doSearch(query, callback) {
+                const where = field.simpleType === 'date' ?
+                `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')` : // convert dates to strings
+                `lower(${fieldName}) LIKE lower('%${query}%')`
+
+                const { features } = await layer.queryFeatures({
+                  // where: `lower(${fieldName}) LIKE lower('%${query}%')`,
+                  // where: `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')`,
+                  where,
+                  orderByFields: [fieldName],
+                  outFields: [fieldName],
+                  returnDistinctValues: true,
+                  num: 10
                 });
-              }
 
-              return { checkboxes, fieldStats: stats };
-            }
+                // de-dupe results (by turning into set)
+                const vals = new Set(features
+                .map(f => f.attributes[fieldName])
+                .map(v => typeof v === 'string' ? v.trim() : v)
+                .filter(value => {
+                  // exclude any results already selected in checkboxes
+                  return !checkboxes
+                  .filter(c => c.checked)
+                  .map(c => JSON.parse(c.value))
+                  .map(v => v.value)
+                  .includes(value);
+                })
+                );
 
-            function resetTabs (container) {
-              // const widget = container.getElementById('widget');
-              const template = document.querySelector('#widgetTemplate').content.cloneNode(true);
-              container.innerHTML = '';
-              container.appendChild(template);
-            }
-
-            function addTab (title, content, container) {
-              const navContainer = container.querySelector('calcite-tab-nav');
-              const navItem = document.createElement('calcite-tab-title');
-              navItem.innerHTML = title;
-              navContainer.appendChild(navItem);
-
-              const contentContainer = container.querySelector('calcite-tabs');
-              const contentItem = document.createElement('calcite-tab');
-              contentItem.appendChild(content);
-              contentContainer.appendChild(contentItem);
-            }
-
-            function createSlider (field, layer, container) {
-              // <calcite-slider
-              //   min="1"
-              //   max="100"
-              //   minValue="50"
-              //   maxValue="85"
-              //   step="1"
-              //   min-label="Temperature (lower)"
-              //   max-label="Temperature (upper)"
-              // ></calcite-slider>
-            }
-
-            function formatDate (timestamp) {
-              const date = new Date(timestamp);
-              return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
-            }
-
-            // from ember-arcgis-layout-cards/addon/utils/esri/renderer.js
-            const POINT_RENDERER = {
-              type: 'simple',
-              label: '',
-              description: '',
-              symbol: {
-                color: [49, 130, 189, 0.9],
-                size: 6,
-                angle: 0,
-                xoffset: 0,
-                yoffset: 0,
-                type: 'simple-marker',
-                style: 'circle',
-                outline: {
-                  color: [220, 220, 220, 1],
-                  width: 0.6,
-                  type: 'simple-line',
-                  style: 'solid'
-                }
-              }
-            };
-
-            const LINE_RENDERER = {
-              type: 'simple',
-              symbol: {
-                color: [0, 122, 194, 0.9],
-                width: 2,
-                type: 'simple-line',
-                style: 'solid'
-              }
-            };
-
-            const POLYGON_RENDERER = {
-              type: 'simple',
-              symbol: {
-                color: [49, 130, 189, 0.75],
-                outline: {
-                  color: [220, 220, 220, 1],
-                  width: 0.6,
-                  type: 'simple-line',
-                  style: 'solid'
-                },
-                type: 'simple-fill',
-                style: 'solid'
-              }
-            };
-
-            window.getDefaultRenderer = getDefaultRenderer;
-            function getDefaultRenderer (geometryType) {
-              switch (geometryType) {
-                case 'polygon':
-                return POLYGON_RENDERER;
-                case 'point':
-                case 'multipoint':
-                return POINT_RENDERER;
-                case 'polyline':
-                return LINE_RENDERER;
-                case 'line':
-                return LINE_RENDERER;
-                default:
-                console.error(`Unknown geometry type (${geometryType})`);
-              }
-            }
-
-            function simpleFieldType (fieldType) {
-              const fieldTypes = {
-                esriFieldTypeGlobalID: 'text',
-                esriFieldTypeGUID: 'text',
-                esriFieldTypeDate: 'date-time',
-                esriFieldTypeString: 'string',
-                esriFieldTypeSingle: 'number',
-                esriFieldTypeFloat: 'number',
-                esriFieldTypeDouble: 'number',
-                esriFieldTypeInteger: 'number',
-                esriFieldTypeSmallInteger: 'number',
-                esriFieldTypeOID: 'number',
+                // return values
+                callback([...vals].map(value => ({
+                  value,
+                  label: field.simpleType === 'date' ? formatDate(value) : value
+                })));
               };
-
-              return fieldTypes[fieldType] || '';
             }
 
-            window.createSmartMapRenderer = createSmartMapRenderer;
-            function createSmartMapRenderer (layer, field, view) {
-              // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
-              // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
-              // `createClassBreaksRenderer` does not support this parameter but will ignore it.
-              const statistics = (field.statistics && field.statistics.duration > 0) ? field.statistics : null;
-              const props = {
-                layer,
-                field: field.name,
-                statistics,
-                view
-              };
-              // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
-              const geomType = layer.geometryType;
-              const fieldType = simpleFieldType(field.type);
-              switch (fieldType) {
-                case 'string':
-                props.numTypes = 12;
-                if (props.statistics) {
-                  // reformat stats to match `UniqueValuesResult` structure expected by `type` renderers
-                  props.statistics = { uniqueValueInfos: props.statistics.values };
+            autocomplete(searchBox, { hint: false, clearOnSelected: true, }, [{
+              source: searchSource({ hitsPerPage: 5 }),
+              displayKey: 'label',
+              templates: {
+                suggestion: function(suggestion) {
+                  return suggestion.label;
                 }
-                return loadRenderer('type', props);
-                case 'number':
-                if (geomType === 'polygon') {
-                  return loadRenderer('color', props);
-                }
-                if (geomType === 'point' || geomType === 'multipoint' || geomType === 'polyline') {
-                  return loadRenderer('size', props);
-                }
-                // return reject('Field/geometry type not supported.');
-                case 'date-time':
-                return loadRenderer('color', props);
-                default:
-                // return reject('Field type not supported.');
               }
+            }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
+              // console.log(event, suggestion, dataset, context);
+              let checkbox = checkboxes
+              .filter(c => !c.checked)
+              .find(c => JSON.parse(c.value).value === suggestion.value);
+
+              if (!checkbox) {
+                checkbox = addValueListCheckbox(suggestion, checkboxes);
+                checkboxes.push(checkbox);
+              }
+
+              checkbox.checked = true;
+              // TODO: why is this necessary? calcite event listener doesn't fire when checkbox added and set to checked in this flow
+              onUpdateValues({ checkboxes });
+            });
+          }
+
+          return { checkboxes, fieldStats: stats };
+        }
+
+        function resetTabs (container) {
+          // const widget = container.getElementById('widget');
+          const template = document.querySelector('#widgetTemplate').content.cloneNode(true);
+          container.innerHTML = '';
+          container.appendChild(template);
+        }
+
+        function addTab (title, content, container) {
+          const navContainer = container.querySelector('calcite-tab-nav');
+          const navItem = document.createElement('calcite-tab-title');
+          navItem.innerHTML = title;
+          navContainer.appendChild(navItem);
+
+          const contentContainer = container.querySelector('calcite-tabs');
+          const contentItem = document.createElement('calcite-tab');
+          contentItem.appendChild(content);
+          contentContainer.appendChild(contentItem);
+        }
+
+        function createSlider (field, layer, container) {
+          // <calcite-slider
+          //   min="1"
+          //   max="100"
+          //   minValue="50"
+          //   maxValue="85"
+          //   step="1"
+          //   min-label="Temperature (lower)"
+          //   max-label="Temperature (upper)"
+          // ></calcite-slider>
+        }
+
+        function formatDate (timestamp) {
+          const date = new Date(timestamp);
+          return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+        }
+
+        // from ember-arcgis-layout-cards/addon/utils/esri/renderer.js
+        const POINT_RENDERER = {
+          type: 'simple',
+          label: '',
+          description: '',
+          symbol: {
+            color: [49, 130, 189, 0.9],
+            size: 6,
+            angle: 0,
+            xoffset: 0,
+            yoffset: 0,
+            type: 'simple-marker',
+            style: 'circle',
+            outline: {
+              color: [220, 220, 220, 1],
+              width: 0.6,
+              type: 'simple-line',
+              style: 'solid'
             }
+          }
+        };
 
-            function loadRenderer (type, props) {
-              return loadModules(
-              [`esri/renderers/smartMapping/creators/${type}`]
-              ).then(([rendererCreator]) => {
-                const creatorFn = type === 'color'
-                ? 'createContinuousRenderer'
-                : type === 'size'
-                ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
-                : 'createRenderer';
-                return rendererCreator[creatorFn](props)
-                .then(response => response.renderer);
-              });
+        const LINE_RENDERER = {
+          type: 'simple',
+          symbol: {
+            color: [0, 122, 194, 0.9],
+            width: 2,
+            type: 'simple-line',
+            style: 'solid'
+          }
+        };
+
+        const POLYGON_RENDERER = {
+          type: 'simple',
+          symbol: {
+            color: [49, 130, 189, 0.75],
+            outline: {
+              color: [220, 220, 220, 1],
+              width: 0.6,
+              type: 'simple-line',
+              style: 'solid'
+            },
+            type: 'simple-fill',
+            style: 'solid'
+          }
+        };
+
+        window.getDefaultRenderer = getDefaultRenderer;
+        function getDefaultRenderer (geometryType) {
+          switch (geometryType) {
+            case 'polygon':
+            return POLYGON_RENDERER;
+            case 'point':
+            case 'multipoint':
+            return POINT_RENDERER;
+            case 'polyline':
+            return LINE_RENDERER;
+            case 'line':
+            return LINE_RENDERER;
+            default:
+            console.error(`Unknown geometry type (${geometryType})`);
+          }
+        }
+
+        function simpleFieldType (fieldType) {
+          const fieldTypes = {
+            esriFieldTypeGlobalID: 'text',
+            esriFieldTypeGUID: 'text',
+            esriFieldTypeDate: 'date-time',
+            esriFieldTypeString: 'string',
+            esriFieldTypeSingle: 'number',
+            esriFieldTypeFloat: 'number',
+            esriFieldTypeDouble: 'number',
+            esriFieldTypeInteger: 'number',
+            esriFieldTypeSmallInteger: 'number',
+            esriFieldTypeOID: 'number',
+          };
+
+          return fieldTypes[fieldType] || '';
+        }
+
+        window.createSmartMapRenderer = createSmartMapRenderer;
+        function createSmartMapRenderer (layer, field, view) {
+          // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
+          // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
+          // `createClassBreaksRenderer` does not support this parameter but will ignore it.
+          const statistics = (field.statistics && field.statistics.duration > 0) ? field.statistics : null;
+          const props = {
+            layer,
+            field: field.name,
+            statistics,
+            view
+          };
+          // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
+          const geomType = layer.geometryType;
+          const fieldType = simpleFieldType(field.type);
+          switch (fieldType) {
+            case 'string':
+            props.numTypes = 12;
+            if (props.statistics) {
+              // reformat stats to match `UniqueValuesResult` structure expected by `type` renderers
+              props.statistics = { uniqueValueInfos: props.statistics.values };
             }
+            return loadRenderer('type', props);
+            case 'number':
+            if (geomType === 'polygon') {
+              return loadRenderer('color', props);
+            }
+            if (geomType === 'point' || geomType === 'multipoint' || geomType === 'polyline') {
+              return loadRenderer('size', props);
+            }
+            // return reject('Field/geometry type not supported.');
+            case 'date-time':
+            return loadRenderer('color', props);
+            default:
+            // return reject('Field type not supported.');
+          }
+        }
 
-          })();
-        </script>
-      </head>
+        function loadRenderer (type, props) {
+          return loadModules(
+          [`esri/renderers/smartMapping/creators/${type}`]
+          ).then(([rendererCreator]) => {
+            const creatorFn = type === 'color'
+            ? 'createContinuousRenderer'
+            : type === 'size'
+            ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
+            : 'createRenderer';
+            return rendererCreator[creatorFn](props)
+            .then(response => response.renderer);
+          });
+        }
 
-      <body>
-        <div id="sidebar">
-          <div id="sidebarItems">
+      })();
+    </script>
+  </head>
 
-            <!-- <calcite-dropdown type="hover" width="l" id="datasetList">
-              <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
-              <calcite-dropdown-group>
-              </calcite-dropdown-group>
-            </calcite-dropdown> -->
+  <body>
+    <div id="sidebar">
+      <div id="sidebarItems">
 
-            <select id="datasetList"></select>
-            <select id="rampList"></select>
-            <select id="themeList"></select>
+        <!-- <calcite-dropdown type="hover" width="l" id="datasetList">
+          <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
+          <calcite-dropdown-group>
+          </calcite-dropdown-group>
+        </calcite-dropdown> -->
 
-            <div id="datasetName"></div>
-            <div>
-              <span id="orgName"></span>
-              <span id="recordCount"></span>
-            </div>
+        <select id="datasetList"></select>
+        <select id="rampList"></select>
+        <select id="themeList"></select>
 
-            <calcite-dropdown type="hover" width="l" id="attributeList">
-              <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
-              <calcite-dropdown-group>
-              </calcite-dropdown-group>
-            </calcite-dropdown>
-
-            <div id="widget">
-            </div>
-
-            <template id="widgetTemplate">
-              <calcite-tabs>
-                <calcite-tab-nav slot="tab-nav">
-                </calcite-tab-nav>
-              </calcite-tabs>
-            </template>
-
-            <div id="widgetMessage"></div>
-
-          </div>
+        <div id="datasetName"></div>
+        <div>
+          <span id="orgName"></span>
+          <span id="recordCount"></span>
         </div>
-        <div id="viewDiv"></div>
-        <div id="zoomToData" class="esri-widget">
-          <label>
-            <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
-          </label>
+
+        <calcite-dropdown type="hover" width="l" id="attributeList">
+          <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
+          <calcite-dropdown-group>
+          </calcite-dropdown-group>
+        </calcite-dropdown>
+
+        <div id="widget">
         </div>
-      </body>
-      </html>
+
+        <template id="widgetTemplate">
+          <calcite-tabs>
+            <calcite-tab-nav slot="tab-nav">
+            </calcite-tab-nav>
+          </calcite-tabs>
+        </template>
+
+        <div id="widgetMessage"></div>
+
+      </div>
+    </div>
+    <div id="viewDiv"></div>
+    <div id="zoomToData" class="esri-widget">
+      <label>
+        <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
+      </label>
+    </div>
+  </body>
+  </html>
