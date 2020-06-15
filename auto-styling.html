@@ -253,7 +253,7 @@
       }
 
       datasetList.addEventListener('change', async event => {
-        var { layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' });
+        ({ layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' }));
         drawMap(layer, dataset);
       });
 
@@ -287,23 +287,25 @@
         updateRamp(ramp);
       });
 
+      // track widgets and state
+      var timeSlider = null;
+      var dataset = null;
+      var layer = null;
+      var zoomToDataCheckbox;
+      var attributeList;
+
       // URL params
       const params = new URLSearchParams(window.location.search);
       var env = 'prod';
       if (Array.from(params).length != 0) {
         var datasetId = params.get('dataset');
         const datasetSlug = params.get('slug');
-        var { layer, dataset } = await loadDataset({ datasetId: datasetId, datasetSlug: datasetSlug, env: env });
+        ({ layer, dataset } = await loadDataset({ datasetId: datasetId, datasetSlug: datasetSlug, env: env }));
         env = params.get('env');
       } else {
         var datasetId = datasetList.options[datasetList.selectedIndex].value;
-        var { layer, dataset } = await loadDataset({ datasetId: datasetId, env: env });
+        ({ layer, dataset } = await loadDataset({ datasetId: datasetId, env: env }));
       }
-
-      // track widgets and state
-      var timeSlider = null;
-      var zoomToDataCheckbox;
-      var attributeList;
 
       // add event listener to dropdown, to create visualizations
       attributeList.addEventListener('calciteDropdownItemSelected', switchSelected);
@@ -491,7 +493,6 @@
       }
 
       async function loadDataset (args) {
-        let dataset = {};
         if (args.url) { // dataset url provided directly
           const datasetURL = args.url;
           try {
