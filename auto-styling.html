@@ -310,9 +310,7 @@
       // add event listener to dropdown, to create visualizations
       attributeList.addEventListener('calciteDropdownItemSelected', switchSelected);
       async function switchSelected () {
-        console.log('dropdown item selected')
         const fieldName = event.target.getAttribute('data-field');
-        console.log('dropdown item selected:', fieldName)
         const field = getDatasetField(dataset, fieldName);
         document.querySelector('#attributeListButton').innerHTML = fieldName;
 
@@ -330,7 +328,6 @@
 
         // clear previous filters
         updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
-        console.log(1)
 
         // Numeric fields - histogram
         if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
@@ -418,18 +415,10 @@
           };
 
           try {
-            console.log('trying fieldStats:')
-            console.log('dataset:', dataset)
-            console.log('dataset.name:', dataset.name)
-            console.log('fieldName:', fieldName)
-            console.log('layer:', layer)
-            console.log('container:', listContainer)
             var { fieldStats } = await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
           } catch(e) {
-            console.log('nope')
             throw new Error(e)
           }
-          console.log('fieldStats?', fieldStats)
 
           if (field.simpleType !== 'numeric' || // always add for strings and dates
           fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
@@ -441,19 +430,15 @@
       drawMap(layer, dataset)
 
       async function drawMap(layer, dataset) {
-        console.log('drawmap')
-
         const map = new Map({
           basemap: "dark-gray-vector",
           layers: layer
         });
-
         const view = new MapView({
           container: "viewDiv",
           map: map,
           extent: getDatasetExtent(dataset)
         });
-
         const layerView = await view.whenLayerView(layer);
 
         // On-map UI widgets
@@ -636,7 +621,6 @@
 
     // Add an entry to the attribute dropdown
     function updateAttributeList (dataset) {
-      console.log('updateAttributeList')
       // create <calcite-dropdown-item> for each attribute
         const attributeList = document.querySelector('#attributeList > calcite-dropdown-group');
         // clear existing entries
