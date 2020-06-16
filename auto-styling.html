@@ -217,6 +217,8 @@
       uniqueValues,
       webMercatorUtils,
       Legend,
+      Renderer,
+      jsonUtils,
       ] = await loadModules([
       "esri/Map",
       "esri/views/MapView",
@@ -229,6 +231,8 @@
       "esri/renderers/smartMapping/statistics/uniqueValues",
       "esri/geometry/support/webMercatorUtils",
       "esri/widgets/Legend",
+      "esri/renderers/Renderer",
+      "esri/renderers/support/jsonUtils",
       ]);
 
 
@@ -526,27 +530,17 @@
             symbol = { ...symbol, type: 'simple-fill' };
           }
 
-        //   if (predefinedStyle) {
-        //     renderer = predefinedStyle.renderer;
-        //     if (renderer.symbol.type == "esriPMS") {
-        //       renderer.symbol.type = "picture-marker";
-        //       if (renderer.symbol.imageData.slice(0,5) !== 'data:') {
-        //         // delete(renderer.symbol.imageData);
-        //         renderer.symbol.url = renderer.symbol.imageData;
-        //         // renderer.symbol.url = 'data:' + renderer.symbol.contentType + ',' + renderer.symbol.imageData;
-        //         // renderer.symbol = 'data:' + renderer.symbol.contentType + ',' + renderer.symbol.imageData;
-        //       }
-        //     }
-        //   }
-        // } else {
-
-          renderer = { type: 'simple', symbol };
-        // }
-          console.log('symbol:', renderer.symbol)
-          layer = await new FeatureLayer({
-            renderer: renderer,
-            url: dataset.attributes.url
-          });
+          if (predefinedStyle) {
+            layer = await new FeatureLayer({
+              renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+              url: dataset.attributes.url
+            });
+          } else {
+          // otherwise do nothing, and the FeatureLayer constructor makes it own
+            layer = await new FeatureLayer({
+              url: dataset.attributes.url
+            });
+          }
 
           layer.minScale = 0; // draw at all scales
           layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
