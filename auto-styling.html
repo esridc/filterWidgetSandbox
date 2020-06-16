@@ -530,17 +530,21 @@
             symbol = { ...symbol, type: 'simple-fill' };
           }
 
-          if (predefinedStyle) {
-            layer = await new FeatureLayer({
-              renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+          // if (predefinedStyle) {
+          //   layer = await new FeatureLayer({
+          //     renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+          //     url: dataset.attributes.url
+          //   });
+          // } else {
+          // // otherwise do nothing, and the FeatureLayer constructor makes it own
+          //   layer = await new FeatureLayer({
+          //     url: dataset.attributes.url
+          //   });
+          // }
+
+          layer = await new FeatureLayer({
               url: dataset.attributes.url
-            });
-          } else {
-          // otherwise do nothing, and the FeatureLayer constructor makes it own
-            layer = await new FeatureLayer({
-              url: dataset.attributes.url
-            });
-          }
+          });
 
           layer.minScale = 0; // draw at all scales
           layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
