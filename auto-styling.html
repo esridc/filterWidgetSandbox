@@ -540,16 +540,33 @@
 
       // analyze a dataset and choose an initial best-guess symbol scheme for it
       function guessSymbology(dataset) {
+
         const geometryType = dataset.attributes.geometryType;
         console.log('dataset:', dataset.attributes.name, 'layer:', layer)
         console.log('geometryType:', geometryType)
         let symbol;
+
         if (geometryType === 'esriGeometryPoint') {
           symbol = {type: 'simple-marker', size: '4px' };
+
+          // scale point size based on viewport size, number of points, and "clumpiness" of the data,
+          // in order to reduce overlap of points
+
+          // if there's still a lot of points, adjust opacity to show points through each other
+
+          // pick a color scheme based on distribution of the data:
+          // if a linear distribution, choose a linear–
+          // if a log or exp distribution, choose log or exp –
+          // if a normal distribution or something similar, choose "extremes"
+
+          // choose colors based on background theme – dark on light, light on dark
+
         }
+
         else if (geometryType === 'esriGeometryPolyline') {
           symbol = {type: 'simple-line', width: '4px' };
         }
+
         else if (geometryType === 'esriGeometryPolygon') {
           symbol = {type: 'simple-fill' };
         }
