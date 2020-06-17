@@ -524,6 +524,7 @@
           // }
 
           layer = await new FeatureLayer({
+              renderer: { type: 'simple', symbol },
               url: dataset.attributes.url
           });
 
