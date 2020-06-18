@@ -170,8 +170,13 @@
         // clear previous filters
         updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
 
+        widgetMessage.innerText = 'Drawing '+fieldName+'.';
+        // guess at a style for this field
+        autoStyle(fieldName, dataset)
+
         // Numeric fields - histogram
         if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
+          widgetMessage.innerText += '\nLooks like numbers.';
           // Histogram
           const container = document.createElement('div');
           container.classList.add('histogramWidget');
@@ -180,7 +185,7 @@
           const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
           if (histogramSlider.widget) {
             if (histogramSlider.coverage < 1) {
-              widgetMessage.innerText = 'Graph values are approximate';
+              widgetMessage.innerText += '\nGraph values are approximate';
             }
 
             histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
@@ -190,7 +195,8 @@
         }
 
         // Date fields - time slider
-        if (field.simpleType === 'date') {
+        else if (field.simpleType === 'date') {
+          widgetMessage.innerText += '\nLooks likes dates.';
           // Time slider
           const container = document.createElement('div');
           container.classList.add('timesliderWidget');
@@ -214,6 +220,9 @@
               updateLayerViewEffect(layerView, { where });
             });
           }
+        }
+        else {
+          widgetMessage.innerText += '\nNot sure what datatype this field is.';
         }
       };
 
@@ -293,9 +302,11 @@
         let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 
         var renderer;
-
+        let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
+        let field = getDatasetField(dataset, fieldName)
+        
         try {
-          var renderer = autoStyle(dataset);
+          renderer = autoStyle(fieldName, dataset);
 
           // if (predefinedStyle) {
           //   layer = await new FeatureLayer({
@@ -310,49 +321,62 @@
           // }
 
           // createSmartMapRenderer(layer, field, view);
-          // let symbol = {
-          //   type: "simple-marker",
-          //   outline: {
-          //     // makes the outlines of all features consistently light gray
-          //     color: "lightgray",
-          //     width: 0.5
-          //   }
-          // }
 
-          // layer = await new FeatureLayer({
-          //     renderer: { type: 'simple', symbol },
-          //     url: dataset.attributes.url
-          // });
-
-          layer = await new FeatureLayer({
-            renderer: renderer,
-            url: dataset.attributes.url
-          });
-
-          layer.minScale = 0; // draw at all scales
-          layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
-
-          return { dataset, layer };
         } catch(e) {
           throw new Error(e);
         }
+        if (typeof view !== 'undefined') {
+        } else {
+            let symbol = {
+              type: "simple-marker",
+              outline: {
+                // makes the outlines of all features consistently light gray
+                color: "lightgray",
+                width: 0.5
+              }
+            }
+
+            renderer = { type: 'simple', symbol };
+        }
+        layer = await new FeatureLayer({
+          renderer: renderer,
+          url: dataset.attributes.url
+        });
+
+        layer.minScale = 0; // draw at all scales
+        layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
+
+        return { dataset, layer };
 
       }
 
-      // analyze a dataset and choose an initial best-guess symbol scheme for it
-      function autoStyle(dataset) {
-
+      // analyze a dataset and choose an initial best-guess symbology for it
+      async function autoStyle(fieldName, dataset) {
+        console.log('autoStyle')
         const geometryType = dataset.attributes.geometryType;
-        let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
-        let field = getDatasetField(dataset, fieldName);
-        let stats = dataset.attributes.statistics.numeric[fieldName].statistics;
-        let minValue = stats.values.min;
-        let maxValue = stats.values.max;
-
+        var field = getDatasetField(dataset, fieldName);
+        let datasetStats = dataset.attributes.statistics.numeric[fieldName.toLowerCase()].statistics;
+        let fieldStats = field.statistics;
+        let minValue = fieldStats.values.min;
+        let maxValue = fieldStats.values.max;
         let symbol;
 
+        widgetMessage.innerText += '\nGeometry type is '+geometryType+'.';
+        widgetMessage.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
+
+        if (!!layer) {
+
+          var query = layer.createQuery();
+          query.outFields = [fieldName]
+          let features = await layer.queryFeatures(query);
+          var values = Object.values(features.features).map(v => v.attributes[fieldName])
+
+          let distribution = getDistribution(values);
+
+          widgetMessage.innerText += '\nDistribution appears to be '+distribution+'.';
+        }
+
         if (geometryType === 'esriGeometryPoint') {
-          let size = 4;
           let stats = dataset.attributes.statistics
           // scale point size based on viewport size, number of points, and "clumpiness" of the data,
           // in order to reduce overlap of points
@@ -389,7 +413,7 @@
             width: 0.5
           }
         }
-
+        widgetMessage.innerText += '\nValues are from '+minValue+' to '+maxValue+'.';
       var renderer = {
         type: "simple", // autocasts as new SimpleRenderer()
         symbol: symbol,
@@ -409,6 +433,7 @@
           }]
         }]
       };
+      widgetMessage.innerText += '\nUsing colors from '+rampColors[0]+' to '+rampColors[rampColors.length-1]+'.';
 
       return renderer;
     }
@@ -929,6 +954,10 @@
           .then(response => response.renderer);
         });
       }
+
+      // TESTS
+
+      makeWidget(null, "phenomenonTime");
 
     })();
   </script>
