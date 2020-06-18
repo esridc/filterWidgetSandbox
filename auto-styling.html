@@ -175,7 +175,6 @@
           timeSlider = null;
         }
 
-        // resetTabs(document.getElementById('widget'));
         document.getElementById('widget').innerHTML = ''; // clear previous widget
         document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
 
@@ -188,7 +187,6 @@
           const container = document.createElement('div');
           container.classList.add('histogramWidget');
           document.getElementById('widget').appendChild(container);
-          // addTab('Graph', container, document.getElementById('widget'));
 
           const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
           if (histogramSlider.widget) {
@@ -208,7 +206,6 @@
           const container = document.createElement('div');
           container.classList.add('timesliderWidget');
           document.getElementById('widget').appendChild(container);
-          // addTab('Graph', container, document.getElementById('widget'));
 
           timeSlider = await createTimeSlider({ dataset, fieldName, layerView, container });
           // set widget state
@@ -1009,25 +1006,6 @@
         return { checkboxes, fieldStats: stats };
       }
 
-      function resetTabs (container) {
-        // const widget = container.getElementById('widget');
-        const template = document.querySelector('#widgetTemplate').content.cloneNode(true);
-        container.innerHTML = '';
-        container.appendChild(template);
-      }
-
-      function addTab (title, content, container) {
-        const navContainer = container.querySelector('calcite-tab-nav');
-        const navItem = document.createElement('calcite-tab-title');
-        navItem.innerHTML = title;
-        navContainer.appendChild(navItem);
-
-        const contentContainer = container.querySelector('calcite-tabs');
-        const contentItem = document.createElement('calcite-tab');
-        contentItem.appendChild(content);
-        contentContainer.appendChild(contentItem);
-      }
-
       function createSlider (field, layer, container) {
         // <calcite-slider
         //   min="1"
@@ -1204,13 +1182,6 @@
 
       <div id="widget">
       </div>
-
-      <template id="widgetTemplate">
-        <calcite-tabs>
-          <calcite-tab-nav slot="tab-nav">
-          </calcite-tab-nav>
-        </calcite-tabs>
-      </template>
 
       <div id="widgetMessage"></div>
 
