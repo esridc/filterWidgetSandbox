@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Switch color ramps</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/4.14/esri/themes/light/main.css"/>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      .rampPicker {
+        padding: 7px;
+        background-color: white;
+        text-align: center;
+      }
+
+      .ramp {
+        padding-bottom: 2px;
+        padding-top: 2px;
+        cursor: pointer;
+      }
+    </style>
+
+    <script src="https://js.arcgis.com/4.14/"></script>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/widgets/Legend",
+        "esri/widgets/Expand",
+        "esri/renderers/smartMapping/symbology/support/colorRamps",
+        "esri/symbols/support/symbolUtils"
+      ], function(
+        Map,
+        MapView,
+        FeatureLayer,
+        Legend,
+        Expand,
+        colorRamps,
+        symbolUtils
+      ) {
+
+        const map = new Map({
+          basemap: {
+            portalItem: {
+              id: "3582b744bba84668b52a16b0b6942544"
+            }
+          }
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-91.3465, 42.2476],
+          zoom: 5
+        });
+
+        // Add a legend to the view
+
+        const legend = new Legend({
+          view: view
+        });
+
+        // Collapse the basemap gallery widget in the expand widget
+
+        const expand = new Expand({
+          view: view,
+          content: legend
+        });
+        view.ui.add(expand, "bottom-left");
+
+        // Create FeatureLayer instance with popupTemplate
+
+        var fieldInfos = [
+          {
+            fieldName: "M172_07",
+            label: "Wheat",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          },
+          {
+            fieldName: "M188_07",
+            label: "Cotton",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          },
+          {
+            fieldName: "M193_07",
+            label: "Soybeans",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          },
+          {
+            fieldName: "M217_07",
+            label: "Vegetables",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          },
+          {
+            fieldName: "M163_07",
+            label: "Corn",
+            format: {
+              digitSeparator: true,
+              places: 0
+            }
+          }
+        ];
+
+        function createSymbol(color){
+          return {
+            type: "simple-fill",
+            color: color ? color : [0,0,0,0],
+            outline: {
+              color: [255,255,255,0.2],
+              width: 0.5
+            }
+          };
+        }
+
+        const renderer = {
+          type: "simple",
+          symbol: createSymbol(),
+          visualVariables: [{
+            type: "color",
+            field: "M163_07",
+            normalizationField: "TOT_CROP_ACRES",
+            legendOptions: {
+              title: "Corn harvest as a % of harvested acres"
+            },
+            // Orange 2 ramp
+            stops: [
+              { value: 0.1, color: "#fee6ce", label: "< 10%" },
+              { value: 0.4, color: "#fdae6b" },
+              { value: 0.65, color: "#e6550d", label: ">65%" }
+            ]
+          }]
+        };
+
+        const layer = new FeatureLayer({
+          url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/US_county_crops_2007_clean/FeatureServer/0",
+          renderer: renderer,
+          title: "U.S. Counties",
+          visible: true,
+          renderer: renderer,
+          popupTemplate: {
+            title: "{COUNTY}, {STATE}",
+            content: [
+              {
+                type: "text",
+                text:
+                  "{TOT_CROP_ACRES} acres of crops were harvested in {COUNTY}, {STATE}" +
+                  " in 2007. The table below breaks down the number of acres that were" +
+                  " harvested for each type of crop."
+              },
+              {
+                type: "fields",
+                fieldInfos: fieldInfos
+              }
+            ],
+            fieldInfos: [
+              {
+                fieldName: "TOT_CROP_ACRES",
+                label: "Total harvest acres of crops",
+                format: {
+                  digitSeparator: true,
+                  places: 0
+                }
+              }
+            ]
+          }
+        });
+
+        map.add(layer);
+
+        // Pre-selected ramps given to the user
+        const rampNames = [
+          "Orange 2",
+          "Blue 6",
+          "Green 4",
+          "Pink 1",
+          "Red 4",
+          "Gray 1",
+          "Purple 4"
+        ];
+
+        const rampPicker = document.createElement("div");
+        rampPicker.classList.add("rampPicker");
+        rampPicker.innerHTML = "Select a ramp"
+
+        // get the colors associated with each ramp
+        // and render a preview in the UI
+        // console.log('?')
+        rampNames.forEach(function(rampName){
+          const colorRamp = colorRamps.byName(rampName);
+          const colors = colorRamp.colorsForClassBreaks[2].colors;
+          // debugger
+
+          const colorRampElement = symbolUtils.renderColorRampPreviewHTML(colors, {
+            align: "horizontal",
+            width: 100
+          });
+          const colorRampElementContainer = document.createElement("div");
+          colorRampElementContainer.classList.add("ramp");
+
+          // when the ramp preview element is clicked
+          // update the renderer with the colors in the ramp
+          colorRampElementContainer.addEventListener("click", function(){
+            updateColorsInRenderer(colors);
+          });
+
+          colorRampElementContainer.appendChild(colorRampElement);
+          rampPicker.appendChild(colorRampElementContainer);
+        });
+
+        const rampExpand = new Expand({
+          content: rampPicker,
+          view: view,
+          expanded: true
+        });
+        view.ui.add(rampExpand, "top-left");
+
+        function updateColorsInRenderer(colors){
+          const renderer = layer.renderer.clone();
+          const colorVariable = renderer.visualVariables[0].clone();
+          colorVariable.stops.forEach(function(stop, index){
+            stop.color = colors[index];
+          });
+          colorVariable.stops;
+          renderer.visualVariables = [ colorVariable ];
+          layer.renderer = renderer;
+        }
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>

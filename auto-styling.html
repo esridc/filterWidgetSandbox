@@ -64,6 +64,7 @@
       Renderer,
       jsonUtils,
       colorRamps,
+      Color,
       ] = await loadModules([
       "esri/Map",
       "esri/views/MapView",
@@ -79,6 +80,7 @@
       "esri/renderers/Renderer",
       "esri/renderers/support/jsonUtils",
       "esri/renderers/smartMapping/symbology/support/colorRamps",
+      "esri/Color",
       ]);
 
 
@@ -403,15 +405,11 @@
       function autoStyle(dataset) {
 
         const geometryType = dataset.attributes.geometryType;
-        console.log('dataset:', dataset.attributes.name, 'layer:', layer)
         let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
         let field = getDatasetField(dataset, fieldName);
         let stats = dataset.attributes.statistics.numeric[fieldName].statistics;
         let minValue = stats.values.min;
         let maxValue = stats.values.max;
-
-        console.log('geometryType:', geometryType)
-        console.log('field:', field)
 
         let symbol;
 
@@ -441,9 +439,9 @@
           symbol = {type: 'simple-fill' };
         }
 
-        let allColors = colorRamps.all();
-        let colors = allColors[Math.floor(Math.random()*allColors.length)];
-        console.log('colors:', colors)
+        let allRamps = colorRamps.all();
+        let ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
+        let rampColors = ramp.colors;
 
         symbol = {
           type: "simple-marker",
@@ -463,13 +461,13 @@
           field: fieldName,
           // normalizationField: "TOTPOP_CY", // total population
           stops: [{
-            value: minValue, // features where < 10% of the pop in poverty
-            color: "#FFFCD4", // will be assiged this color (beige)
-            label: "10% or lower" // label to display in the legend
+            value: minValue,
+            color: rampColors[0],
+            label: minValue
           },{
-            value: maxValue, // features where > 30% of the pop in poverty
-            color: "#350242", // will be assigned this color (purple)
-            label: "30% or higher" // label to display in the legend
+            value: maxValue,
+            color: rampColors[rampColors.length-1],
+            label: maxValue
           }]
         }]
       };
