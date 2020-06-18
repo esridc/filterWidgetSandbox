@@ -110,34 +110,21 @@
         drawMap(layer, dataset);
       });
 
-      // ramps
-      var ramps = [
-      "seq-browns-bright",
-      "seq-dark-to-light-magenta-bright",
-      "seq-dark-to-light-purple-bright",
-      "seq-dark-to-light-blue-bright",
-      "seq-dark-to-light-green-bright",
-      "seq-brown-to-tan-bright",
-      "seq-lightgray-blue-bright",
-      "seq-lightgray-green-bright",
-      "seq-lightgray-darkmagenta-bright",
-      "seq-yellow-darkblue-bright",
-      "seq-lightred-darkgray-bright"
-      ]
-
       // color ramp switcher
       var rampList = document.getElementById('rampList');
-      for (let [key, value] of Object.entries(ramps)) {
+      const allRamps = colorRamps.all();
+      for (let [key, value] of Object.entries(allRamps)) {
         // create new option element and add it to the dropdown
         var opt = document.createElement('option');
-        opt.text = key;
-        opt.value = value;
+        opt.text = value.name;
+        opt.value = value.name;
         rampList.appendChild(opt);
       }
 
+      // set ramp list event handler
       rampList.addEventListener('change', async event => {
-        var ramp = await loadRamp({ ramp: event.target.value });
-        updateRamp(ramp);
+        var ramp = colorRamps.byName(event.target.value);
+        updateRamp(ramp.colors, layer);
       });
 
       // track widgets and state
@@ -228,7 +215,6 @@
         }
 
         // All fields - value list
-        // if (field.simpleType === 'numeric' || field.simpleType === 'string') {
           // Value list
           const listContainer = document.createElement('div');
           listContainer.classList.add('valueListWidget');
@@ -451,7 +437,7 @@
 
       var renderer = {
         type: "simple", // autocasts as new SimpleRenderer()
-        symbol: symbol, // the default symbol defined in step 1
+        symbol: symbol,
         // label: "% population in poverty by county", // label for the legend
         visualVariables: [{
           type: "color", // indicates this is a color visual variable
@@ -471,6 +457,15 @@
 
       return renderer;
     }
+
+    function updateRamp(rampColors, layer) {
+      let renderer = layer.renderer.clone();
+      renderer.visualVariables[0].stops[0].color = rampColors[0];
+      renderer.visualVariables[0].stops[1].color = rampColors[rampColors.length-1];
+      layer.renderer = renderer;
+      return renderer;
+    }
+
 
     function createSmartMapRenderer (layer, field, view) {
       // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
