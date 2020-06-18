@@ -213,53 +213,6 @@
             });
           }
         }
-
-        // All fields - value list
-          // Value list
-          const listContainer = document.createElement('div');
-          listContainer.classList.add('valueListWidget');
-
-          // Build filter/where clause and update layer
-          const onCheckboxChange = ({ checkboxes }) => {
-            let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
-            let where = '1=1';
-            if (checked.length > 0) {
-              const hasNull = checked.find(c => c.value == null) ? true : false;
-              checked = checked.filter(c => c.value != null);
-
-              let whereVals;
-              if (field.simpleType === 'date') {
-                whereVals = checked.map(c => +new Date(c.value));
-                where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
-              } else {
-                whereVals = checked.map(c => {
-                  if (typeof c.value === 'string') {
-                    return `'${c.value}'`
-                  } else {
-                    return c.value;
-                  }
-                });
-                where = `${fieldName} IN (${whereVals.join(', ')})`;
-              }
-
-              if (hasNull) {
-                where = whereVals ? `${where} OR ` : '';
-                where = `${fieldName} IS NULL`; // need special SQL handling for null vales
-              }
-            }
-            updateLayerViewEffect(layerView, { where, updateExtent: zoomToDataCheckbox.checked });
-          };
-
-          try {
-            var { fieldStats } = await createValueList({ dataset, fieldName, layer, container: listContainer, onUpdateValues: onCheckboxChange });
-          } catch(e) {
-            throw new Error(e)
-          }
-
-          if (field.simpleType !== 'numeric' || // always add for strings and dates
-          fieldStats.topValues.length > 0) { // only add for numerics if there are "categorical" values
-          document.getElementById('widget').appendChild(listContainer);
-        }
       };
 
 

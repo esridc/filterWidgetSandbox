@@ -93,30 +93,6 @@ body,
   margin: 12px 0px;
 }
 
-.valueListWidget label {
-  display: block;
-  padding: 4px;
-}
-
-.valueListWidget label > .subText {
-/*     display: none; */
-  margin-left: 8px;
-  color: #828282; 
-  font-size: 14px;
-}
-
-.valueListWidget label:hover .subText {
-/*     display: inline; */
-}
-
-.valueListSearchBox {
-  font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  margin-top: 4px;
-  margin-left: 4px;
-  width: calc(100% - 4px);
-}
-
 *:focus {
    outline: none !important;
 }
