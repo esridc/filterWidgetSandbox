@@ -35,6 +35,9 @@
   href="https://unpkg.com/@esri/calcite-components@1.0.0-beta.24/dist/calcite/calcite.css"
   />
 
+  <!-- Load jStat -->
+  <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
+
   <script type="module">
 
     import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/dist/esm/esri-loader.js';
@@ -418,6 +421,12 @@
       return renderer;
     }
 
+    function getDistribution(values) {
+      let js = jStat(values)
+      let mean = jStat.mean();
+      debugger
+      return "roughly normal";
+    }
 
     function createSmartMapRenderer (layer, field, view) {
       // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
