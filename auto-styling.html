@@ -304,7 +304,7 @@
         var renderer;
         let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
         let field = getDatasetField(dataset, fieldName)
-        
+
         try {
           renderer = autoStyle(fieldName, dataset);
 
@@ -447,10 +447,27 @@
     }
 
     function getDistribution(values) {
+      let result = [];
       let js = jStat(values)
-      let mean = jStat.mean();
-      debugger
-      return "roughly normal";
+      let min = jStat.min(values);
+      let mean = jStat.mean(values);
+      let mode = jStat.mode(values);
+      let range = jStat.range(values);
+      let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
+      if (meanLocation < .2) result.push('skewed low')
+      else if (meanLocation < .4) result.push('skewed a bit low')
+      else if (meanLocation < .6) result.push('symmetrical')
+      else if (meanLocation < .8) result.push('skewed a bit high')
+      else result.push('skewed high')
+
+      let modeLocation = (mode-min)/range; // how far along in the range is the mode? subtract min to account for offsets
+      if (modeLocation < .2 || modeLocation > .8) result.push('and possibly exponential')
+      else if (modeLocation < .4) result.push('skewed a bit low')
+      else if (modeLocation < .6) result.push('symmetrical')
+      else if (modeLocation < .8) result.push('skewed a bit high')
+      else result.push('skewed high')
+
+      return result.join(' ');
     }
 
     function createSmartMapRenderer (layer, field, view) {
@@ -957,7 +974,7 @@
 
       // TESTS
 
-      makeWidget(null, "phenomenonTime");
+      // makeWidget(null, "phenomenonTime");
 
     })();
   </script>
