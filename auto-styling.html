@@ -449,10 +449,14 @@
     function getDistribution(values) {
       let result = [];
       let js = jStat(values)
+      let count = values.length;
       let min = jStat.min(values);
       let mean = jStat.mean(values);
       let mode = jStat.mode(values);
       let range = jStat.range(values);
+      let variance = jStat.variance(values);
+      let distance = (jStat.sum(values)-(min*count))/count; // average distance between adjacent points
+
       let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
       if (meanLocation < .2) result.push('skewed low')
       else if (meanLocation < .4) result.push('skewed a bit low')
