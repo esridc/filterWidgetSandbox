@@ -47,7 +47,7 @@
       setDefaultOptions({
         css: true,
         // url: 'http://localhost:8000/buildOutput/init.js',
-        url: 'https://jscore.esri.com/debug/4.16/dojo/dojo.js',
+        // url: 'https://jscore.esri.com/debug/4.16/dojo/dojo.js',
         // version: 'next',
       });
 
@@ -371,7 +371,7 @@
           let features = await layer.queryFeatures(query);
           var values = Object.values(features.features).map(v => v.attributes[fieldName])
 
-          let distribution = getDistribution(values);
+          let distribution = getDistribution(values, datasetStats.values);
 
           widgetMessage.innerText += '\nDistribution appears to be '+distribution+'.';
         }
@@ -446,32 +446,89 @@
       return renderer;
     }
 
-    function getDistribution(values) {
+    function getDistribution(values, stats) {
+      // debugger
       let result = [];
       let js = jStat(values)
-      let count = values.length;
-      let min = jStat.min(values);
-      let mean = jStat.mean(values);
+      let count = stats.count;
+      let sampleCount = values.length;
+      let min = stats.min;
+      let max = stats.max;
+      let midpoint = max-min/2;
+      let range = max-min; // distance between min and max
+      let mean = stats.avg;
       let mode = jStat.mode(values);
-      let range = jStat.range(values);
-      let variance = jStat.variance(values);
-      let distance = (jStat.sum(values)-(min*count))/count; // average distance between adjacent points
+      let variance = stats.var;
+      let stdev = stats.stddev;
+      let meddev = jStat.meddev(values);
+      result.push('Sample count: '+sampleCount)
+      result.push('Mean: '+mean)
+      result.push('Min: '+min+' Max: '+max)
+      result.push('Range: '+range)
+      if (typeof Mode === "Array") {
+        result.push(mode.length+" Modes")
+      } else {
+        result.push('Mode: '+mode);
+      }
+      result.push('Meddev: '+meddev)
+      if (mode.length == 2) {
+        result.push('with two modes')
+      } else  if (mode.length > 5) {
+        result.push('with '+mode.length+' modes')
+      }
+      if (mode.length == sampleCount) {
+        result.push('perfectly flat')
+      }
+
+      // let smoothest = range/(sampleCount-1) // distance you'd expect for a perfectly smooth distribution between min and max
+      // let noisiness = variance/smoothest;
+      // // debugger
+      // if (noisiness < .2) result.push('very smooth')
+      // else if (noisiness < .4) result.push('fairly smooth')
+      // else if (noisiness < .6) result.push('a bit noisy')
+      // else if (noisiness < .8) result.push('fairly noisy')
+      // else result.push('highly noisy')
+      // result.push('noisiness: '+noisiness)
 
       let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
       if (meanLocation < .2) result.push('skewed low')
-      else if (meanLocation < .4) result.push('skewed a bit low')
-      else if (meanLocation < .6) result.push('symmetrical')
+      else if (meanLocation < .45) result.push('skewed a bit low')
+      else if (meanLocation < .55) result.push('roughly symmetrical')
       else if (meanLocation < .8) result.push('skewed a bit high')
       else result.push('skewed high')
+      result.push('meanLocation: '+meanLocation)
+      
+      if ((mode === min && meanLocation < .5) || (mode === max && meanLocation > .5)) {
+        result.push('possibly exponential')
+      } else if ((mode === min && meanLocation > .5) || (mode === max && meanLocation < .5)) {
+        result.push('possibly logarithmic')
+      } else {
 
-      let modeLocation = (mode-min)/range; // how far along in the range is the mode? subtract min to account for offsets
-      if (modeLocation < .2 || modeLocation > .8) result.push('and possibly exponential')
-      else if (modeLocation < .4) result.push('skewed a bit low')
-      else if (modeLocation < .6) result.push('symmetrical')
-      else if (modeLocation < .8) result.push('skewed a bit high')
-      else result.push('skewed high')
+      
+        let dispersion = range/stdev;
+        result.push('stdev: '+stdev)
+        result.push('dispersion: '+dispersion)
+        // debugger
+        // rule of thumb is that for a normal distribution, range is 4x stdev
+        if (dispersion < 1) result.push('highly clustered')
+        else if (dispersion < 3) result.push('a bit clustered')
+        else if (dispersion < 5) result.push('roughly normal')
+        else if (dispersion < 7) result.push('a bit dispersed')
+        else result.push('highly dispersed')
+        
+        
+        let variability = meddev/range;
+        result.push('Variablility:', variability)
+        if (variability < .2) result.push('highly regular')
+        else if (variability < .4) result.push('generally regular')
+        else if (variability < .6) result.push('slightly variable')
+        else if (variability < .8) result.push('moderately variable')
+        else result.push('highly variable')
+      }
+      // debugger
+      result[result.length-1] = 'and '+result[result.length-1];
+      return result.join(', ');
 
-      return result.join(' ');
     }
 
     function createSmartMapRenderer (layer, field, view) {
