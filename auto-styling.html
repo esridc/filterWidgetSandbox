@@ -171,8 +171,14 @@
         updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
 
         widgetMessage.innerText = 'Drawing '+fieldName+'.';
+
         // guess at a style for this field
-        autoStyle(fieldName, dataset)
+        try {
+          let renderer = await autoStyle(fieldName, dataset)
+          layer.renderer = renderer;
+        } catch(e) {
+          console.log('e:', e)
+        }
 
         // Numeric fields - histogram
         if (field.simpleType === 'numeric') {// || field.simpleType === 'date') {
