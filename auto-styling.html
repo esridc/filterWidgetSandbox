@@ -373,7 +373,7 @@
 
           let distribution = getDistribution(values, datasetStats.values);
 
-          widgetMessage.innerText += '\nDistribution appears to be '+distribution+'.';
+          widgetMessage.innerHTML += '<br>'+distribution+'.';
         }
 
         if (geometryType === 'esriGeometryPoint') {
@@ -413,7 +413,7 @@
             width: 0.5
           }
         }
-        widgetMessage.innerText += '\nValues are from '+minValue+' to '+maxValue+'.';
+        // widgetMessage.innerText += '\nValues are from '+minValue+' to '+maxValue+'.';
       var renderer = {
         type: "simple", // autocasts as new SimpleRenderer()
         symbol: symbol,
@@ -434,6 +434,7 @@
         }]
       };
       widgetMessage.innerText += '\nUsing colors from '+rampColors[0]+' to '+rampColors[rampColors.length-1]+'.';
+      widgetMessage.innerHTML += '<br><br>';
 
       return renderer;
     }
@@ -450,87 +451,108 @@
       // debugger
       let result = [];
       let js = jStat(values)
-      let count = stats.count;
+      let uniqueValues = new Set(values);
+
+      if (stats) {
+        var min = stats.min;
+        var max = stats.max;
+        var midpoint = max-min/2;
+        var range = max-min; // distance between min and max
+        var mean = stats.avg;
+        var variance = stats.var;
+        var stdev = stats.stddev;
+        var count = stats.count;
+      } else {
+        var min = jStat.min(values);
+        var max = jStat.max(values);
+        var midpoint = max-min/2;
+        var range = max-min; // distance between min and max
+        var mean = jStat.mean(values);
+        var variance = jStat.variance(values);
+        var stdev = jStat.stdev(values);
+        var count = values.length;
+      }
+
       let sampleCount = values.length;
-      let min = stats.min;
-      let max = stats.max;
-      let midpoint = max-min/2;
-      let range = max-min; // distance between min and max
-      let mean = stats.avg;
       let mode = jStat.mode(values);
-      let variance = stats.var;
-      let stdev = stats.stddev;
-      let meddev = jStat.meddev(values);
+      let meddev = jStat.meddev(values); // median absolute deviation
+      let quartiles = jStat.quartiles(values);
+      let IQR = quartiles[2]-quartiles[0];
+      // debugger
       result.push('Sample count: '+sampleCount)
       result.push('Mean: '+mean)
       result.push('Min: '+min+' Max: '+max)
       result.push('Range: '+range)
-      if (typeof Mode === "Array") {
-        result.push(mode.length+" Modes")
+      result.push('IQR: '+IQR)
+      result.push('IQR/range: '+ (IQR/range))
+      let clustered = IQR/range;
+      if (! clustered || clustered < .1) result.push('highly clustered')
+      else if (clustered < .25) result.push('a bit clustered')
+      else if (clustered < .5) result.push('roughly flat')
+      else if (clustered < .75) result.push('a bit dispersed')
+      else result.push('highly dispersed')
+
+      let uniquesCount = uniqueValues.size;
+      let uniqueness = uniqueValues.size/values.length;
+      result.push('uniqueness: '+uniqueness)
+      if (uniquesCount === 1) {
+        result.push('no unique values')
       } else {
-        result.push('Mode: '+mode);
-      }
-      result.push('Meddev: '+meddev)
-      if (mode.length == 2) {
-        result.push('with two modes')
-      } else  if (mode.length > 5) {
-        result.push('with '+mode.length+' modes')
-      }
-      if (mode.length == sampleCount) {
-        result.push('perfectly flat')
+          if (uniqueness < .25) result.push('very few unique values ('+uniquesCount+')')
+          else if (uniqueness < .5) result.push('few unique values')
+          else if (uniqueness < .75) result.push('few repeated values')
+          else if (uniqueness < 1) result.push('very vew repeated values')
+          else result.push('no repeated values')
       }
 
-      // let smoothest = range/(sampleCount-1) // distance you'd expect for a perfectly smooth distribution between min and max
-      // let noisiness = variance/smoothest;
-      // // debugger
-      // if (noisiness < .2) result.push('very smooth')
-      // else if (noisiness < .4) result.push('fairly smooth')
-      // else if (noisiness < .6) result.push('a bit noisy')
-      // else if (noisiness < .8) result.push('fairly noisy')
-      // else result.push('highly noisy')
-      // result.push('noisiness: '+noisiness)
+
+      if (uniqueness != 1) {
+        if (typeof Mode === "Array") {
+          result.push(mode.length+" Modes")
+        } else {
+          result.push('Mode: '+mode);
+        }
+        result.push('Meddev: '+meddev)
+        if (mode.length == 2) {
+          result.push('with two modes')
+        } else if (mode.length > 5) {
+          result.push('with '+mode.length+' modes')
+        }
+      }
 
       let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
-      if (meanLocation < .2) result.push('skewed low')
-      else if (meanLocation < .45) result.push('skewed a bit low')
-      else if (meanLocation < .55) result.push('roughly symmetrical')
-      else if (meanLocation < .8) result.push('skewed a bit high')
-      else result.push('skewed high')
       result.push('meanLocation: '+meanLocation)
-      
-      if ((mode === min && meanLocation < .5) || (mode === max && meanLocation > .5)) {
-        result.push('possibly exponential')
-      } else if ((mode === min && meanLocation > .5) || (mode === max && meanLocation < .5)) {
-        result.push('possibly logarithmic')
-      } else {
+      if (!!meanLocation) {
+        if (meanLocation < .3) result.push('skewed low')
+        else if (meanLocation < .45) result.push('skewed a bit low')
+        else if (meanLocation < .55) result.push('roughly symmetrical')
+        else if (meanLocation < .7) result.push('skewed a bit high')
+        else result.push('skewed high')
 
-      
-        let dispersion = range/stdev;
-        result.push('stdev: '+stdev)
-        result.push('dispersion: '+dispersion)
-        // debugger
-        // rule of thumb is that for a normal distribution, range is 4x stdev
-        if (dispersion < 1) result.push('highly clustered')
-        else if (dispersion < 3) result.push('a bit clustered')
-        else if (dispersion < 5) result.push('roughly normal')
-        else if (dispersion < 7) result.push('a bit dispersed')
-        else result.push('highly dispersed')
-        
-        
-        let variability = meddev/range;
-        result.push('Variablility:', variability)
+        if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
+          result.push('possibly exponential')
+        } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
+          result.push('possibly logarithmic')
+        }
+      }
+
+      let variability = meddev/range;
+      result.push('Variablility:'+variability)
+      if (!!variability) {
         if (variability < .2) result.push('highly regular')
         else if (variability < .4) result.push('generally regular')
         else if (variability < .6) result.push('slightly variable')
         else if (variability < .8) result.push('moderately variable')
         else result.push('highly variable')
+      } else {
+          result.push('with very little apparent variability')
       }
-      // debugger
+
+        // debugger
       result[result.length-1] = 'and '+result[result.length-1];
-      return result.join(', ');
-
+      return result.join('<br>');
     }
-
+window.getDistribution = getDistribution;
     function createSmartMapRenderer (layer, field, view) {
       // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
       // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
