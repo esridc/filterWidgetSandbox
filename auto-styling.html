@@ -902,7 +902,8 @@
               const featureCount = await layer.queryFeatureCount();
               values = await generateHistogram(params);
               source = 'layerQuery';
-              coverage = params.features.length / featureCount;
+              // coverage = params.features.length / featureCount;
+              coverage = 1;
             } catch(e) {
               // histogram generation failed with server call, try using features in layer view
               console.log('histogram generation failed with server call, try using features in layer view');
