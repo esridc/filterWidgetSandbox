@@ -530,7 +530,7 @@
 
       function getDistribution(values, stats) {
         // debugger
-        let result = [];
+        let msg = [];
         let js = jStat(values)
         let uniqueValues = new Set(values);
 
@@ -559,79 +559,92 @@
         let meddev = jStat.meddev(values); // median absolute deviation
         let quartiles = jStat.quartiles(values);
         let IQR = quartiles[2]-quartiles[0];
-        // debugger
-        result.push('Sample count: '+sampleCount)
-        result.push('Mean: '+mean)
-        result.push('Min: '+min+' Max: '+max)
-        result.push('Range: '+range)
-        result.push('IQR: '+IQR)
-        result.push('IQR/range: '+ (IQR/range))
+
+        msg.push('Sample count: '+sampleCount)
+        msg.push('Min: '+min+', Max: '+max+', Range:'+range)
+        msg.push('Mean: '+mean)
+        msg.push('IQR: '+IQR)
+        msg.push('IQR/range: '+ (IQR/range))
         let clustered = IQR/range;
-        if (! clustered || clustered < .1) result.push('highly clustered')
-        else if (clustered < .25) result.push('a bit clustered')
-        else if (clustered < .5) result.push('roughly flat')
-        else if (clustered < .75) result.push('a bit dispersed')
-        else result.push('highly dispersed')
+        if (! clustered || clustered < .1) msg.push('highly clustered')
+        else if (clustered < .25) msg.push('a bit clustered')
+        else if (clustered < .5) msg.push('roughly uniform')
+        else if (clustered < .75) msg.push('a bit dispersed')
+        else msg.push('highly dispersed')
 
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
-        result.push('uniqueness: '+uniqueness)
+        msg.push('uniqueness: '+uniqueness)
         if (uniquesCount === 1) {
-          result.push('no unique values')
+          msg.push('no unique values')
         } else {
-            if (uniqueness < .25) result.push('very few unique values ('+uniquesCount+')')
-            else if (uniqueness < .5) result.push('few unique values')
-            else if (uniqueness < .75) result.push('few repeated values')
-            else if (uniqueness < 1) result.push('very vew repeated values')
-            else result.push('no repeated values')
+            if (uniqueness < .25) msg.push('very few unique values ('+uniquesCount+')')
+            else if (uniqueness < .5) msg.push('few unique values')
+            else if (uniqueness < .75) msg.push('few repeated values')
+            else if (uniqueness < 1) msg.push('very vew repeated values')
+            else msg.push('no repeated values')
         }
 
-
         if (uniqueness != 1) {
-          if (typeof Mode === "Array") {
-            result.push(mode.length+" Modes")
-          } else {
-            result.push('Mode: '+mode);
-          }
-          result.push('Meddev: '+meddev)
-          if (mode.length == 2) {
-            result.push('with two modes')
-          } else if (mode.length > 5) {
-            result.push('with '+mode.length+' modes')
+          if (!!mode) {
+            if (typeof mode === "Array") {
+              msg.push(mode.length+" Modes")
+            } else {
+              msg.push('Mode: '+mode);
+            }
+            msg.push('Meddev: '+meddev)
+            console.log('mode:', mode)
+            if (mode.length == 2) {
+              msg.push('with two modes')
+            } else if (mode.length > 5) {
+              msg.push('with '+mode.length+' modes')
+            }
           }
         }
 
         let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
-        result.push('meanLocation: '+meanLocation)
+        msg.push('meanLocation: '+meanLocation)
         if (!!meanLocation) {
-          if (meanLocation < .3) result.push('skewed low')
-          else if (meanLocation < .45) result.push('skewed a bit low')
-          else if (meanLocation < .55) result.push('roughly symmetrical')
-          else if (meanLocation < .7) result.push('skewed a bit high')
-          else result.push('skewed high')
+          if (meanLocation < .3) msg.push('skewed low')
+          else if (meanLocation < .45) msg.push('skewed a bit low')
+          else if (meanLocation < .55) msg.push('roughly symmetrical')
+          else if (meanLocation < .7) msg.push('skewed a bit high')
+          else msg.push('skewed high')
 
           if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
-            result.push('possibly exponential')
+            msg.push('possibly exponential')
           } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
-            result.push('possibly logarithmic')
+            msg.push('possibly logarithmic')
           }
         }
 
         let variability = meddev/range;
-        result.push('Variablility:'+variability)
+        msg.push('Variablility:'+variability)
         if (!!variability) {
-          if (variability < .2) result.push('highly regular')
-          else if (variability < .4) result.push('generally regular')
-          else if (variability < .6) result.push('slightly variable')
-          else if (variability < .8) result.push('moderately variable')
-          else result.push('highly variable')
+          if (variability < .2) msg.push('highly regular')
+          else if (variability < .4) msg.push('generally regular')
+          else if (variability < .6) msg.push('slightly variable')
+          else if (variability < .8) msg.push('moderately variable')
+          else msg.push('highly variable')
         } else {
-            result.push('with very little apparent variability')
+            msg.push('with very little apparent variability')
         }
 
-          // debugger
-        result[result.length-1] = 'and '+result[result.length-1];
-        return result.join('<br>');
+        msg[msg.length-1] = 'and '+msg[msg.length-1];
+        msg = msg.join('<br>');
+        return {
+          message: msg,
+          stats: {
+            min: min,
+            max: max,
+            mode: mode,
+            uniqueness: uniqueness,
+            variability: variability,
+            meanLocation: meanLocation,
+            clustered: clustered,
+            mode: mode,
+          }
+        }
       }
 
       window.getDistribution = getDistribution;
