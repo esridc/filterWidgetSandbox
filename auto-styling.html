@@ -35,6 +35,9 @@
   href="https://unpkg.com/@esri/calcite-components@1.0.0-beta.24/dist/calcite/calcite.css"
   />
 
+  <!-- Load d3.js -->
+  <script src="https://d3js.org/d3.v4.js"></script>
+
   <!-- Load jStat -->
   <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
 
@@ -366,18 +369,84 @@
         let maxValue = fieldStats.values.max;
         let symbol;
 
+        widgetMessage.innerText += '\nAnalyzing field \''+fieldName+'\'.';
         widgetMessage.innerText += '\nGeometry type is '+geometryType+'.';
 
         if (!!layer) {
 
           var query = layer.createQuery();
-          query.outFields = [fieldName]
-          let features = await layer.queryFeatures(query);
-          var values = Object.values(features.features).map(v => v.attributes[fieldName])
+          // query.outFields = [fieldName]
+          try {
+            let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+            let domain = [Math.min(...uniqueValues.map(a => a.value)),
+                          Math.max(...uniqueValues.map(a => a.value))]
+            // remove nulls
+            var filtered = uniqueValues.filter(a => a.value != null);
+            // manually reconstruct a feature values array from the unique values and their counts -
 
-          let distribution = getDistribution(values, datasetStats.values);
+            // normalize array length to 1000, as precision isn't as important as speed here
+            // const divisor = dataset.attributes.recordCount / 1000;
 
-          widgetMessage.innerHTML += '<br>'+distribution+'.';
+            // use the whole set
+            const divisor = 1;
+            let arr = [];
+            for (let x = 0; x < filtered.length; x++) {
+              for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
+                arr.push(filtered[x].value);
+              };
+            }
+            // use d3 to bin histograms
+            let d3bins = d3.histogram()  // create layout object
+              .domain([Math.min(...filtered.map(a => a.value)),
+              Math.max(...filtered.map(a => a.value))])  // to cover range
+              .thresholds(29) // separated into 30 bins
+              (arr);          // pass the array
+            // convert the d3 bins array to a bins object
+            var bins = [];
+            for (let x = 0; x < d3bins.length; x++) {
+              bins.push({
+                minValue: d3bins[x]['x0'],
+                maxValue: d3bins[x]['x1'],
+                count: d3bins[x].length,
+              });
+            }
+            // put the bins in the params object
+            var values = {
+              'bins': bins,
+              'minValue': Math.min(...filtered.map(a => a.value)),
+              'maxValue': Math.max(...filtered.map(a => a.value)),
+            }
+            const featureCount = arr.length;
+            var source = 'layerQuery';
+            var coverage = 1;
+          } catch(e) {
+            // histogram generation failed with unique values, try using features in layer view
+            console.log('histogram generation failed with unique values, try using features in layer view:');
+            console.error(new Error(e));
+            if (typeof layerView != 'undefined') {
+              const { features } = await layerView.queryFeatures();
+              const featureCount = await layer.queryFeatureCount();
+              var values = await generateHistogram(params);
+              var source = 'layerView';
+              var coverage = params.features.length / featureCount;
+            } else {
+              console.warn('No layerView')
+            }
+          }
+
+          var {features} = await layer.queryFeatures(query);
+          // var { features } = await layer.queryFeatures( { where: '1=1', outFields: [fieldName] });
+
+          if (features) {
+            var values = Object.values(features).map(v => v.attributes[fieldName])
+            // debugger
+            var distribution = getDistribution(values, datasetStats.values);
+            widgetMessage.innerHTML += '<br>'+distribution.message+'.';
+          } else {
+            console.log('no features returned for', fieldName)
+            // debugger
+          }
+
         }
 
         if (geometryType === 'esriGeometryPoint') {
