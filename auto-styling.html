@@ -316,8 +316,28 @@
         let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
         let field = getDatasetField(dataset, fieldName)
 
-        try {
-          renderer = autoStyle(fieldName, dataset);
+        if (typeof view !== 'undefined') {
+        } else {
+            let symbol = {
+              type: "simple-marker",
+              outline: {
+                // makes the outlines of all features consistently light gray
+                color: "lightgray",
+                width: 0.5
+              }
+            }
+
+            renderer = { type: 'simple', symbol };
+        }
+
+        // make a new layer with a default renderer so the autostyle has something to work with
+        layer = await new FeatureLayer({
+          renderer: renderer,
+          url: dataset.attributes.url
+        });
+
+        renderer = await autoStyle(fieldName, dataset);
+        layer.renderer = renderer;
 
           // if (predefinedStyle) {
           //   layer = await new FeatureLayer({
@@ -332,27 +352,6 @@
           // }
 
           // createSmartMapRenderer(layer, field, view);
-
-        } catch(e) {
-          throw new Error(e);
-        }
-        if (typeof view !== 'undefined') {
-        } else {
-            let symbol = {
-              type: "simple-marker",
-              outline: {
-                // makes the outlines of all features consistently light gray
-                color: "lightgray",
-                width: 0.5
-              }
-            }
-
-            renderer = { type: 'simple', symbol };
-        }
-        layer = await new FeatureLayer({
-          renderer: renderer,
-          url: dataset.attributes.url
-        });
 
         layer.minScale = 0; // draw at all scales
         layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
