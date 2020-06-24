@@ -171,7 +171,9 @@
         document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
 
         // clear previous filters
-        updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
+        if (layerView) {
+          updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
+        }
 
         widgetMessage.innerText = 'Drawing '+fieldName+'.';
 
