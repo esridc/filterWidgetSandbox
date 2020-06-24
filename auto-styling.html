@@ -436,16 +436,13 @@
           }
 
           var {features} = await layer.queryFeatures(query);
-          // var { features } = await layer.queryFeatures( { where: '1=1', outFields: [fieldName] });
 
           if (features) {
             var values = Object.values(features).map(v => v.attributes[fieldName])
-            // debugger
             var distribution = getDistribution(values, datasetStats.values);
             widgetMessage.innerHTML += '<br>'+distribution.message+'.';
           } else {
             console.log('no features returned for', fieldName)
-            // debugger
           }
 
         }
@@ -828,10 +825,6 @@
             layerView.effect = null;
           } else {
             layerView.effect = {
-              filter: {
-                where,
-                // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
-              },
               excludedEffect: 'grayscale(100%) opacity(15%)'
             };
           }
