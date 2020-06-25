@@ -291,12 +291,7 @@
 
         // On-map UI widgets
         view.ui.move('zoom', 'top-right');
-        // view.ui.add('zoomToData', 'bottom-right');
         view.ui.add('messageDiv', 'top-left');
-        // zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
-        // zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
-        //   updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
-        // });
 
         var legend = await new Legend({
           view: view,
