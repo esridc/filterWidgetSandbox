@@ -159,6 +159,7 @@
 
       // add event listener to dropdown, to create visualizations
       attributeList.addEventListener('calciteDropdownItemSelected', switchSelected);
+
       async function switchSelected (event, fieldName = null) {
         fieldName = fieldName ? fieldName : event.target.getAttribute('data-field');
         const field = getDatasetField(dataset, fieldName);
@@ -184,14 +185,7 @@
               url: dataset.attributes.url
             });
           }
-          if (!layer?.loaded) { // if the layer isn't loaded yet
-            // wait for layer to load
-            layer.on("layerview-create", async () => {
-              switchStyles(layer, fieldName);
-            });
-          } else {
-            switchStyles(layer, fieldName);
-          }
+          switchStyles(null, layer, fieldName);
         } catch(e) {
           console.log('e:', e)
         }
@@ -212,11 +206,14 @@
 
       }
 
-        async function switchStyles(layer, fieldName) {
-          console.log('switchStyles')
+        async function switchStyles(view, layer, fieldName) {
+          if (!view) {
+            var view = await drawMap(layer, dataset)
+          }
           widgetMessage.innerText = 'Drawing '+fieldName+'.';
 
-          var layerView = layer.view;
+          const layerView = await view.whenLayerView(layer);
+
           var renderer = await autoStyle(fieldName, dataset);
           const field = getDatasetField(dataset, fieldName);
           layer.renderer = renderer;
@@ -281,9 +278,6 @@
           }
         };
 
-
-      drawMap(layer, dataset)
-
       async function drawMap(layer, dataset) {
         const map = new Map({
           basemap: "dark-gray-vector",
@@ -330,6 +324,8 @@
         document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
         document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
         document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
+
+        return view;
       }
 
       async function loadDataset (args) {
