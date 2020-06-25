@@ -136,7 +136,7 @@
       var timeSlider = null;
       var dataset = null;
       var layer = null;
-      var zoomToDataCheckbox;
+      // var zoomToDataCheckbox;
       var attributeList;
 
       // URL params
@@ -214,7 +214,8 @@
 
           // clear previous filters
           if (typeof layerView != 'undefined') {
-            updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
+            // updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
+            updateLayerViewEffect(layerView, { where: null, updateExtent: true });
           }
 
           // Numeric fields - histogram
@@ -287,11 +288,12 @@
 
         // On-map UI widgets
         view.ui.move('zoom', 'top-right');
-        view.ui.add('zoomToData', 'bottom-right');
-        zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
-        zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
-          updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
-        });
+        // view.ui.add('zoomToData', 'bottom-right');
+        view.ui.add('messageDiv', 'top-left');
+        // zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
+        // zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
+        //   updateLayerViewEffect(layerView, { updateExtent: zoomToDataCheckbox.checked });
+        // });
 
         var legend = await new Legend({
           view: view,
@@ -308,7 +310,8 @@
         // update layerview filter based on histogram widget, debounced
         const updateLayerViewWithHistogram = _.throttle(
         (layerView, fieldName, histogramWidget) => {
-          updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: zoomToDataCheckbox.checked });
+          // updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: zoomToDataCheckbox.checked });
+          updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: true });
         },
         50
         );
@@ -1220,10 +1223,10 @@
     </div>
   </div>
   <div id="viewDiv"></div>
-  <div id="zoomToData" class="esri-widget">
+  <!-- <div id="zoomToData" class="esri-widget">
     <label>
       <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
     </label>
-  </div>
+  </div> -->
 </body>
 </html>
