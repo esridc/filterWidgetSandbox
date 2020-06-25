@@ -410,7 +410,9 @@
         let symbol;
 
         widgetMessage.innerText += '\nAnalyzing field \''+fieldName+'\'.';
+        bigBoard(`Analyzing '${fieldName}'`, false);
         widgetMessage.innerText += '\nGeometry type is '+geometryType+'.';
+        bigBoard(`Geometry type is ${geometryType}`);
 
         if (!!layer) {
 
@@ -610,6 +612,7 @@
         else if (clustered < .5) msg.push('roughly uniform')
         else if (clustered < .75) msg.push('a bit dispersed')
         else msg.push('highly dispersed')
+        bigBoard(msg[msg.length-1]);
 
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
@@ -623,6 +626,7 @@
             else if (uniqueness < 1) msg.push('very vew repeated values')
             else msg.push('no repeated values')
         }
+        bigBoard(msg[msg.length-1]);
 
         if (uniqueness != 1) {
           if (!!mode) {
@@ -649,6 +653,7 @@
           else if (meanLocation < .55) msg.push('roughly symmetrical')
           else if (meanLocation < .7) msg.push('skewed a bit high')
           else msg.push('skewed high')
+          bigBoard(msg[msg.length-1]);
 
           if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
             msg.push('possibly exponential')
@@ -668,6 +673,7 @@
         } else {
             msg.push('with very little apparent variability')
         }
+        bigBoard(msg[msg.length-1]);
 
         msg[msg.length-1] = 'and '+msg[msg.length-1];
         msg = msg.join('<br>');
@@ -1191,6 +1197,12 @@
 
       // makeWidget(null, "phenomenonTime");
 
+      function bigBoard(msg, append=true) {
+        if (append) {
+          msg = document.getElementById('messageDiv').innerHTML + '<br>' + msg;
+        }
+        document.getElementById('messageDiv').innerHTML = msg;
+      }
     })();
   </script>
 </head>
@@ -1223,6 +1235,7 @@
     </div>
   </div>
   <div id="viewDiv"></div>
+  <div id="messageDiv" class="esri-widget"></div>
   <!-- <div id="zoomToData" class="esri-widget">
     <label>
       <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data

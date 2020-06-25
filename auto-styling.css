@@ -119,3 +119,11 @@ body,
 /* #stylingAttributeList {
   margin: 10px;
 } */
+
+#messageDiv {
+  font-size: 24px;
+  color: white;
+  background-color: black;
+  /* display: inline-table; */
+  padding: 5px;
+}
