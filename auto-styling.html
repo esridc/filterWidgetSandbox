@@ -222,8 +222,7 @@
 
           // clear previous filters
           if (typeof layerView != 'undefined') {
-            // updateLayerViewEffect(layerView, { where: null, updateExtent: zoomToDataCheckbox.checked });
-            updateLayerViewEffect(layerView, { where: null, updateExtent: true });
+            updateLayerViewEffect(layerView, { updateExtent: true });
           }
 
           // Numeric fields - histogram
@@ -311,15 +310,6 @@
         // put vars on window for debugging
         Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
 
-        // update layerview filter based on histogram widget, debounced
-        const updateLayerViewWithHistogram = _.throttle(
-        (layerView, fieldName, histogramWidget) => {
-          // updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: zoomToDataCheckbox.checked });
-          updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: true });
-        },
-        50
-        );
-
         // Dataset info
         document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
         document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
@@ -327,6 +317,15 @@
 
         return view;
       }
+
+      // update layerview filter based on histogram widget, throttled
+      const updateLayerViewWithHistogram = _.throttle(
+      async (layerView, fieldName, histogramWidget) => {
+        await updateLayerViewEffect(layerView, { where: histogramWidget.generateWhereClause(fieldName), updateExtent: true });
+      },
+      50
+      );
+
 
       async function loadDataset (args) {
         if (args.url) { // dataset url provided directly
@@ -807,17 +806,16 @@
         return attributeList;
       }
 
-      async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = false } = {}) {
+      async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = true } = {}) {
         layerView.filter = null;
 
-        if (where !== undefined) {
-          if (where === null) {
-            layerView.effect = null;
-          } else {
-            layerView.effect = {
-              excludedEffect: 'grayscale(100%) opacity(15%)'
-            };
-          }
+        if (where) {
+          layerView.effect = {
+            filter: {
+              where,
+            },
+            excludedEffect: 'grayscale(100%) opacity(15%)'
+          };
         }
 
         // adjust view extent (in or out) to fit all filtered data
