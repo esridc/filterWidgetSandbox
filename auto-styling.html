@@ -159,7 +159,7 @@
 
       // add event listener to dropdown, to create visualizations
       attributeList.addEventListener('calciteDropdownItemSelected', switchSelected);
-      async function switchSelected (fieldName = null) {
+      async function switchSelected (event, fieldName = null) {
         fieldName = fieldName ? fieldName : event.target.getAttribute('data-field');
         const field = getDatasetField(dataset, fieldName);
         document.querySelector('#attributeListButton').innerHTML = fieldName;
@@ -177,37 +177,54 @@
 
         // guess at a style for this field
         try {
-          // debugger
           if (!!layer) { // if there's a layer
-          console.log('1')
+            console.log('1', layer.loaded)
             if (!layer?.loaded) { // but it's not loaded yet
-            console.log('2')
-            layer.on("layerview-create", async () => {
-              console.log('3')
-                switchStyles(layer);
+              console.log('2')
+              layer.on("layerview-create", async () => {
+                switchStyles(layer, fieldName);
               });
             }
+            switchStyles(layer, fieldName);
           } else { // if there's no layer
-          console.log('4')
-          layer = new FeatureLayer({
-            // renderer: renderer,
-            url: dataset.attributes.url
-          });
-          layer.on("layerview-create", async () => {
-            console.log('5')
-                switchStyles(layer);
-              });
+            // make a new one
+            layer = new FeatureLayer({
+              renderer: {type: 'simple'},
+              url: dataset.attributes.url
+            });
+            // wait for layer to load
+            layer.on("layerview-create", async () => {
+              switchStyles(layer, fieldName);
+            });
+            window.layer = layer;
           }
         } catch(e) {
           console.log('e:', e)
         }
 
-        async function switchStyles(layer) {
+        // if (predefinedStyle) {
+        //   layer = await new FeatureLayer({
+        //     renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+        //     url: dataset.attributes.url
+        //   });
+        // } else {
+        // // otherwise do nothing, and the FeatureLayer constructor makes it own
+        //   layer = await new FeatureLayer({
+        //     url: dataset.attributes.url
+        //   });
+        // }
+
+        // createSmartMapRenderer(layer, field, view);
+
+      }
+
+        async function switchStyles(layer, fieldName) {
           console.log('switchStyles')
           widgetMessage.innerText = 'Drawing '+fieldName+'.';
 
           var layerView = layer.view;
           var renderer = await autoStyle(fieldName, dataset);
+          const field = getDatasetField(dataset, fieldName);
           layer.renderer = renderer;
           layer.minScale = 0; // draw at all scales
           layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
@@ -269,7 +286,6 @@
             widgetMessage.innerText += '\nNot sure what datatype this field is.';
           }
         };
-      }
 
 
       drawMap(layer, dataset)
@@ -350,52 +366,10 @@
 
         var renderer;
         let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
-        switchSelected(fieldName);
         let field = getDatasetField(dataset, fieldName)
+        switchSelected(null, field.name);
 
-        if (typeof view !== 'undefined') {
-        } else {
-            let symbol = {
-              type: "simple-marker",
-              outline: {
-                // makes the outlines of all features consistently light gray
-                color: "lightgray",
-                width: 0.15
-              }
-            }
-
-            renderer = { type: 'simple', symbol };
-        }
-
-        // make a new layer with a default renderer so the autostyle has something to work with
-        layer = new FeatureLayer({
-          renderer: renderer,
-          url: dataset.attributes.url
-        });
-        if (!layer.loaded) {
-          layer.on("layerview-create", async () => {
-            renderer = await autoStyle(fieldName, dataset);
-            layer.renderer = renderer;
-            layer.minScale = 0; // draw at all scales
-            layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
-          });
-        }
-
-          // if (predefinedStyle) {
-          //   layer = await new FeatureLayer({
-          //     renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
-          //     url: dataset.attributes.url
-          //   });
-          // } else {
-          // // otherwise do nothing, and the FeatureLayer constructor makes it own
-          //   layer = await new FeatureLayer({
-          //     url: dataset.attributes.url
-          //   });
-          // }
-
-          // createSmartMapRenderer(layer, field, view);
-
-          return { dataset, layer };
+        return { dataset, layer };
       }
 
       // analyze a dataset and choose an initial best-guess symbology for it
