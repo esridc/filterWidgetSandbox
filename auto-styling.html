@@ -177,26 +177,20 @@
 
         // guess at a style for this field
         try {
-          if (!!layer) { // if there's a layer
-            console.log('1', layer.loaded)
-            if (!layer?.loaded) { // but it's not loaded yet
-              console.log('2')
-              layer.on("layerview-create", async () => {
-                switchStyles(layer, fieldName);
-              });
-            }
-            switchStyles(layer, fieldName);
-          } else { // if there's no layer
-            // make a new one
+          if (!layer) { // if there's no layer
+            // initialize a new one
             layer = new FeatureLayer({
               renderer: {type: 'simple'},
               url: dataset.attributes.url
             });
+          }
+          if (!layer?.loaded) { // if the layer isn't loaded yet
             // wait for layer to load
             layer.on("layerview-create", async () => {
               switchStyles(layer, fieldName);
             });
-            window.layer = layer;
+          } else {
+            switchStyles(layer, fieldName);
           }
         } catch(e) {
           console.log('e:', e)
@@ -374,7 +368,6 @@
 
       // analyze a dataset and choose an initial best-guess symbology for it
       async function autoStyle(fieldName, dataset) {
-        console.log('autostyle')
         const geometryType = dataset.attributes.geometryType;
         var field = getDatasetField(dataset, fieldName);
         let datasetStats = dataset.attributes.statistics.numeric[fieldName.toLowerCase()].statistics;
@@ -453,6 +446,7 @@
           var {features} = await layer.queryFeatures(query);
 
           if (features) {
+            // debugger
             var values = Object.values(features).map(v => v.attributes[fieldName])
             var distribution = getDistribution(values, datasetStats.values);
             widgetMessage.innerHTML += '<br>'+distribution.message+'.';
@@ -531,7 +525,6 @@
         };
         widgetMessage.innerText += '\nUsing colors from '+rampColors[0]+' to '+rampColors[rampColors.length-1]+'.';
         widgetMessage.innerHTML += '<br><br>';
-        console.log('renderer:', renderer)
         return renderer;
       }
 
@@ -610,7 +603,6 @@
               msg.push('Mode: '+mode);
             }
             msg.push('Meddev: '+meddev)
-            console.log('mode:', mode)
             if (mode.length == 2) {
               msg.push('with two modes')
             } else if (mode.length > 5) {
