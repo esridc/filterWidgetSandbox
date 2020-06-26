@@ -443,6 +443,13 @@
 
         }
 
+        // v simple way to vary point size with number of data points
+        // 1-9: 20px
+        // 10-99: 10px
+        // 100-999: 5px
+        // 1000-9999: 2.5px
+        var pointSize = 20/(datasetStats.values.count+'').length; // convert to string to get power of 10
+
         if (geometryType === 'esriGeometryPoint') {
           let stats = dataset.attributes.statistics
           // scale point size based on viewport size, number of points, and "clumpiness" of the data,
@@ -456,6 +463,16 @@
           // if a normal distribution or something similar, choose "extremes"
 
           // choose colors based on background theme – dark on light, light on dark
+
+          symbol = {
+            type: "simple-marker",
+            outline: {
+              // makes the outlines of all features consistently light gray
+              color: "lightgray",
+              width: 0.05*pointSize
+            },
+            size: pointSize+'px'
+          }
 
         }
 
@@ -471,23 +488,6 @@
         let allRamps = colorRamps.all();
         let ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
         let rampColors = ramp.colors;
-
-        // v simple way to vary point size with number of data points
-        // 1-9: 20px
-        // 10-99: 10px
-        // 100-999: 5px
-        // 1000-9999: 2.5px
-        var pointSize = 20/(datasetStats.values.count+'').length; // convert to string to get power of 10
-
-        symbol = {
-          type: "simple-marker",
-          outline: {
-            // makes the outlines of all features consistently light gray
-            color: "lightgray",
-            width: 0.05*pointSize
-          },
-          size: pointSize+'px'
-        }
 
         widgetMessage.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
 
@@ -888,8 +888,8 @@
             widget = new HistogramRangeSlider({
               bins: values.bins,
               min: values.minValue,
-              max: values.maxValue,
-              values: [values.minValue, values.maxValue],
+              max: values.maxValue+1,
+              values: [values.minValue, values.maxValue+1],
               precision: integer ? 0 : 2,
               container: container,
               excludedBarColor: "#dddddd",
