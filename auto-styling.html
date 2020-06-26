@@ -548,8 +548,6 @@
             }]
           }]
         };
-        widgetMessage.innerText += '\nUsing colors from '+rampColors[0]+' to '+rampColors[rampColors.length-1]+'.';
-        widgetMessage.innerHTML += '<br><br>';
         return renderer;
       }
 
@@ -598,10 +596,10 @@
         msg.push('IQR: '+IQR)
         msg.push('IQR/range: '+ (IQR/range))
         let clustered = IQR/range;
-        if (! clustered || clustered < .1) msg.push('highly clustered')
-        else if (clustered < .25) msg.push('a bit clustered')
-        else if (clustered < .5) msg.push('roughly uniform')
-        else if (clustered < .75) msg.push('a bit dispersed')
+        if (! clustered || clustered < .2) msg.push('highly clustered')
+        else if (clustered < .4) msg.push('somewhat clustered')
+        else if (clustered < .6) msg.push('roughly uniform')
+        else if (clustered < .8) msg.push('somewhat dispersed')
         else msg.push('highly dispersed')
         if (!clustered) clustered = 1;
         bigBoard(`${msg[msg.length-1]}: (${(clustered*100).toPrecision(3)}%)`);
@@ -619,8 +617,8 @@
             else if (uniqueness < 1) msg.push('very few repeated values')
             else msg.push('no repeated values')
         }
-        if (uniqueness == 0) {
-          bigBoard(`${msg[msg.length-1]}: (${(uniqueness*100).toPrecision(2)}%) unique`);
+        if (uniqueness == 0 || uniqueness == 1) {
+          bigBoard(`${msg[msg.length-1]}: (${uniqueness*100}% unique)`);
         }
 
         if (uniqueness != 1) {
@@ -665,10 +663,12 @@
           else if (variability < .8) msg.push('moderately variable')
           else msg.push('highly variable')
         } else {
-            msg.push('with very little apparent variability')
+            msg.push('with no apparent variability')
             variability = 0;
         }
-        bigBoard(`${msg[msg.length-1]}: (${(variability*100).toPrecision(2)}% variability)`);
+        if (variability != 0) {
+          bigBoard(`${msg[msg.length-1]}: (${(variability*100).toPrecision(2)}% variability)`);
+        }
 
         msg[msg.length-1] = 'and '+msg[msg.length-1];
         msg = msg.join('<br>');
