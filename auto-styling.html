@@ -360,7 +360,7 @@
       async function autoStyle(fieldName, dataset, layer) {
         const geometryType = dataset.attributes.geometryType;
         var field = getDatasetField(dataset, fieldName);
-        let datasetStats = dataset.attributes.statistics.numeric[fieldName.toLowerCase()].statistics;
+        let datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
         let fieldStats = field.statistics;
         let minValue = fieldStats.values.min;
         let maxValue = fieldStats.values.max;
@@ -585,13 +585,15 @@
         else if (clustered < .5) msg.push('roughly uniform')
         else if (clustered < .75) msg.push('a bit dispersed')
         else msg.push('highly dispersed')
-        bigBoard(`${msg[msg.length-1]}: (${(clustered*100).toPrecision(2)}%)`);
+        if (!clustered) clustered = 1;
+        bigBoard(`${msg[msg.length-1]}: (${(clustered*100).toPrecision(3)}%)`);
 
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
         msg.push('uniqueness: '+uniqueness)
         if (uniquesCount === 1) {
           msg.push('no unique values')
+          uniqueness = 0;
         } else {
             if (uniqueness < .25) msg.push('very few unique values ('+uniquesCount+')')
             else if (uniqueness < .5) msg.push('few unique values')
@@ -644,6 +646,7 @@
           else msg.push('highly variable')
         } else {
             msg.push('with very little apparent variability')
+            variability = 0;
         }
         bigBoard(`${msg[msg.length-1]}: (${(variability*100).toPrecision(2)}% variability)`);
 
