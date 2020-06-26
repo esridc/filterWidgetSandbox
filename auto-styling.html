@@ -112,7 +112,6 @@
 
       datasetList.addEventListener('change', async event => {
         ({ layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' }));
-        drawMap(layer, dataset);
       });
 
       // color ramp switcher
@@ -150,11 +149,6 @@
       } else {
         var datasetId = datasetList.options[datasetList.selectedIndex].value;
         ({ layer, dataset } = await loadDataset({ datasetId: datasetId, env: env }));
-        if (!layer.loaded) {
-          layer.on("layerview-create", function(event){
-
-          });
-        }
       }
 
       // add event listener to dropdown, to create visualizations
@@ -178,13 +172,11 @@
 
         // guess at a style for this field
         try {
-          if (!layer) { // if there's no layer
-            // initialize a new one
-            layer = new FeatureLayer({
-              renderer: {type: 'simple'},
-              url: dataset.attributes.url
-            });
-          }
+          // initialize a new layer
+          var layer = new FeatureLayer({
+            renderer: {type: 'simple'},
+            url: dataset.attributes.url
+          });
           switchStyles(null, layer, fieldName);
         } catch(e) {
           console.log('e:', e)
@@ -212,10 +204,14 @@
           }
           widgetMessage.innerText = 'Drawing '+fieldName+'.';
 
-          const layerView = await view.whenLayerView(layer);
+            const layerView = await view.whenLayerView(layer);
+          } catch(e) {
+            console.error(new Error(e));
+            const layerView = await view.whenLayerView(layer);
+          }
 
-          var renderer = await autoStyle(fieldName, dataset);
-          const field = getDatasetField(dataset, fieldName);
+          var renderer = await autoStyle(fieldName, dataset, layer);
+          field = getDatasetField(dataset, fieldName);
           layer.renderer = renderer;
           layer.minScale = 0; // draw at all scales
           layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
@@ -357,7 +353,7 @@
       }
 
       // analyze a dataset and choose an initial best-guess symbology for it
-      async function autoStyle(fieldName, dataset) {
+      async function autoStyle(fieldName, dataset, layer) {
         const geometryType = dataset.attributes.geometryType;
         var field = getDatasetField(dataset, fieldName);
         let datasetStats = dataset.attributes.statistics.numeric[fieldName.toLowerCase()].statistics;
@@ -818,7 +814,7 @@
           try {
             let featureExtent;
 
-            const queriedExtent = await layer.queryExtent({
+            const queriedExtent = await layerView.layer.queryExtent({
               where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
               outSpatialReference: layerView.view.spatialReference
             });
