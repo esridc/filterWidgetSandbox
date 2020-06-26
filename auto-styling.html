@@ -494,11 +494,11 @@
         } else if (distribution.stats.clustered > .8) {
           tags.push('diverging');
           theme = 'above-and-below';
+        } else if (distribution.stats.uniqueness == 1) {
+          tags.push('sequential');
+          theme = 'high-to-low';
         } else if (distribution.stats.variability < .3) {
           tags.push('heatmap');
-          theme = 'high-to-low';
-        } else if (distribution.stats.variability > .8) {
-          tags.push('sequential');
           theme = 'high-to-low';
         } else {
           tags.push('extremes')
