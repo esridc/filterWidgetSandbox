@@ -486,33 +486,49 @@
         }
 
         // choose ramp
-        var rampTags = ['bright'];
-        if (distribution.stats.clustered < .5) {
-          rampTags.push('extreme');
+        var tags = ['bright'];
+        var theme;
+        var useRamp = false;
+        if (distribution.stats.clustered < .3) {
+          theme = 'extremes';
+        } else if (distribution.stats.clustered > .8) {
+          tags.push('diverging');
+          theme = 'above-and-below';
+        } else if (distribution.stats.variability < .3) {
+          tags.push('heatmap');
+          theme = 'high-to-low';
+        } else if (distribution.stats.variability > .8) {
+          tags.push('sequential');
+          theme = 'high-to-low';
         } else {
-          rampTags.push('diverging');
+          tags.push('extremes')
+          useRamp = true
+          if (distribution.stats.clustered < .5) {
+            tags.push('extremes');
+          } else {
+            tags.push('diverging');
+          }
+          if (distribution.stats.variability < .5) {
+            tags.push('heatmap');
+          } else {
+            tags.push('sequential');
+          }
         }
-        if (distribution.stats.variability < .5) {
-          rampTags.push('heatmap');
+        console.log('tags:', tags)
+        if (useRamp) {
+          let allRamps = colorRamps.byTag({includedTags: tags});
+          var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
         } else {
-          rampTags.push('sequential');
+          let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
+          console.log(allSchemes)
+          var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
         }
-
-        // let allSchemes = Color.getSchemesByTag({includedTags: ['bright', 'diverging']});
-        let allSchemes = Color.getSchemes({geometryType: 'point', theme: 'above-and-below'});
-        console.log('allSchemes:', allSchemes)
-        // let allRamps = colorRamps.byTag({includedTags: rampTags});
-        let allRamps = colorRamps.byTag({includedTags: rampTags});
-        let ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
-        console.log(rampTags, ramp)
-        let rampColors = ramp.colors;
-
+        console.log('rampColors:', rampColors)
         widgetMessage.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
 
         var renderer = {
           type: "simple", // autocasts as new SimpleRenderer()
           symbol: symbol,
-          // label: "% population in poverty by county", // label for the legend
           visualVariables: [{
             type: "color", // indicates this is a color visual variable
             field: fieldName,
@@ -521,6 +537,10 @@
               value: minValue,
               color: rampColors[0],
               label: minValue
+            },{
+              value: (maxValue+minValue)/2,
+              color: rampColors[Math.floor((rampColors.length-1)/2)],
+              label: (maxValue+minValue)/2,
             },{
               value: maxValue,
               color: rampColors[rampColors.length-1],
@@ -542,7 +562,6 @@
       }
 
       function getDistribution(values, stats) {
-        // debugger
         let msg = [];
         let js = jStat(values)
         let uniqueValues = new Set(values);
