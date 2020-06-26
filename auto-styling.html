@@ -111,6 +111,7 @@
       }
 
       datasetList.addEventListener('change', async event => {
+        bigBoard('', false);
         ({ layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' }));
       });
 
@@ -199,10 +200,12 @@
       }
 
         async function switchStyles(view, layer, fieldName) {
-          if (!view) {
-            var view = await drawMap(layer, dataset)
-          }
-          widgetMessage.innerText = 'Drawing '+fieldName+'.';
+          var field;
+          try {
+            if (!view) {
+              var view = await drawMap(layer, dataset)
+            }
+            widgetMessage.innerText = 'Drawing '+fieldName+'.';
 
             const layerView = await view.whenLayerView(layer);
           } catch(e) {
@@ -362,10 +365,8 @@
         let maxValue = fieldStats.values.max;
         let symbol;
 
-        widgetMessage.innerText += '\nAnalyzing field \''+fieldName+'\'.';
         bigBoard(`Analyzing '${fieldName}'`, false);
-        widgetMessage.innerText += '\nGeometry type is '+geometryType+'.';
-        bigBoard(`Geometry type is ${geometryType}`);
+        bigBoard(`Data is ${field.simpleType} in ${geometryType}s.`);
 
         if (!!layer) {
 
@@ -565,7 +566,7 @@
         else if (clustered < .5) msg.push('roughly uniform')
         else if (clustered < .75) msg.push('a bit dispersed')
         else msg.push('highly dispersed')
-        bigBoard(msg[msg.length-1]);
+        bigBoard(`${msg[msg.length-1]}: (${(clustered*100).toPrecision(2)}%)`);
 
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
@@ -576,10 +577,10 @@
             if (uniqueness < .25) msg.push('very few unique values ('+uniquesCount+')')
             else if (uniqueness < .5) msg.push('few unique values')
             else if (uniqueness < .75) msg.push('few repeated values')
-            else if (uniqueness < 1) msg.push('very vew repeated values')
+            else if (uniqueness < 1) msg.push('very few repeated values')
             else msg.push('no repeated values')
         }
-        bigBoard(msg[msg.length-1]);
+        bigBoard(`${msg[msg.length-1]}: (${(uniqueness*100).toPrecision(2)}%) unique`);
 
         if (uniqueness != 1) {
           if (!!mode) {
@@ -605,7 +606,7 @@
           else if (meanLocation < .55) msg.push('roughly symmetrical')
           else if (meanLocation < .7) msg.push('skewed a bit high')
           else msg.push('skewed high')
-          bigBoard(msg[msg.length-1]);
+          bigBoard(`${msg[msg.length-1]}: (${(meanLocation*100).toPrecision(2)}%)`);
 
           if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
             msg.push('possibly exponential')
@@ -625,7 +626,7 @@
         } else {
             msg.push('with very little apparent variability')
         }
-        bigBoard(msg[msg.length-1]);
+        bigBoard(`${msg[msg.length-1]}: (${(variability*100).toPrecision(2)}% variability)`);
 
         msg[msg.length-1] = 'and '+msg[msg.length-1];
         msg = msg.join('<br>');
