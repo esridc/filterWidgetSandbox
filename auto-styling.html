@@ -85,7 +85,7 @@
       "esri/renderers/Renderer",
       "esri/renderers/support/jsonUtils",
       "esri/renderers/smartMapping/symbology/support/colorRamps",
-      "esri/Color",
+      "esri/renderers/smartMapping/symbology/color",
       ]);
 
 
@@ -125,12 +125,6 @@
         opt.value = value.name;
         rampList.appendChild(opt);
       }
-
-      // set ramp list event handler
-      rampList.addEventListener('change', async event => {
-        var ramp = colorRamps.byName(event.target.value);
-        updateRamp(ramp.colors, layer);
-      });
 
       // track widgets and state
       var timeSlider = null;
@@ -178,6 +172,13 @@
             renderer: {type: 'simple'},
             url: dataset.attributes.url
           });
+
+          // now we have a layer, set ramp list event handler
+          rampList.addEventListener('change', async event => {
+            var ramp = colorRamps.byName(event.target.value);
+            updateRamp(ramp.colors, layer);
+          });
+
           switchStyles(null, layer, fieldName);
         } catch(e) {
           console.log('e:', e)
@@ -485,8 +486,26 @@
           symbol = {type: 'simple-fill' };
         }
 
-        let allRamps = colorRamps.all();
+        // choose ramp
+        var rampTags = ['bright'];
+        if (distribution.stats.clustered < .5) {
+          rampTags.push('extreme');
+        } else {
+          rampTags.push('diverging');
+        }
+        if (distribution.stats.variability < .5) {
+          rampTags.push('heatmap');
+        } else {
+          rampTags.push('sequential');
+        }
+
+        // let allSchemes = Color.getSchemesByTag({includedTags: ['bright', 'diverging']});
+        let allSchemes = Color.getSchemes({geometryType: 'point', theme: 'above-and-below'});
+        console.log('allSchemes:', allSchemes)
+        // let allRamps = colorRamps.byTag({includedTags: rampTags});
+        let allRamps = colorRamps.byTag({includedTags: rampTags});
         let ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
+        console.log(rampTags, ramp)
         let rampColors = ramp.colors;
 
         widgetMessage.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
