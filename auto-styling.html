@@ -401,11 +401,13 @@
                 arr.push(filtered[x].value);
               };
             }
+
+            var numBins = (uniqueValues.length > 30 ? 30 : uniqueValues.length)
             // use d3 to bin histograms
             let d3bins = d3.histogram()  // create layout object
               .domain([Math.min(...filtered.map(a => a.value)),
               Math.max(...filtered.map(a => a.value))])  // to cover range
-              .thresholds(29) // separated into 30 bins
+              .thresholds(numBins - 1) // separated into 30 bins
               (arr);          // pass the array
             // convert the d3 bins array to a bins object
             var bins = [];
@@ -914,11 +916,14 @@
         container = document.createElement('div');
         parentContainer.appendChild(container);
 
+        let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+        var numBins = (uniqueValues.length > 30 ? 30 : uniqueValues.length)
+
         try {
           const params = {
             layer: layer,
             field: fieldName,
-            numBins: 30
+            numBins: numBins
           };
 
           let values, source, coverage;
