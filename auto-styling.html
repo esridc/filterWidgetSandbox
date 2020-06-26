@@ -111,7 +111,7 @@
       }
 
       datasetList.addEventListener('change', async event => {
-        bigBoard('', false);
+        bigBoard('', false, false);
         ({ layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' }));
       });
 
@@ -291,7 +291,7 @@
 
         // On-map UI widgets
         view.ui.move('zoom', 'top-right');
-        view.ui.add('messageDiv', 'top-left');
+        view.ui.add('bigBoard', 'top-left');
 
         var legend = await new Legend({
           view: view,
@@ -366,8 +366,17 @@
         let maxValue = fieldStats.values.max;
         let symbol;
 
-        bigBoard(`Analyzing '${fieldName}'`, false);
-        bigBoard(`Data is ${field.simpleType} in ${geometryType}s.`);
+        bigBoard(`Analyzing '${fieldName}'`, false, false);
+        var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
+                    : (geometryType == 'esriGeometryMultiPoint') ? 'point'
+                    : (geometryType == 'esriGeometryPolygon') ? 'polygon'
+                    : (geometryType == 'esriGeometryLine') ? 'line'
+                    : (geometryType == 'esriGeometryPolyline') ? 'line'
+                    : geometryType;
+        bigBoard(`Data is ${field.simpleType} in ${geotype}s`);
+
+        var aside = "so we'll draw some "+geotype+"s."
+        bigBoard(aside, true, false);
 
         if (!!layer) {
 
@@ -443,12 +452,25 @@
 
         }
 
+        var numValues = datasetStats.values.count;
+        bigBoard(`There are ${numValues} values`);
+
         // v simple way to vary point size with number of data points
         // 1-9: 20px
         // 10-99: 10px
         // 100-999: 5px
         // 1000-9999: 2.5px
         var pointSize = 20/(datasetStats.values.count+'').length; // convert to string to get power of 10
+
+        aside = "so we'll draw them at "+pointSize+"px"
+        bigBoard(aside, true, false);
+
+        if (numValues > 1000) {
+          aside = "and make them slightly transparent."
+        } else {
+          aside = ".";
+        }
+        bigBoard(aside, true, false);
 
         if (geometryType === 'esriGeometryPoint') {
           let stats = dataset.attributes.statistics
@@ -590,6 +612,7 @@
         let quartiles = jStat.quartiles(values);
         let IQR = quartiles[2]-quartiles[0];
 
+        let aside;
         msg.push('Sample count: '+sampleCount)
         msg.push('Min: '+min+', Max: '+max+', Range:'+range)
         msg.push('Mean: '+mean)
@@ -598,11 +621,18 @@
         let clustered = IQR/range;
         if (! clustered || clustered < .2) msg.push('highly clustered')
         else if (clustered < .4) msg.push('somewhat clustered')
-        else if (clustered < .6) msg.push('roughly uniform')
+        else if (clustered < .6) {
+          msg.push("roughly uniform");
+          aside = "so we'll use an extremes ramp."
+        }
         else if (clustered < .8) msg.push('somewhat dispersed')
         else msg.push('highly dispersed')
         if (!clustered) clustered = 1;
         bigBoard(`${msg[msg.length-1]}: (${(clustered*100).toPrecision(3)}%)`);
+        if (aside) {
+          bigBoard(aside, true, false);
+          aside = null;
+        }
 
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
@@ -1090,11 +1120,14 @@
 
       // makeWidget(null, "phenomenonTime");
 
-      function bigBoard(msg, append=true) {
-        if (append) {
-          msg = document.getElementById('messageDiv').innerHTML + '<br>' + msg;
+      function bigBoard(msg, aside=false, append=true) {
+        var bigBoard = document.getElementById('bigBoard');
+        if (aside) {
+          msg = bigBoard.innerHTML + ' <span class="aside">' + msg + "</span>";
+        } if (append) {
+          msg = bigBoard.innerHTML + '<br>' + msg;
         }
-        document.getElementById('messageDiv').innerHTML = msg;
+        bigBoard.innerHTML = msg;
       }
     })();
   </script>
@@ -1128,7 +1161,7 @@
     </div>
   </div>
   <div id="viewDiv"></div>
-  <div id="messageDiv" class="esri-widget"></div>
+  <div id="bigBoard" class="esri-widget"><p class="block"></p></div>
   <!-- <div id="zoomToData" class="esri-widget">
     <label>
       <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
