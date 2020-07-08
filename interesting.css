@@ -1,5 +1,5 @@
 /* aloglia autocomplete.js styles */
-  
+
 .algolia-autocomplete {
   width: 100%;
 }
@@ -100,11 +100,8 @@ body,
    outline: none !important;
 }
 
-.miniHistogramWidget {
-  position: absolute;
-  top: 13px;
-  width: 100%;
-  height: 40px;
+.histogramWidget {
+  height: 80px;
 }
 
 .widgetLabel {
@@ -114,23 +111,4 @@ body,
 #stylingAttribute {
   margin: 10px;
   list-style-position: inside;
-}
-
-/* #stylingAttributeList {
-  margin: 10px;
-} */
-
-#bigBoard {
-  font-size: 24px;
-  color: white;
-  background-color: black;
-  border: 2px solid white;
-  /* display: inline-table; */
-  padding: 10px;
-  box-shadow: none;
-}
-
-.aside {
-  font-size: 18px;
-  color: rgb(78,159,209)
 }
