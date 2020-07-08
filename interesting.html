@@ -59,15 +59,10 @@
       MapView,
       FeatureLayer,
       generateHistogram,
-      Histogram,
       HistogramRangeSlider,
-      TimeSlider,
-      SimpleMarker,
       uniqueValues,
-      webMercatorUtils,
       Legend,
       Renderer,
-      jsonUtils,
       colorRamps,
       Color,
       ] = await loadModules([
@@ -75,15 +70,10 @@
       "esri/views/MapView",
       "esri/layers/FeatureLayer",
       "esri/renderers/smartMapping/statistics/histogram",
-      "esri/widgets/Histogram",
       "esri/widgets/HistogramRangeSlider",
-      "esri/widgets/TimeSlider",
-      "esri/symbols/SimpleMarkerSymbol",
       "esri/renderers/smartMapping/statistics/uniqueValues",
-      "esri/geometry/support/webMercatorUtils",
       "esri/widgets/Legend",
       "esri/renderers/Renderer",
-      "esri/renderers/support/jsonUtils",
       "esri/renderers/smartMapping/symbology/support/colorRamps",
       "esri/renderers/smartMapping/symbology/color",
       ]);
@@ -881,10 +871,6 @@
               coverage = params.features.length / featureCount;
             }
           }
-
-          // Histogram widget (graph only, no range slider)
-          // const histogram = Histogram.fromHistogramResult(values);
-          // histogram.container = container;
 
           // Determine if field is an integer
           const field = getDatasetField(dataset, fieldName);
