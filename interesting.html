@@ -454,21 +454,11 @@
 
         // choose ramp
         console.log(distribution.stats)
-        var useRamp = false;
-        // debugger
-        const {tags, theme} = getRamp(distribution.stats);
 
-        console.log('theme:', theme)
-        console.log('tags:', tags)
-        if (useRamp) {
-          let allRamps = colorRamps.byTag({includedTags: tags});
-          var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
-        } else {
-          let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-          console.log(allSchemes)
-          var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
-        }
-        console.log('rampColors:', rampColors)
+        let thisramp = colorRamps.byName("Flower Field");
+        console.log(thisramp)
+        var rampColors = thisramp.colors;
+
         widgetMessage.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
         var rMin = rampColors[0];
         var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
@@ -496,48 +486,6 @@
           }]
         };
         return renderer;
-      }
-
-      function getRamp(stats) {
-        var tags = ['bright'];
-        var theme = null;
-        if (
-            ((stats.clustered < .3) || (stats.clustered == 1))
-            && ((stats.meanLocation < .3 || stats.meanLocation > .7))
-          ) {
-          tags.push('heatmap');
-          theme = 'high-to-low';
-          bigBoard("Could be exponential <span class='aside'>so we'll use a heatmap ramp.</span>")
-          return {tags, theme}
-        }
-
-        if (stats.clustered < .3) {
-          theme = 'extremes';
-        } else if (stats.clustered > .8) {
-          tags.push('diverging');
-          theme = 'above-and-below';
-        } else if (stats.uniqueness == 1) {
-          tags.push('sequential');
-          theme = 'high-to-low';
-          bigBoard("Distribution is flat <span class='aside'>so we'll use a sequential ramp.</span>")
-        } else if (stats.variability < .3) {
-          tags.push('heatmap');
-          theme = 'high-to-low';
-        } else {
-          tags.push('extremes')
-          useRamp = true
-          if (stats.clustered < .5) {
-            tags.push('extremes');
-          } else {
-            tags.push('diverging');
-          }
-          if (stats.variability < .5) {
-            tags.push('heatmap');
-          } else {
-            tags.push('sequential');
-          }
-        }
-        return {tags, theme}
       }
 
       function getDistribution(values, stats) {
