@@ -16,8 +16,8 @@
   name="viewport"
   content="initial-scale=1,maximum-scale=1,user-scalable=no"
   />
-  <title>Filters</title>
-  <link href="auto-styling.css" rel="stylesheet">
+  <title>Interesting</title>
+  <link href="interesting.css" rel="stylesheet">
 
   <script src="https://unpkg.com/lodash@4.17.15/lodash.js"></script>
 
@@ -375,7 +375,7 @@
           var opacity = 1;
           if (geotype == "point" || geotype == "line") {
             if (numValues > 5000) {
-              opacity = .15;
+              opacity = .50;
             } else if (numValues > 1000) {
               opacity = .75;
             }
@@ -500,38 +500,38 @@
         let IQR = quartiles[2]-quartiles[0];
 
         msg.push('Sample count: '+sampleCount)
-        msg.push('Min: '+min+', Max: '+max+', Range:'+range)
+        msg.push('Min: '+min+', Max: '+max+', Range: '+range)
         msg.push('Mean: '+mean)
         msg.push('IQR: '+IQR)
-        msg.push('IQR/range: '+ (IQR/range))
+        msg.push('IQR/Range: '+ (IQR/range))
 
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
-        msg.push('uniqueness: '+uniqueness)
+        msg.push('Uniqueness: '+uniqueness)
         if (uniquesCount === 1) {
-          msg.push('no unique values')
+          msg.push('- no unique values')
           uniqueness = 0;
         } else {
-            if (uniqueness < .25) msg.push('very few unique values ('+uniquesCount+')')
-            else if (uniqueness < .5) msg.push('few unique values')
-            else if (uniqueness < .75) msg.push('few repeated values')
-            else if (uniqueness < 1) msg.push('very few repeated values')
-            else msg.push('no repeated values')
+            if (uniqueness < .25) msg.push('- very few unique values ('+uniquesCount+')')
+            else if (uniqueness < .5) msg.push('- few unique values')
+            else if (uniqueness < .75) msg.push('- few repeated values')
+            else if (uniqueness < 1) msg.push('- very few repeated values')
+            else msg.push('- no repeated values')
         }
 
         let clustered = IQR/range;
-        if (!clustered) { 
+        if (!clustered) {
           clustered = 0;
-          msg.push('highly clustered')
+          msg.push('- highly clustered')
         } else if (clustered < .2) {
-          msg.push('highly clustered')
+          msg.push('- highly clustered')
         }
-        else if (clustered < .4) msg.push('somewhat clustered')
+        else if (clustered < .4) msg.push('- somewhat clustered')
         else if (clustered < .6) {
-          msg.push("roughly uniform");
+          msg.push("- roughly uniform");
         }
-        else if (clustered < .8) msg.push('somewhat dispersed')
-        else msg.push('highly dispersed')
+        else if (clustered < .8) msg.push('- somewhat dispersed')
+        else msg.push('- highly dispersed')
 
         if (uniqueness != 1) {
           if (!!mode) {
@@ -540,11 +540,12 @@
             } else {
               msg.push('Mode: '+mode);
             }
+            msg.push('jsapi Stdev: '+stdev)
+            msg.push('jStat Stdev: '+stddev)
             msg.push('Meddev: '+meddev)
-            if (mode.length == 2) {
-              msg.push('with two modes')
-            } else if (mode.length > 5) {
-              msg.push('with '+mode.length+' modes')
+            msg.push('Diffdev: '+diffdev)
+            if (mode.length > 1) {
+              msg.push('- with '+mode.length+' modes')
             }
           }
         }
@@ -553,42 +554,41 @@
         msg.push('meanLocation: '+meanLocation)
         if (!!meanLocation) {
           if (meanLocation < .3) {
-            msg.push('skewed low')
+            msg.push('- skewed low')
           }
           else if (meanLocation < .45) {
-            msg.push('skewed a bit low')
+            msg.push('- skewed a bit low')
           }
           else if (meanLocation < .55) {
-            msg.push('roughly symmetrical')
+            msg.push('- roughly symmetrical')
           }
           else if (meanLocation < .7) {
-            msg.push('skewed a bit high')
+            msg.push('- skewed a bit high')
           }
           else {
-            msg.push('skewed high')
+            msg.push('- skewed high')
           }
 
           if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
-            msg.push('possibly exponential')
+            msg.push('- possibly exponential')
           } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
-            msg.push('possibly logarithmic')
+            msg.push('- possibly logarithmic')
           }
         }
 
         let variability = meddev/range;
-        msg.push('Variablility:'+variability)
+        msg.push('Variablility: '+variability)
         if (!!variability) {
-          if (variability < .2) msg.push('highly regular')
-          else if (variability < .4) msg.push('generally regular')
-          else if (variability < .6) msg.push('slightly variable')
-          else if (variability < .8) msg.push('moderately variable')
-          else msg.push('highly variable')
+          if (variability < .2) msg.push('- highly regular')
+          else if (variability < .4) msg.push('- generally regular')
+          else if (variability < .6) msg.push('- slightly variable')
+          else if (variability < .8) msg.push('- moderately variable')
+          else msg.push('- highly variable')
         } else {
-            msg.push('with no apparent variability')
+            msg.push('- with no apparent variability')
             variability = 0;
         }
 
-        msg[msg.length-1] = 'and '+msg[msg.length-1];
         msg = msg.join('<br>');
         return {
           message: msg,
