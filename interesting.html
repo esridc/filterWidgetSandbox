@@ -505,7 +505,10 @@
 
         let sampleCount = values.length;
         let mode = jStat.mode(values);
+        let stddev = jStat.stdev(values); // standard deviation
         let meddev = jStat.meddev(values); // median absolute deviation
+        let diffdev = meddev - stddev; // difference between the two – detects outliers
+
         let quartiles = jStat.quartiles(values);
         let IQR = quartiles[2]-quartiles[0];
 
