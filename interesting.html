@@ -198,7 +198,7 @@
             }
           }
           else {
-            widgetMessage.innerText += '\nNot sure what datatype this field is.';
+            widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
           }
         };
 
@@ -383,7 +383,7 @@
 
           if (features) {
             var values = Object.values(features).map(v => v.attributes[fieldName])
-            var distribution = getDistribution(values, datasetStats.values);
+            var distribution = getDistribution(values, datasetStats.values, field.simpleType);
             widgetMessage.innerHTML += '<br>'+distribution.message+'.';
           } else {
             console.log('no features returned for', fieldName)
@@ -465,49 +465,19 @@
         return renderer;
       }
 
-      function getDistribution(values, stats) {
+      function getDistribution(values, stats, type) {
         let msg = [];
         let js = jStat(values)
         let uniqueValues = new Set(values);
 
-        if (stats) {
-          var min = stats.min;
-          var max = stats.max;
-          var midpoint = max-min/2;
-          var range = max-min; // distance between min and max
-          var mean = stats.avg;
-          var variance = stats.var;
-          var stdev = stats.stddev;
-          var count = stats.count;
-        } else {
-          var min = jStat.min(values);
-          var max = jStat.max(values);
-          var midpoint = max-min/2;
-          var range = max-min; // distance between min and max
-          var mean = jStat.mean(values);
-          var variance = jStat.variance(values);
-          var stdev = jStat.stdev(values);
-          var count = values.length;
-        }
-
         let sampleCount = values.length;
-        let mode = jStat.mode(values);
-        let stddev = jStat.stdev(values); // standard deviation
-        let meddev = jStat.meddev(values); // median absolute deviation
-        let diffdev = meddev - stddev; // difference between the two – detects outliers
-
-        let quartiles = jStat.quartiles(values);
-        let IQR = quartiles[2]-quartiles[0];
 
         msg.push('Sample count: '+sampleCount)
-        msg.push('Min: '+min+', Max: '+max+', Range: '+range)
-        msg.push('Mean: '+mean)
-        msg.push('IQR: '+IQR)
-        msg.push('IQR/Range: '+ (IQR/range))
-
         let uniquesCount = uniqueValues.size;
         let uniqueness = uniqueValues.size/values.length;
         msg.push('Uniqueness: '+uniqueness)
+
+        let result = {};
         if (uniquesCount === 1) {
           msg.push('- no unique values')
           uniqueness = 0;
@@ -519,80 +489,107 @@
             else msg.push('- no repeated values')
         }
 
-        let clustered = IQR/range;
-        if (!clustered) {
-          clustered = 0;
-          msg.push('- highly clustered')
-        } else if (clustered < .2) {
-          msg.push('- highly clustered')
-        }
-        else if (clustered < .4) msg.push('- somewhat clustered')
-        else if (clustered < .6) {
-          msg.push("- roughly uniform");
-        }
-        else if (clustered < .8) msg.push('- somewhat dispersed')
-        else msg.push('- highly dispersed')
+        if (type != "string") {
+          if (stats) {
+            var min = stats.min;
+            var max = stats.max;
+            var midpoint = max-min/2;
+            var range = max-min; // distance between min and max
+            var mean = stats.avg;
+            var variance = stats.var;
+            var stdev = stats.stddev;
+            var count = stats.count;
+          } else {
+            var min = jStat.min(values);
+            var max = jStat.max(values);
+            var midpoint = max-min/2;
+            var range = max-min; // distance between min and max
+            var mean = jStat.mean(values);
+            var variance = jStat.variance(values);
+            var stdev = jStat.stdev(values);
+            var count = values.length;
+          }
+          let mode = jStat.mode(values);
+          let stddev = jStat.stdev(values); // standard deviation
+          let meddev = jStat.meddev(values); // median absolute deviation
+          let diffdev = meddev - stddev; // difference between the two – detects outliers
 
-        if (uniqueness != 1) {
-          if (!!mode) {
-            if (typeof mode === "Array") {
-              msg.push(mode.length+" Modes")
-            } else {
-              msg.push('Mode: '+mode);
+          let quartiles = jStat.quartiles(values);
+          let IQR = quartiles[2]-quartiles[0];
+          msg.push('Min: '+min+', Max: '+max+', Range: '+range)
+          msg.push('Mean: '+mean)
+          msg.push('IQR: '+IQR)
+          msg.push('IQR/Range: '+ (IQR/range))
+          let clustered = IQR/range;
+          if (!clustered) {
+            clustered = 0;
+            msg.push('- highly clustered')
+          } else if (clustered < .2) {
+            msg.push('- highly clustered')
+          }
+          else if (clustered < .4) msg.push('- somewhat clustered')
+          else if (clustered < .6) {
+            msg.push("- roughly uniform");
+          }
+          else if (clustered < .8) msg.push('- somewhat dispersed')
+          else msg.push('- highly dispersed')
+
+          if (uniqueness != 1) {
+            if (!!mode) {
+              if (typeof mode === "Array") {
+                msg.push(mode.length+" Modes")
+              } else {
+                msg.push('Mode: '+mode);
+              }
+              msg.push('jsapi Stdev: '+stdev)
+              msg.push('jStat Stdev: '+stddev)
+              msg.push('Meddev: '+meddev)
+              msg.push('Diffdev: '+diffdev)
+              if (mode.length > 1) {
+                msg.push('- with '+mode.length+' modes')
+              }
             }
-            msg.push('jsapi Stdev: '+stdev)
-            msg.push('jStat Stdev: '+stddev)
-            msg.push('Meddev: '+meddev)
-            msg.push('Diffdev: '+diffdev)
-            if (mode.length > 1) {
-              msg.push('- with '+mode.length+' modes')
+          }
+          let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
+          msg.push('meanLocation: '+meanLocation)
+          if (!!meanLocation) {
+            if (meanLocation < .3) {
+              msg.push('- skewed low')
+            }
+            else if (meanLocation < .45) {
+              msg.push('- skewed a bit low')
+            }
+            else if (meanLocation < .55) {
+              msg.push('- roughly symmetrical')
+            }
+            else if (meanLocation < .7) {
+              msg.push('- skewed a bit high')
+            }
+            else {
+              msg.push('- skewed high')
+            }
+
+            if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
+              msg.push('- possibly exponential')
+            } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
+              msg.push('- possibly logarithmic')
             }
           }
-        }
 
-        let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
-        msg.push('meanLocation: '+meanLocation)
-        if (!!meanLocation) {
-          if (meanLocation < .3) {
-            msg.push('- skewed low')
-          }
-          else if (meanLocation < .45) {
-            msg.push('- skewed a bit low')
-          }
-          else if (meanLocation < .55) {
-            msg.push('- roughly symmetrical')
-          }
-          else if (meanLocation < .7) {
-            msg.push('- skewed a bit high')
-          }
-          else {
-            msg.push('- skewed high')
+          let variability = meddev/range;
+          msg.push('Variablility: '+variability)
+          if (!!variability) {
+            if (variability < .2) msg.push('- highly regular')
+            else if (variability < .4) msg.push('- generally regular')
+            else if (variability < .6) msg.push('- slightly variable')
+            else if (variability < .8) msg.push('- moderately variable')
+            else msg.push('- highly variable')
+          } else {
+              msg.push('- with no apparent variability')
+              variability = 0;
           }
 
-          if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
-            msg.push('- possibly exponential')
-          } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
-            msg.push('- possibly logarithmic')
-          }
-        }
-
-        let variability = meddev/range;
-        msg.push('Variablility: '+variability)
-        if (!!variability) {
-          if (variability < .2) msg.push('- highly regular')
-          else if (variability < .4) msg.push('- generally regular')
-          else if (variability < .6) msg.push('- slightly variable')
-          else if (variability < .8) msg.push('- moderately variable')
-          else msg.push('- highly variable')
-        } else {
-            msg.push('- with no apparent variability')
-            variability = 0;
-        }
-
-        msg = msg.join('<br>');
-        return {
-          message: msg,
-          stats: {
+          result.stats = {
             min: min,
             max: max,
             mode: mode,
@@ -603,6 +600,10 @@
             mode: mode,
           }
         }
+
+        msg = msg.join('<br>');
+        result.message = msg;
+        return result;
       }
 
       window.getDistribution = getDistribution;
