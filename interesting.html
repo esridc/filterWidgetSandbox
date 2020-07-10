@@ -197,13 +197,33 @@
             });
           }
 
+          // add a result row and get the container for a minihistogram
+          let minicontainer = addResultRow();
           const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
-          addResultRow(histogram);
+          debugger
         }
         else {
           widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
         }
       };
+
+      function addResultRow() {
+        // debugger
+        const table = document.getElementById('resultsTable')
+                .getElementsByTagName('table')[0]
+                .getElementsByTagName('tbody')[0];
+        const row = document.createElement('tr');
+        table.appendChild(row);
+        for (var x = 0; x < 14; x++) {
+          row.appendChild(document.createElement('td'));
+        }
+        let cells = row.getElementsByTagName('td');
+        let target = cells[cells.length-1];
+        const minicontainer = document.createElement('div');
+        minicontainer.classList.add('miniHistogram');
+        target.appendChild(minicontainer);
+        return minicontainer;
+      }
 
       async function drawMap(layer, dataset) {
         const map = new Map({
@@ -219,7 +239,7 @@
 
         // On-map UI widgets
         view.ui.move('zoom', 'top-right');
-        view.ui.add('resultsTable', 'top-left');
+        // view.ui.add('resultsTable', 'top-left');
 
         var legend = await new Legend({
           view: view,
@@ -281,8 +301,8 @@
         let field = getDatasetField(dataset, fieldName)
         switchSelected(null, field.name);
 
-        for (each in Object.keys(dataset.attributes.statistics.numeric)) {
-          let fieldName = Object.keys(dataset.attributes.statistics.numeric)[each]
+        for (let x in Object.keys(dataset.attributes.statistics.numeric)) {
+          let fieldName = Object.keys(dataset.attributes.statistics.numeric)[x]
           let field = getDatasetField(dataset, fieldName)
           switchSelected(null, field.name);
         }
@@ -1080,7 +1100,7 @@
         <td>Meddev</td>
         <td>Balance</td>
         <td>Variability</td>
-        <td><div id="test"></div></td>
+        <td></td>
       </tr>
     </table>
   </div>
