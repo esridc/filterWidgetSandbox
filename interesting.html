@@ -152,60 +152,58 @@
 
       }
 
-        async function switchStyles(view, layer, fieldName) {
-          var field;
-          try {
-            if (!view) {
-              var view = await drawMap(layer, dataset)
+      async function switchStyles(view, layer, fieldName) {
+        var field;
+        try {
+          if (!view) {
+            var view = await drawMap(layer, dataset)
+          }
+          widgetMessage.innerText = 'Drawing '+fieldName+'.';
+
+          const layerView = await view.whenLayerView(layer);
+        } catch(e) {
+          console.error(new Error(e));
+          const layerView = await view.whenLayerView(layer);
+        }
+
+        var renderer = await autoStyle(fieldName, dataset, layer);
+        field = getDatasetField(dataset, fieldName);
+        layer.renderer = renderer;
+        layer.minScale = 0; // draw at all scales
+        layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
+
+        // clear previous filters
+        if (typeof layerView != 'undefined') {
+          updateLayerViewEffect(layerView, { updateExtent: true });
+        }
+
+        // Numeric fields - histogram
+        if (field.simpleType === 'numeric' || field.simpleType === 'date') {
+          // widgetMessage.innerText += '\nLooks like numbers.';
+          // Histogram
+          const container = document.createElement('div');
+          container.classList.add('histogramWidget');
+          document.getElementById('widget').appendChild(container);
+
+          const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
+          if (histogramSlider.widget) {
+            if (histogramSlider.coverage < 1) {
+              // widgetMessage.innerText += '\nGraph values are approximate';
             }
-            widgetMessage.innerText = 'Drawing '+fieldName+'.';
 
-            const layerView = await view.whenLayerView(layer);
-          } catch(e) {
-            console.error(new Error(e));
-            const layerView = await view.whenLayerView(layer);
+            histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
+              where = histogramSlider.widget.generateWhereClause(fieldName);
+              updateLayerViewWithHistogram(layerView, fieldName, where);
+            });
           }
 
-          var renderer = await autoStyle(fieldName, dataset, layer);
-          field = getDatasetField(dataset, fieldName);
-          layer.renderer = renderer;
-          layer.minScale = 0; // draw at all scales
-          layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
-
-          // clear previous filters
-          if (typeof layerView != 'undefined') {
-            updateLayerViewEffect(layerView, { updateExtent: true });
-          }
-
-          // Numeric fields - histogram
-          if (field.simpleType === 'numeric' || field.simpleType === 'date') {
-            // widgetMessage.innerText += '\nLooks like numbers.';
-            // Histogram
-            const container = document.createElement('div');
-            container.classList.add('histogramWidget');
-            document.getElementById('widget').appendChild(container);
-
-            const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
-            if (histogramSlider.widget) {
-              if (histogramSlider.coverage < 1) {
-                // widgetMessage.innerText += '\nGraph values are approximate';
-              }
-
-              histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-                where = histogramSlider.widget.generateWhereClause(fieldName);
-                updateLayerViewWithHistogram(layerView, fieldName, where);
-              });
-            }
-            const minicontainer = document.createElement('div');
-            minicontainer.classList.add('miniHistogram');
-            document.getElementById('test').appendChild(minicontainer);
-
-            const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
-          }
-          else {
-            widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
-          }
-        };
+          const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
+          addResultRow(histogram);
+        }
+        else {
+          widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
+        }
+      };
 
       async function drawMap(layer, dataset) {
         const map = new Map({
@@ -282,6 +280,12 @@
         let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
         let field = getDatasetField(dataset, fieldName)
         switchSelected(null, field.name);
+
+        for (each in Object.keys(dataset.attributes.statistics.numeric)) {
+          let fieldName = Object.keys(dataset.attributes.statistics.numeric)[each]
+          let field = getDatasetField(dataset, fieldName)
+          switchSelected(null, field.name);
+        }
 
         return { dataset, layer };
       }
