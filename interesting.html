@@ -58,6 +58,7 @@
       FeatureLayer,
       generateHistogram,
       HistogramRangeSlider,
+      Histogram,
       uniqueValues,
       Legend,
       Renderer,
@@ -69,6 +70,7 @@
       "esri/layers/FeatureLayer",
       "esri/renderers/smartMapping/statistics/histogram",
       "esri/widgets/HistogramRangeSlider",
+      "esri/widgets/Histogram",
       "esri/renderers/smartMapping/statistics/uniqueValues",
       "esri/widgets/Legend",
       "esri/renderers/Renderer",
@@ -194,6 +196,11 @@
                 updateLayerViewWithHistogram(layerView, fieldName, where);
               });
             }
+            const minicontainer = document.createElement('div');
+            minicontainer.classList.add('miniHistogram');
+            document.getElementById('test').appendChild(minicontainer);
+
+            const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
           }
           else {
             widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
@@ -1069,7 +1076,7 @@
         <td>Meddev</td>
         <td>Balance</td>
         <td>Variability</td>
-        <td><div id ="test"></div></td>
+        <td><div id="test"></div></td>
       </tr>
     </table>
   </div>

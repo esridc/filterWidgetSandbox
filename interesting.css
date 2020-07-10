@@ -104,6 +104,10 @@ body,
   height: 80px;
 }
 
+.miniHistogram {
+  height: 20px;
+}
+
 .widgetLabel {
   font-size: .9em;
 }
