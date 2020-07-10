@@ -1010,20 +1010,18 @@
             height = 300 - margin.top - margin.bottom;
 
         // Parse the date / time
-        var	parseDate = d3.timeFormat("%Y-%m").parse;
+        var	parseDate = d3.timeParse("%Y-%m");
 
-        var x = d3.scaleOrdinal().rangeRoundBands([0, width], .05);
+        var x = d3.scaleBand().
+            rangeRound([0, width],).
+            padding(.05);
 
         var y = d3.scaleLinear().range([height, 0]);
 
-        var xAxis = d3.svg.axis()
-            .scale(x)
-            .orient("bottom")
+        var xAxis = d3.axisBottom(x)
             .tickFormat(d3.timeFormat("%Y-%m"));
 
-        var yAxis = d3.svg.axis()
-            .scale(y)
-            .orient("left")
+        var yAxis = d3.axisLeft(y)
             .ticks(10);
 
         var svg = d3.select("test").append("svg")
