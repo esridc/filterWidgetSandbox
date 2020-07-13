@@ -185,7 +185,7 @@
           container.classList.add('histogramWidget');
           document.getElementById('widget').appendChild(container);
 
-          const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: true });
+          const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: false });
           if (histogramSlider.widget) {
             if (histogramSlider.coverage < 1) {
               // widgetMessage.innerText += '\nGraph values are approximate';
@@ -200,7 +200,7 @@
           // add a result row and get the container for a minihistogram
           let minicontainer = addResultRow();
           const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
-          debugger
+          // debugger
         }
         else {
           widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
@@ -212,6 +212,7 @@
         const table = document.getElementById('resultsTable')
                 .getElementsByTagName('table')[0]
                 .getElementsByTagName('tbody')[0];
+                window.table = table;
         const row = document.createElement('tr');
         table.appendChild(row);
         for (var x = 0; x < 14; x++) {
@@ -239,7 +240,8 @@
 
         // On-map UI widgets
         view.ui.move('zoom', 'top-right');
-        // view.ui.add('resultsTable', 'top-left');
+        // view.ui.add('resultsTable', 'bottom-left');
+        view.ui.add('resultsTable', 'top-left');
 
         var legend = await new Legend({
           view: view,
@@ -248,7 +250,7 @@
             title: "Legend"
           }]
         });
-        view.ui.add(legend, "bottom-right");
+        // view.ui.add(legend, "bottom-right");
 
         // put vars on window for debugging
         Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
