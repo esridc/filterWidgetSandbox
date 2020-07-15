@@ -232,7 +232,8 @@
           var cell = row.appendChild(document.createElement('td'));
           cell.innerHTML = stats[columns[x]];
         }
-        let target = cells[cells.length-1];
+        // one more td for the chart
+        let target = row.appendChild(document.createElement('td'));
         const minicontainer = document.createElement('div');
         minicontainer.classList.add('miniHistogram');
         target.appendChild(minicontainer);
@@ -242,28 +243,27 @@
       async function drawMap(layer, dataset) {
         const map = new Map({
           basemap: "dark-gray-vector",
-          layers: layer
+          layers: layer,
         });
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          extent: getDatasetExtent(dataset)
+          extent: getDatasetExtent(dataset),
+          ui: { components: [] }
         });
         const layerView = await view.whenLayerView(layer);
+        if (layerView) {
+          // var legend = await new Legend({
+          //   view: view,
+          //   layerInfos: [{
+          //     layer: layer,
+          //     title: "Legend"
+          //   }]
+          // });
+          // view.ui.add(legend, "bottom-right");
+          view.ui.add('resultsTable', 'top-left');
+        }
 
-        // On-map UI widgets
-        view.ui.move('zoom', 'top-right');
-        // view.ui.add('resultsTable', 'bottom-left');
-        view.ui.add('resultsTable', 'top-left');
-
-        var legend = await new Legend({
-          view: view,
-          layerInfos: [{
-            layer: layer,
-            title: "Legend"
-          }]
-        });
-        // view.ui.add(legend, "bottom-right");
 
         // put vars on window for debugging
         Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
@@ -634,14 +634,16 @@
               variability = 0;
           }
 
+          mode = mode.length ? mode.reduce((a, b) => a + b) / mode.length : mode;
+          console.log('mode:', mode);
           result.stats = {
-            min: min,
-            max: max,
-            mode: mode.length ? (mode) => mode.reduce((a, b) => a + b) / mode.length : mode,
-            uniqueness: uniqueness,
-            variability: variability,
-            meanLocation: meanLocation,
-            clustered: clustered,
+            min: min < 1 ? Math.round(min) : min.toPrecision(2),
+            max: max > 1 ? Math.round(max) : max.toPrecision(2),
+            mode: mode.toPrecision(2),
+            uniqueness: uniqueness.toPrecision(2),
+            variability: variability.toPrecision(2),
+            meanLocation: meanLocation.toPrecision(2),
+            clustered: clustered.toPrecision(2),
           }
         }
 
@@ -1050,6 +1052,7 @@
 
       // TESTS
 
+      window.results = document.getElementById('resultsTable')
       // makeWidget(null, "phenomenonTime");
 
     })();
