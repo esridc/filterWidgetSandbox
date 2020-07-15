@@ -166,7 +166,7 @@
           const layerView = await view.whenLayerView(layer);
         }
 
-        var renderer = await autoStyle(fieldName, dataset, layer);
+        var {renderer, stats} = await autoStyle(fieldName, dataset, layer);
         field = getDatasetField(dataset, fieldName);
         layer.renderer = renderer;
         layer.minScale = 0; // draw at all scales
@@ -196,9 +196,8 @@
               updateLayerViewWithHistogram(layerView, fieldName, where);
             });
           }
-
           // add a result row and get the container for a minihistogram
-          let minicontainer = addResultRow();
+          let minicontainer = addResultRow(stats);
           const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
           // debugger
         }
@@ -207,18 +206,32 @@
         }
       };
 
-      function addResultRow() {
-        // debugger
-        const table = document.getElementById('resultsTable')
-                .getElementsByTagName('table')[0]
-                .getElementsByTagName('tbody')[0];
-                window.table = table;
-        const row = document.createElement('tr');
-        table.appendChild(row);
-        for (var x = 0; x < 14; x++) {
-          row.appendChild(document.createElement('td'));
+      function addResultRow(stats) {
+        let table = document.getElementById('resultsTable')
+                .getElementsByTagName('table')[0];
+        table = table.getElementsByTagName('tbody')[0] ? table.getElementsByTagName('tbody')[0] : table;
+        window.table = table;
+        if (table.getElementsByTagName('tr').length == 0) {
+          // make a headings row
+          const row = document.createElement('tr');
+          var columns = Object.keys(stats);
+          for (let x in columns) {
+            var cell = row.appendChild(document.createElement('td'));
+            cell.innerHTML = columns[x];
+          }
+          table.appendChild(row);
         }
+        // make a values row
+        let row = document.createElement('tr');
+        columns = Object.values(stats);
+        table.appendChild(row);
+
         let cells = row.getElementsByTagName('td');
+        columns = Object.keys(stats);
+        for (let x in columns) {
+          var cell = row.appendChild(document.createElement('td'));
+          cell.innerHTML = stats[columns[x]];
+        }
         let target = cells[cells.length-1];
         const minicontainer = document.createElement('div');
         minicontainer.classList.add('miniHistogram');
@@ -493,7 +506,7 @@
             }]
           }]
         };
-        return renderer;
+        return {renderer: renderer, stats: distribution.stats};
       }
 
       function getDistribution(values, stats, type) {
@@ -547,6 +560,7 @@
 
           let quartiles = jStat.quartiles(values);
           let IQR = quartiles[2]-quartiles[0];
+          let IQRrange = IQR/range;
           msg.push('Min: '+min+', Max: '+max+', Range: '+range)
           msg.push('Mean: '+mean)
           msg.push('IQR: '+IQR)
@@ -623,12 +637,11 @@
           result.stats = {
             min: min,
             max: max,
-            mode: mode,
+            mode: mode.length ? (mode) => mode.reduce((a, b) => a + b) / mode.length : mode,
             uniqueness: uniqueness,
             variability: variability,
             meanLocation: meanLocation,
             clustered: clustered,
-            mode: mode,
           }
         }
 
@@ -1072,38 +1085,6 @@
   <div id="viewDiv"></div>
   <div id="resultsTable" class="esri-widget">
     <table>
-      <tr>
-        <th>Name</th>
-        <th>Count</th>
-        <th>Uniqueness</th>
-        <th>Min</th>
-        <th>Max</th>
-        <th>Range</th>
-        <th>IQR</th>
-        <th>IQR/Range</th>
-        <th>Mode</th>
-        <th>Sthdev</th>
-        <th>Meddev</th>
-        <th>Balance</th>
-        <th>Variability</th>
-        <th>Bar chart</th>
-      </tr>
-      <tr>
-        <td>Name</td>
-        <td>Count</td>
-        <td>Uniqueness</td>
-        <td>Min</td>
-        <td>Max</td>
-        <td>Range</td>
-        <td>IQR</td>
-        <td>IQR/Range</td>
-        <td>Mode</td>
-        <td>Stddev</td>
-        <td>Meddev</td>
-        <td>Balance</td>
-        <td>Variability</td>
-        <td></td>
-      </tr>
     </table>
   </div>
   <!-- <div id="zoomToData" class="esri-widget">
