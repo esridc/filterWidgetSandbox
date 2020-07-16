@@ -179,27 +179,9 @@
 
         // Numeric fields - histogram
         if (field.simpleType === 'numeric' || field.simpleType === 'date') {
-          // widgetMessage.innerText += '\nLooks like numbers.';
-          // Histogram
-          const container = document.createElement('div');
-          container.classList.add('histogramWidget');
-          document.getElementById('widget').appendChild(container);
-
-          const histogramSlider = await createHistogram({ dataset, fieldName, layer, layerView, container, slider: false });
-          if (histogramSlider.widget) {
-            if (histogramSlider.coverage < 1) {
-              // widgetMessage.innerText += '\nGraph values are approximate';
-            }
-
-            histogramSlider.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-              where = histogramSlider.widget.generateWhereClause(fieldName);
-              updateLayerViewWithHistogram(layerView, fieldName, where);
-            });
-          }
           // add a result row and get the container for a minihistogram
           let minicontainer = addResultRow(stats);
           const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
-          // debugger
         }
         else {
           widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
@@ -251,19 +233,20 @@
           extent: getDatasetExtent(dataset),
           ui: { components: [] }
         });
-        const layerView = await view.whenLayerView(layer);
-        if (layerView) {
-          // var legend = await new Legend({
-          //   view: view,
-          //   layerInfos: [{
-          //     layer: layer,
-          //     title: "Legend"
-          //   }]
-          // });
-          // view.ui.add(legend, "bottom-right");
-          view.ui.add('resultsTable', 'top-left');
-        }
+        const layerView = await view.whenLayerView(layer).then((layerView) => {
+          if (layerView && view.ui.components.length < 2) {
+            // var legend = await new Legend({
+            //   view: view,
+            //   layerInfos: [{
+            //     layer: layer,
+            //     title: "Legend"
+            //   }]
+            // });
+            // view.ui.add(legend, "bottom-right");
+            view.ui.add('resultsTable', 'top-left');
+          }
 
+        });
 
         // put vars on window for debugging
         Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
@@ -475,7 +458,6 @@
         }
 
         // choose ramp
-        console.log(distribution.stats)
 
         let thisramp = colorRamps.byName("Heatmap 9");
         var rampColors = thisramp.colors;
