@@ -412,6 +412,7 @@
           if (features) {
             var values = Object.values(features).map(v => v.attributes[fieldName])
             var distribution = getDistribution(values, datasetStats.values, field.simpleType);
+            var interestingness = distribution.interesting;
             widgetMessage.innerHTML += '<br>'+distribution.message+'.';
           } else {
             console.log('no features returned for', fieldName)
@@ -548,18 +549,29 @@
           msg.push('IQR: '+IQR)
           msg.push('IQR/Range: '+ (IQR/range))
           let clustered = IQR/range;
+
+          let interesting = 0;
           if (!clustered) {
             clustered = 0;
+            interesting += 1;
             msg.push('- highly clustered')
           } else if (clustered < .2) {
             msg.push('- highly clustered')
+            interesting += .8;
           }
-          else if (clustered < .4) msg.push('- somewhat clustered')
-          else if (clustered < .6) {
+          else if (clustered < .4) {
+            msg.push('- somewhat clustered');
+            interesting += .6;
+          } else if (clustered < .6) {
             msg.push("- roughly uniform");
+            interesting += .4;
           }
-          else if (clustered < .8) msg.push('- somewhat dispersed')
-          else msg.push('- highly dispersed')
+          else if (clustered < .8) {
+            msg.push('- somewhat dispersed')
+            interesting += .2;
+          } else {
+            msg.push('- highly dispersed')
+          }
 
           if (uniqueness != 1) {
             if (!!mode) {
@@ -574,6 +586,8 @@
               msg.push('Diffdev: '+diffdev)
               if (mode.length > 1) {
                 msg.push('- with '+mode.length+' modes')
+              } else {
+                interesting += 1;
               }
             }
           }
@@ -582,38 +596,48 @@
           if (!!meanLocation) {
             if (meanLocation < .3) {
               msg.push('- skewed low')
+              interesting += 1;
             }
             else if (meanLocation < .45) {
               msg.push('- skewed a bit low')
+              interesting += .5;
             }
             else if (meanLocation < .55) {
               msg.push('- roughly symmetrical')
             }
             else if (meanLocation < .7) {
               msg.push('- skewed a bit high')
+              interesting += .5;
             }
             else {
               msg.push('- skewed high')
+              interesting += 1;
             }
 
             if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
-              msg.push('- possibly exponential')
+              msg.push('- possibly exponential');
+              interesting += 1;
             } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
-              msg.push('- possibly logarithmic')
+              msg.push('- possibly logarithmic');
+              interesting += 1;
             }
           }
 
           let variability = meddev/range;
           msg.push('Variablility: '+variability)
           if (!!variability) {
-            if (variability < .2) msg.push('- highly regular')
-            else if (variability < .4) msg.push('- generally regular')
-            else if (variability < .6) msg.push('- slightly variable')
-            else if (variability < .8) msg.push('- moderately variable')
+            if (variability < .2) {
+              msg.push('- highly regular');
+            } else if (variability < .4) {
+              msg.push('- generally regular');
+            } else if (variability < .6) {
+              msg.push('- slightly variable');
+            } else if (variability < .8) msg.push('- moderately variable')
             else msg.push('- highly variable')
           } else {
               msg.push('- with no apparent variability')
               variability = 0;
+              interesting += .5;
           }
 
           mode = mode.length ? mode.reduce((a, b) => a + b) / mode.length : mode;
@@ -626,6 +650,7 @@
             variability: variability.toPrecision(2),
             meanLocation: meanLocation.toPrecision(2),
             clustered: clustered.toPrecision(2),
+            interesting: interesting,
           }
         }
 
