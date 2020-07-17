@@ -118,6 +118,8 @@ body,
 }
 
 #resultsTable {
+  position: absolute;
+  right: 0px;
   font-size: 12px;
   color: white;
   background-color: black;

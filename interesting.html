@@ -234,17 +234,14 @@
           ui: { components: [] }
         });
         const layerView = await view.whenLayerView(layer).then((layerView) => {
-          if (layerView && view.ui.components.length < 2) {
-            // var legend = await new Legend({
-            //   view: view,
-            //   layerInfos: [{
-            //     layer: layer,
-            //     title: "Legend"
-            //   }]
-            // });
-            // view.ui.add(legend, "bottom-right");
-            view.ui.add('resultsTable', 'top-left');
-          }
+          // var legend = await new Legend({
+          //   view: view,
+          //   layerInfos: [{
+          //     layer: layer,
+          //     title: "Legend"
+          //   }]
+          // });
+          // view.ui.add(legend, "bottom-right");
 
         });
 
