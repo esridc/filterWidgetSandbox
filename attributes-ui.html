@@ -90,8 +90,11 @@
         'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
       }
 
+      let widgets = document.getElementById('widgetsDiv');
+
       // dataset switcher
       var datasetList = document.getElementById('datasetList');
+      // populate dropdown with all attributes
       for (let [key, value] of Object.entries(datasets)) {
         // create new option element and add it to the dropdown
         var opt = document.createElement('option');
@@ -134,8 +137,7 @@
 
         // Reset UI state
 
-        document.getElementById('widget').innerHTML = ''; // clear previous widget
-        document.getElementById('widgetMessage').innerHTML = ''; // clear previous message
+        widgets.innerHTML = ''; // clear previous widget
 
         // guess at a style for this field
         try {
@@ -158,7 +160,7 @@
           if (!view) {
             var view = await drawMap(layer, dataset)
           }
-          widgetMessage.innerText = 'Drawing '+fieldName+'.';
+          widgets.innerText += '\nDrawing '+fieldName+'.';
 
           const layerView = await view.whenLayerView(layer);
         } catch(e) {
@@ -166,7 +168,7 @@
           const layerView = await view.whenLayerView(layer);
         }
 
-        var {renderer, stats} = await autoStyle(fieldName, dataset, layer);
+        var {renderer} = await autoStyle(fieldName, dataset, layer);
         field = getDatasetField(dataset, fieldName);
         layer.renderer = renderer;
         layer.minScale = 0; // draw at all scales
@@ -180,11 +182,11 @@
         // Numeric fields - histogram
         if (field.simpleType === 'numeric' || field.simpleType === 'date') {
           // add a result row and get the container for a minihistogram
-          let minicontainer = addResultRow(stats);
-          const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
+          // let minicontainer = addResultRow(stats);
+          // const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
         }
         else {
-          widgetMessage.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
+          widgets.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
         }
       };
 
@@ -197,6 +199,7 @@
           // make a headings row
           const row = document.createElement('tr');
           var columns = Object.keys(stats);
+          // make as many tds as there are stats, fill with stat names
           for (let x in columns) {
             var cell = row.appendChild(document.createElement('td'));
             cell.innerHTML = columns[x];
@@ -210,6 +213,8 @@
 
         let cells = row.getElementsByTagName('td');
         columns = Object.keys(stats);
+
+        // make as many tds as there are stats, fill with stat values
         for (let x in columns) {
           var cell = row.appendChild(document.createElement('td'));
           cell.innerHTML = stats[columns[x]];
@@ -296,6 +301,7 @@
         let field = getDatasetField(dataset, fieldName)
         switchSelected(null, field.name);
 
+        // iterate through all attributes and run stat & style generation for all
         for (let x in Object.keys(dataset.attributes.statistics.numeric)) {
           let fieldName = Object.keys(dataset.attributes.statistics.numeric)[x]
           let field = getDatasetField(dataset, fieldName)
@@ -390,34 +396,15 @@
 
           var numValues = datasetStats.values.count;
 
-          // v simple way to vary point size with number of data points
-          // 1-9: 20px
-          // 10-99: 10px
-          // 100-999: 5px
-          // 1000-9999: 2.5px
-          var pointSize = 20/(datasetStats.values.count+'').length; // convert to string to get power of 10
-
-          var opacity = 1;
-          if (geotype == "point" || geotype == "line") {
-            if (numValues > 5000) {
-              opacity = .50;
-            } else if (numValues > 1000) {
-              opacity = .75;
-            }
-          }
-
           if (features) {
             var values = Object.values(features).map(v => v.attributes[fieldName])
-            var distribution = getDistribution(values, datasetStats.values, field.simpleType);
-            var interestingness = distribution.interesting;
-            widgetMessage.innerHTML += '<br>'+distribution.message+'.';
           } else {
             console.log('no features returned for', fieldName)
           }
 
         }
 
-
+        var opacity = .5;
 
         if (geometryType === 'esriGeometryPoint') {
           let stats = dataset.attributes.statistics
@@ -438,9 +425,9 @@
             outline: {
               // makes the outlines of all features consistently light gray
               color: "lightgray",
-              width: 0.05*pointSize
+              width: 0.05
             },
-            size: pointSize+'px',
+            size: '5px',
             opacity: opacity,
           }
 
@@ -460,7 +447,7 @@
         let thisramp = colorRamps.byName("Heatmap 9");
         var rampColors = thisramp.colors;
 
-        widgetMessage.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
+        widgets.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
         var rMin = rampColors[0];
         var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
         var rMax = rampColors[rampColors.length-1];
@@ -486,177 +473,8 @@
             }]
           }]
         };
-        return {renderer: renderer, stats: distribution.stats};
+        return {renderer: renderer};
       }
-
-      function getDistribution(values, stats, type) {
-        let msg = [];
-        let js = jStat(values)
-        let uniqueValues = new Set(values);
-
-        let sampleCount = values.length;
-
-        msg.push('Sample count: '+sampleCount)
-        let uniquesCount = uniqueValues.size;
-        let uniqueness = uniqueValues.size/values.length;
-        msg.push('Uniqueness: '+uniqueness)
-
-        let result = {};
-        if (uniquesCount === 1) {
-          msg.push('- no unique values')
-          uniqueness = 0;
-        } else {
-            if (uniqueness < .25) msg.push('- very few unique values ('+uniquesCount+')')
-            else if (uniqueness < .5) msg.push('- few unique values')
-            else if (uniqueness < .75) msg.push('- few repeated values')
-            else if (uniqueness < 1) msg.push('- very few repeated values')
-            else msg.push('- no repeated values')
-        }
-
-        if (type != "string") {
-          if (stats) {
-            var min = stats.min;
-            var max = stats.max;
-            var midpoint = max-min/2;
-            var range = max-min; // distance between min and max
-            var mean = stats.avg;
-            var variance = stats.var;
-            var stdev = stats.stddev;
-            var count = stats.count;
-          } else {
-            var min = jStat.min(values);
-            var max = jStat.max(values);
-            var midpoint = max-min/2;
-            var range = max-min; // distance between min and max
-            var mean = jStat.mean(values);
-            var variance = jStat.variance(values);
-            var stdev = jStat.stdev(values);
-            var count = values.length;
-          }
-          let mode = jStat.mode(values);
-          let stddev = jStat.stdev(values); // standard deviation
-          let meddev = jStat.meddev(values); // median absolute deviation
-          let diffdev = meddev - stddev; // difference between the two – detects outliers
-
-          let quartiles = jStat.quartiles(values);
-          let IQR = quartiles[2]-quartiles[0];
-          let IQRrange = IQR/range;
-          msg.push('Min: '+min+', Max: '+max+', Range: '+range)
-          msg.push('Mean: '+mean)
-          msg.push('IQR: '+IQR)
-          msg.push('IQR/Range: '+ (IQR/range))
-          let clustered = IQR/range;
-
-          let interesting = 0;
-          if (!clustered) {
-            clustered = 0;
-            interesting += 1;
-            msg.push('- highly clustered')
-          } else if (clustered < .2) {
-            msg.push('- highly clustered')
-            interesting += .8;
-          }
-          else if (clustered < .4) {
-            msg.push('- somewhat clustered');
-            interesting += .6;
-          } else if (clustered < .6) {
-            msg.push("- roughly uniform");
-            interesting += .4;
-          }
-          else if (clustered < .8) {
-            msg.push('- somewhat dispersed')
-            interesting += .2;
-          } else {
-            msg.push('- highly dispersed')
-          }
-
-          if (uniqueness != 1) {
-            if (!!mode) {
-              if (typeof mode === "Array") {
-                msg.push(mode.length+" Modes")
-              } else {
-                msg.push('Mode: '+mode);
-              }
-              msg.push('jsapi Stdev: '+stdev)
-              msg.push('jStat Stdev: '+stddev)
-              msg.push('Meddev: '+meddev)
-              msg.push('Diffdev: '+diffdev)
-              if (mode.length > 1) {
-                msg.push('- with '+mode.length+' modes')
-              } else {
-                interesting += 1;
-              }
-            }
-          }
-          let meanLocation = (mean-min)/range; // how far along in the range is the mean? subtract min to account for offsets
-          msg.push('meanLocation: '+meanLocation)
-          if (!!meanLocation) {
-            if (meanLocation < .3) {
-              msg.push('- skewed low')
-              interesting += 1;
-            }
-            else if (meanLocation < .45) {
-              msg.push('- skewed a bit low')
-              interesting += .5;
-            }
-            else if (meanLocation < .55) {
-              msg.push('- roughly symmetrical')
-            }
-            else if (meanLocation < .7) {
-              msg.push('- skewed a bit high')
-              interesting += .5;
-            }
-            else {
-              msg.push('- skewed high')
-              interesting += 1;
-            }
-
-            if ((mode === min && meanLocation < .25) || (mode === max && meanLocation > .5)) {
-              msg.push('- possibly exponential');
-              interesting += 1;
-            } else if ((mode === min && meanLocation > .75) || (mode === max && meanLocation < .5)) {
-              msg.push('- possibly logarithmic');
-              interesting += 1;
-            }
-          }
-
-          let variability = meddev/range;
-          msg.push('Variablility: '+variability)
-          if (!!variability) {
-            if (variability < .2) {
-              msg.push('- highly regular');
-            } else if (variability < .4) {
-              msg.push('- generally regular');
-            } else if (variability < .6) {
-              msg.push('- slightly variable');
-            } else if (variability < .8) msg.push('- moderately variable')
-            else msg.push('- highly variable')
-          } else {
-              msg.push('- with no apparent variability')
-              variability = 0;
-              interesting += .5;
-          }
-
-          mode = mode.length ? mode.reduce((a, b) => a + b) / mode.length : mode;
-          console.log('mode:', mode);
-          result.stats = {
-            min: min < 1 ? Math.round(min) : min.toPrecision(2),
-            max: max > 1 ? Math.round(max) : max.toPrecision(2),
-            mode: mode.toPrecision(2),
-            uniqueness: uniqueness.toPrecision(2),
-            variability: variability.toPrecision(2),
-            meanLocation: meanLocation.toPrecision(2),
-            clustered: clustered.toPrecision(2),
-            interesting: interesting,
-          }
-        }
-
-        msg = msg.join('<br>');
-        result.message = msg;
-        return result;
-      }
-
-      window.getDistribution = getDistribution;
 
       function loadRenderer (type, props) {
         return loadModules(
@@ -1056,7 +874,7 @@
 
       // TESTS
 
-      window.results = document.getElementById('resultsTable')
+      // window.results = document.getElementById('resultsTable')
       // makeWidget(null, "phenomenonTime");
 
     })();
@@ -1082,15 +900,12 @@
         </calcite-dropdown-group>
       </calcite-dropdown>
 
-      <div id="widget">
+      <div id="widgetsDiv">
       </div>
-
-      <div id="widgetMessage"></div>
 
     </div>
   </div>
   <div id="viewDiv"></div>
-  <div id="resultsTable" class="esri-widget">
     <table>
     </table>
   </div>
