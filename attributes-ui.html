@@ -27,13 +27,17 @@
   <!-- calcite components -->
   <script
   type="module"
-  src="https://unpkg.com/@esri/calcite-components@1.0.0-beta.24/dist/calcite/calcite.esm.js"
-  ></script>
-  <link
+  src="https://unpkg.com/@esri/calcite-components@1.0.0-beta.33/dist/calcite/calcite.esm.js"
+></script>
+<script
+  nomodule=""
+  src="https://unpkg.com/@esri/calcite-components@1.0.0-beta.33/dist/calcite/calcite.js"
+></script>
+<link
   rel="stylesheet"
   type="text/css"
-  href="https://unpkg.com/@esri/calcite-components@1.0.0-beta.24/dist/calcite/calcite.css"
-  />
+  href="https://unpkg.com/@esri/calcite-components@1.0.0-beta.33/dist/calcite/calcite.css"
+/>
 
   <!-- 3rd party libraries -->
   <script src="https://d3js.org/d3.v4.js"></script>
@@ -302,11 +306,11 @@
         switchSelected(null, field.name);
 
         // iterate through all attributes and run stat & style generation for all
-        for (let x in Object.keys(dataset.attributes.statistics.numeric)) {
-          let fieldName = Object.keys(dataset.attributes.statistics.numeric)[x]
-          let field = getDatasetField(dataset, fieldName)
-          switchSelected(null, field.name);
-        }
+        // for (let x in Object.keys(dataset.attributes.statistics.numeric)) {
+        //   let fieldName = Object.keys(dataset.attributes.statistics.numeric)[x]
+        //   let field = getDatasetField(dataset, fieldName)
+        //   switchSelected(null, field.name);
+        // }
 
         return { dataset, layer };
       }
@@ -474,20 +478,6 @@
           }]
         };
         return {renderer: renderer};
-      }
-
-      function loadRenderer (type, props) {
-        return loadModules(
-        [`esri/renderers/smartMapping/creators/${type}`]
-        ).then(([rendererCreator]) => {
-          const creatorFn = type === 'color'
-          ? 'createContinuousRenderer'
-          : type === 'size'
-          ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
-          : 'createRenderer';
-          return rendererCreator[creatorFn](props)
-          .then(response => response.renderer);
-        });
       }
 
       function getDatasetExtent (dataset) {
@@ -820,58 +810,6 @@
         return fieldTypes[fieldType] || '';
       }
 
-      window.createSmartMapRenderer = createSmartMapRenderer;
-      function createSmartMapRenderer (layer, field, view) {
-        // Some smart mapping renderers support passing cached statistics, which saves an extra server call.
-        // Currently, our uses of `createRenderer` and `createContinuousRenderer` benefit from this.
-        // `createClassBreaksRenderer` does not support this parameter but will ignore it.
-        const statistics = (field.statistics && field.statistics.duration > 0) ? field.statistics : null;
-        const props = {
-          layer,
-          field: field.name,
-          statistics,
-          view
-        };
-        // TOOD: should this use simpleGeomType() to be consistent w/ component's geometryClass?
-        const geomType = layer.geometryType;
-        const fieldType = simpleFieldType(field.type);
-        switch (fieldType) {
-          case 'string':
-          props.numTypes = 12;
-          if (props.statistics) {
-            // reformat stats to match `UniqueValuesResult` structure expected by `type` renderers
-            props.statistics = { uniqueValueInfos: props.statistics.values };
-          }
-          return loadRenderer('type', props);
-          case 'number':
-          if (geomType === 'polygon') {
-            return loadRenderer('color', props);
-          }
-          if (geomType === 'point' || geomType === 'multipoint' || geomType === 'polyline') {
-            return loadRenderer('size', props);
-          }
-          // return reject('Field/geometry type not supported.');
-          case 'date-time':
-          return loadRenderer('color', props);
-          default:
-          // return reject('Field type not supported.');
-        }
-      }
-
-      function loadRenderer (type, props) {
-        return loadModules(
-        [`esri/renderers/smartMapping/creators/${type}`]
-        ).then(([rendererCreator]) => {
-          const creatorFn = type === 'color'
-          ? 'createContinuousRenderer'
-          : type === 'size'
-          ? 'createContinuousRenderer' // 'createClassBreaksRenderer'
-          : 'createRenderer';
-          return rendererCreator[creatorFn](props)
-          .then(response => response.renderer);
-        });
-      }
-
       // TESTS
 
       // window.results = document.getElementById('resultsTable')
@@ -894,10 +832,40 @@
         <span id="recordCount"></span>
       </div>
 
+      Browse Attributes:
+
       <calcite-dropdown type="hover" width="l" id="attributeList">
         <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
         <calcite-dropdown-group>
         </calcite-dropdown-group>
+      </calcite-dropdown>
+
+      Add Filter:
+
+      <calcite-label>Search by Name
+      <calcite-input type="search" id="test" placeholder="Press &quot;/&quot; to search..." aria-label="Search stories"></calcite-input>
+    </calcite-label>
+
+      Filtered Results:
+
+      <calcite-label>Change Display:
+        <calcite-dropdown type="hover" width="l" id="displayList">
+        <calcite-button id="attributeListButton" slot="dropdown-trigger">Display Settings:</calcite-button>
+        <calcite-dropdown-group>
+          <calcite-dropdown-item>test
+          </calcite-dropdown-item>
+          </calcite-dropdown-group>
+      </calcite-dropdown>
+    </calcite-label>
+
+      Style by Attribute:
+
+      <calcite-dropdown type="hover" width="l" id="styleList">
+        <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose Attribute:</calcite-button>
+        <calcite-dropdown-group>
+          <calcite-dropdown-item>test
+          </calcite-dropdown-item>
+          </calcite-dropdown-group>
       </calcite-dropdown>
 
       <div id="widgetsDiv">
