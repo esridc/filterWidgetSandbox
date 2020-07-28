@@ -160,3 +160,9 @@ body,
 #filterResults {
   outline: 1px solid lightgray;
 }
+
+.attribute {
+  border: 1px solid pink;
+  padding: 1px;
+  margin: 1px;
+}
