@@ -153,43 +153,6 @@
       }
     };
 
-    function addResultRow(stats) {
-      let table = document.getElementById('resultsTable')
-              .getElementsByTagName('table')[0];
-      table = table.getElementsByTagName('tbody')[0] ? table.getElementsByTagName('tbody')[0] : table;
-      window.table = table;
-      if (table.getElementsByTagName('tr').length == 0) {
-        // make a headings row
-        const row = document.createElement('tr');
-        var columns = Object.keys(stats);
-        // make as many tds as there are stats, fill with stat names
-        for (let x in columns) {
-          var cell = row.appendChild(document.createElement('td'));
-          cell.innerHTML = columns[x];
-        }
-        table.appendChild(row);
-      }
-      // make a values row
-      let row = document.createElement('tr');
-      columns = Object.values(stats);
-      table.appendChild(row);
-
-      let cells = row.getElementsByTagName('td');
-      columns = Object.keys(stats);
-
-      // make as many tds as there are stats, fill with stat values
-      for (let x in columns) {
-        var cell = row.appendChild(document.createElement('td'));
-        cell.innerHTML = stats[columns[x]];
-      }
-      // one more td for the chart
-      let target = row.appendChild(document.createElement('td'));
-      const minicontainer = document.createElement('div');
-      minicontainer.classList.add('miniHistogram');
-      target.appendChild(minicontainer);
-      return minicontainer;
-    }
-
     async function drawMap(layer, dataset) {
       const map = new Map({
         basemap: "dark-gray-vector",
@@ -782,7 +745,6 @@
 
     // TESTS
 
-    // window.results = document.getElementById('resultsTable')
     // makeWidget(null, "phenomenonTime");
 
   })();
