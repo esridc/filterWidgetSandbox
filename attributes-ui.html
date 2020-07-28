@@ -563,8 +563,8 @@
 
       // Add an entry to the attribute dropdown
       function updateAttributeList (dataset) {
-        // create <calcite-dropdown-item> for each attribute
-        const attributeList = document.querySelector('#attributeList > calcite-dropdown-group');
+        // create attributeitem for each attribute
+        const attributeList = document.querySelector('#attributeList');
         // clear existing entries
         Array.from(attributeList.children)
         .forEach(i => attributeList.removeChild(i))
@@ -810,6 +810,13 @@
         return fieldTypes[fieldType] || '';
       }
 
+      function attributeSearchChange(e) {
+        console.log(e.srcElement.value);
+      }
+
+      let attributeSearchElement = document.getElementById("attributeSearch")
+      attributeSearchElement.addEventListener("input", attributeSearchChange);
+
       // TESTS
 
       // window.results = document.getElementById('resultsTable')
@@ -832,21 +839,33 @@
         <span id="recordCount"></span>
       </div>
 
-      Browse Attributes:
 
-      <calcite-dropdown type="hover" width="l" id="attributeList">
-        <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose an attribute</calcite-button>
-        <calcite-dropdown-group>
-        </calcite-dropdown-group>
-      </calcite-dropdown>
+      Select Attribute for Filtering:
 
-      Add Filter:
+      <calcite-input type="search" scale="s" id="attributeSearch" placeholder="Search by Name" aria-label="Search stories"></calcite-input>
 
-      <calcite-label>Search by Name
-      <calcite-input type="search" id="test" placeholder="Press &quot;/&quot; to search..." aria-label="Search stories"></calcite-input>
-    </calcite-label>
+      <style>
+        .attribute {
+          border: 1px solid pink;
+          padding: 1px;
+          margin: 1px;
+        }
+      </style>
+
+      <div id="attributeList">
+        <div class="attribute"><div class="icon"></div><div class="name"></div>attribute name</div>
+        <div class="attribute"><div class="icon"></div><div class="name"></div>attribute name</div>
+        <div class="attribute"><div class="icon"></div><div class="name"></div>attribute name</div>
+      </div>
+
+
 
       Filtered Results:
+
+
+      <div id="filteredResults" style="height: 18px; border: 1px solid lightgray">
+        <span id="number of results">20 results</span>
+      </div>
 
       <calcite-label>Change Display:
         <calcite-dropdown type="hover" width="l" id="displayList">
