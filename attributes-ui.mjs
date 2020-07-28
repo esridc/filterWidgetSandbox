@@ -256,8 +256,8 @@
       }
 
       attributeList = updateAttributeList(dataset, '#attributeList')
-      debugger
-      updateAttributeList(dataset, '#styleList')
+      updateAttributeList(dataset, '#displayListItems')
+      updateAttributeList(dataset, '#styleListItems')
 
       let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 

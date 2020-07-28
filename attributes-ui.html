@@ -77,23 +77,19 @@
 
       <calcite-label>Change Display:
         <calcite-dropdown type="hover" width="l" id="displayList">
-        <calcite-button id="attributeListButton" slot="dropdown-trigger">Display Settings:</calcite-button>
-        <calcite-dropdown-group>
-          <calcite-dropdown-item>test
-          </calcite-dropdown-item>
+          <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose Attribute:</calcite-button>
+          <calcite-dropdown-group id="displayListItems">
           </calcite-dropdown-group>
-      </calcite-dropdown>
-    </calcite-label>
+        </calcite-dropdown>
+      </calcite-label>
 
-      Style by Attribute:
-
-      <calcite-dropdown type="hover" width="l" id="styleList">
-        <calcite-button id="attributeListButton" slot="dropdown-trigger">Choose Attribute:</calcite-button>
-        <calcite-dropdown-group>
-          <calcite-dropdown-item>test
-          </calcite-dropdown-item>
+      <calcite-label>Style by Attribute:
+        <calcite-dropdown type="hover" width="l" id="styleList">
+          <calcite-button id="styleListButton" slot="dropdown-trigger">Choose Attribute:</calcite-button>
+          <calcite-dropdown-group id="styleListItems">
           </calcite-dropdown-group>
-      </calcite-dropdown>
+        </calcite-dropdown>
+      </calcite-label>
 
       <div id="widgetsDiv">
       </div>
@@ -101,13 +97,5 @@
     </div>
   </div>
   <div id="viewDiv"></div>
-    <table>
-    </table>
-  </div>
-  <!-- <div id="zoomToData" class="esri-widget">
-    <label>
-      <calcite-checkbox checked="true"></calcite-checkbox>Zoom to data
-    </label>
-  </div> -->
 </body>
 </html>
