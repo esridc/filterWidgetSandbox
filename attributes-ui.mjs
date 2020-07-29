@@ -120,6 +120,15 @@
 
       let filter = document.createElement('div');
       filter.innerText = fieldName;
+
+      // actions
+      let icons = document.createElement('span');
+      icons.innerText = "🅧";
+      icons.onclick = removeFilter;
+      icons.classList.add('filterIcons');
+
+      filter.appendChild(icons);
+
       let filtersList = document.getElementById('filtersList');
       filtersList.appendChild(filter);
       let widget = document.createElement('div');
@@ -129,6 +138,22 @@
       // Numeric fields - histogram
       if (field.simpleType === 'numeric' || field.simpleType === 'date') {
         const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: widget, slider: true });
+      }
+    }
+
+    async function removeFilter(event, fieldName = null) {
+      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
+      // const field = getDatasetField(dataset, fieldName);
+
+      let filter = event.currentTarget.parentElement;
+      let filterList = filter.parentElement;
+      // debugger
+      filter.remove();
+      if (filterList.children.length == 0) {
+        let firstFilter = document.createElement('div');
+        firstFilter.setAttribute('id', 'firstfilter');
+        firstFilter.innerText = "None"
+        filterList.appendChild(firstFilter);
       }
     }
 

@@ -169,3 +169,14 @@ body,
   padding: 1px;
   margin: 1px;
 }
+
+.filterIcons {
+  float: right;
+  padding: 5px;
+}
+
+.filterIcons:hover {
+  color: white;
+  background-color: darkred;
+  cursor: pointer
+}
