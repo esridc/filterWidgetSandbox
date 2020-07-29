@@ -109,6 +109,24 @@
 
     }
 
+    async function addFilter(event, fieldName = null) {
+      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
+      const field = getDatasetField(dataset, fieldName);
+      // document.querySelector('#attributeListButton').innerHTML = fieldName;
+
+      let filter = document.createElement('div');
+      filter.innerText = fieldName;
+      let filtersList = document.getElementById('filtersList');
+      filtersList.appendChild(filter);
+      let widget = document.createElement('div');
+      filter.appendChild(widget);
+
+      // Numeric fields - histogram
+      if (field.simpleType === 'numeric' || field.simpleType === 'date') {
+        const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: widget, slider: true });
+      }
+    }
+
     async function switchAttribute(event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       const field = getDatasetField(dataset, fieldName);
@@ -142,15 +160,6 @@
         updateLayerViewEffect(layerView, { updateExtent: true });
       }
 
-      // Numeric fields - histogram
-      if (field.simpleType === 'numeric' || field.simpleType === 'date') {
-        // add a result row and get the container for a minihistogram
-        // let minicontainer = addResultRow(stats);
-        // const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: minicontainer, slider: false });
-      }
-      else {
-        widgets.innerText += '\nThis field\'s datatype is ""'+field.simpleType+'""; things might be funky.';
-      }
     };
 
     async function drawMap(layer, dataset) {
@@ -537,7 +546,7 @@
         }
 
         item.setAttribute('data-field', field.name);
-        item.addEventListener('click', switchAttribute);
+        item.addEventListener('click', addFilter);
         attributeList.appendChild(item);
       });
       return attributeList;
