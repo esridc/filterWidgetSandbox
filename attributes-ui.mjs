@@ -114,11 +114,15 @@
       const field = getDatasetField(dataset, fieldName);
       // document.querySelector('#attributeListButton').innerHTML = fieldName;
 
+      let firstFilter = document.getElementById('firstfilter');
+      firstFilter ? firstFilter.remove() : null;
+
       let filter = document.createElement('div');
       filter.innerText = fieldName;
       let filtersList = document.getElementById('filtersList');
       filtersList.appendChild(filter);
       let widget = document.createElement('div');
+      widget.classList.add('histogramWidget');
       filter.appendChild(widget);
 
       // Numeric fields - histogram
