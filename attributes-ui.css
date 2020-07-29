@@ -104,6 +104,7 @@ body,
   height: 80px;
   width: 90%;
   padding-left: 5%;
+  padding-bottom: 15px;
 }
 
 .miniHistogram {
@@ -140,7 +141,7 @@ body,
 }
 
 #filtersList {
-  max-height: 10.5em;
+  max-height: 15.5em;
   line-height: normal;
   overflow-x: hidden;
   overflow-y: auto;

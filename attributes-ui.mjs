@@ -759,6 +759,6 @@
 
     // TESTS
 
-    // makeWidget(null, "phenomenonTime");
+    addFilter(null, "phenomenonTime");
 
   })();
