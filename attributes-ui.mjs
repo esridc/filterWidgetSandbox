@@ -69,6 +69,7 @@
     var timeSlider = null;
     var dataset = null;
     var layer = null;
+    var layerView = null;
     // var zoomToDataCheckbox;
     var attributeList;
 
@@ -147,10 +148,10 @@
         }
         widgets.innerText += '\nDrawing '+fieldName+'.';
 
-        const layerView = await view.whenLayerView(layer);
+        layerView = await view.whenLayerView(layer);
       } catch(e) {
         console.error(new Error(e));
-        const layerView = await view.whenLayerView(layer);
+        layerView = await view.whenLayerView(layer);
       }
 
       var {renderer} = await autoStyle(fieldName, dataset, layer);
@@ -177,7 +178,7 @@
         extent: getDatasetExtent(dataset),
         ui: { components: [] }
       });
-      const layerView = await view.whenLayerView(layer).then((layerView) => {
+      layerView = await view.whenLayerView(layer).then((layerView) => {
         // var legend = await new Legend({
         //   view: view,
         //   layerInfos: [{
