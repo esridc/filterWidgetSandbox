@@ -137,7 +137,296 @@
 
       // Numeric fields - histogram
       if (field.simpleType === 'numeric' || field.simpleType === 'date') {
-        const histogram = await createHistogram({ dataset, fieldName, layer, layerView, container: widget, slider: true });
+        if (!view) {
+          view = await drawMap(layer, dataset)
+        }
+        layerView = await view.whenLayerView(layer);
+        const histogram = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container: widget, slider: true });
+      }
+    }
+
+    // create a histogram
+    async function makeHistogram ({dataset, fieldName, layer, layerView, container, slider = false, where = null }) {
+      // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
+      const parentContainer = container;
+      let newcontainer = document.createElement('div');
+      parentContainer.appendChild(newcontainer);
+
+      try {
+        let params = {
+          layer: layer,
+          field: fieldName,
+          numBins: 30,
+        };
+        if (where) params.where = where;
+
+        let values, bins, source, coverage;
+
+        try {
+          values = await generateHistogram(params);
+          source = 'widgets';
+          coverage = 1;
+        } catch(e) {
+          try {
+            // histogram generation failed with automated server call, try using features from server query
+            console.log('histogram generation failed with automated server call, try using features from server query', e);
+            params.features = (await layer.queryFeatures()).features;
+            const featureCount = await layer.queryFeatureCount();
+            if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
+            values = await generateHistogram(params);
+            source = 'layerQuery';
+            coverage = params.features.length / featureCount;
+          } catch(e) {
+            // histogram generation failed with automated server call, try using features from server query
+            console.log('histogram generation failed with automated server call, try reconstructing from unique values', e);
+
+            try {
+              let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+              let domain = [Math.min(...uniqueValues.map(a => a.value)),
+                            Math.max(...uniqueValues.map(a => a.value))]
+              // remove nulls
+              var filtered = uniqueValues.filter(a => a.value != null);
+              // manually reconstruct a feature values array from the unique values and their counts -
+              // normalize array length to 1000, as precision isn't as important as speed here
+              const divisor = dataset.attributes.recordCount / 1000;
+              let arr = [];
+              for (let x = 0; x < filtered.length; x++) {
+                for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
+                  arr.push(filtered[x].value);
+                };
+              }
+              // use d3 to bin histograms
+              let d3bins = d3.histogram()  // create layout object
+              .domain([Math.min(...filtered.map(a => a.value)),
+              Math.max(...filtered.map(a => a.value))])  // to cover range
+              .thresholds(29) // separated into 30 bins
+              (arr);          // pass the array
+              // convert the d3 bins array to a bins object
+              bins = [];
+              for (let x = 0; x < d3bins.length; x++) {
+                bins.push({
+                  minValue: d3bins[x]['x0'],
+                  maxValue: d3bins[x]['x1'],
+                  count: d3bins[x].length,
+                });
+              }
+              // put the bins in the params object
+              values = {
+                'bins': bins,
+                'minValue': Math.min(...filtered.map(a => a.value)),
+                'maxValue': Math.max(...filtered.map(a => a.value)),
+              }
+              const featureCount = arr.length;
+              source = 'layerQuery';
+              coverage = 1;
+            } catch(e) {
+            // histogram generation failed with unique values, try using features in layer view
+            console.log('histogram generation failed with unique values, try using features in layer view', e);
+            params.features = (await layerView.queryFeatures()).features;
+            const featureCount = await layer.queryFeatureCount();
+            values = await generateHistogram(params);
+            source = 'layerView';
+            coverage = params.features.length / featureCount;
+            }
+          }
+        }
+
+        // Determine if field is an integer
+        const field = getDatasetField(dataset, fieldName);
+        const integer = await datasetFieldIsInteger(field);
+        const widget =
+          slider ?
+            // Histogram range slider widget
+            new HistogramRangeSlider({
+              bins: values.bins,
+              min: values.minValue,
+              max: values.maxValue,
+              values: [values.minValue, values.maxValue],
+              precision: integer ? 0 : 2,
+              container: container,
+              excludedBarColor: "#dddddd",
+              rangeType: "between",
+              labelFormatFunction: (value, type) => {
+                // apply date formatting to histogram
+                if (field.simpleType == 'date') {
+                  return formatDate(value);
+                }
+                return value;
+              }
+            })
+          :
+            // plain histogram, for miniHistogram nested in timeSlider
+            new Histogram({
+              bins: values.bins,
+              min: values.minValue,
+              max: values.maxValue,
+              container: container,
+              rangeType: "between",
+            })
+        ;
+        return { widget, values, source, coverage };
+      }
+      catch(e) {
+        console.log('histogram generation failed', e);
+        return {};
+      }
+    }
+
+    // make and place a histogram
+    async function makeHistogramWidget({ dataset, fieldName, layer, layerView, container = null, slider = true }) {
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('histogramWidget');
+      container = container ? container : document.getElementById('filters');
+      container.appendChild(wrapper);
+
+      const histogram = await makeHistogram({ dataset, fieldName, layer, layerView, container: wrapper, slider: true });
+      if (histogram.widget) {
+        wrapper.widget = histogram.widget;
+
+        // set event handler to update map filter and histograms when handles are dragged
+        histogram.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
+          updateLayerView(layerView, fieldName, histogram.widget);
+          updateWidgets(layerView, fieldName, histogram.widget)
+        });
+
+        // register widget
+        widgets.push(histogram.widget)
+      }
+      return histogram.widget;
+  }
+
+      // update layerview filter based on widget, throttled
+      const updateLayerView = _.throttle(
+        async (layerView, fieldName, widget, value = null) => {
+          let whereClause;
+          if (widget.label === "Histogram Range Slider") {
+            whereClause = widget.generateWhereClause(fieldName);
+          }
+          if (widget.label === "TimeSlider") {
+            // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
+            whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
+          }
+          // set whereClause attribute
+          widget.container.setAttribute('whereClause', whereClause);
+          const where = concatWheres();
+          await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
+        },
+        10,
+        {trailing: false}
+      );
+
+    // update the bins of all histograms except the current widget, throttled
+    const updateWidgets = _.throttle(
+      async (layerView, fieldName, currentWidget) => {
+        // if there's only one widget, skip this
+        if (widgets.length === 1) return
+        // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
+        let otherWidgets = widgets.filter(w => w.fieldName != fieldName);
+        let fieldNames = otherWidgets.map(w => w.fieldName);
+        // convert to a set to remove any duplicates (nested widgets), then back to array
+        fieldNames = [...new Set(fieldNames)];
+
+        const whereClause = currentWidget.container.getAttribute('whereClause');
+        try {
+          let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
+          // update other widgets, passing in the filtered feature set
+          throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
+        } catch(e) {
+          throw new Error('Tried to update other widgets: '+e)
+        }
+      },
+      100,
+      {trailing: false}
+    );
+
+    // update the bins of a histogram
+    async function updateHistogram(widget, layerView, fieldName, where, features) {
+      let values;
+      if (features) {
+        let params = {
+          layer,
+          features,
+          field: fieldName,
+          numBins: 30,
+          // minValue: widget.min,
+          // maxValue: widget.max,
+          // values: [widget.values[0], widget.values[1]]
+          // values: [widget.min, widget.max]
+          // sqlWhere: concatWheres()
+          // sqlWhere: where
+        };
+        try {
+          values = await generateHistogram(params);
+          if (values.bins) {
+            widget.bins = values.bins;
+          }
+        } catch(e) {
+          console.log('e:', e)
+        }
+      }
+    }
+
+    function updateOthers(otherWidgets, layerView, whereClause, features) {
+      for (var x = 0; x < otherWidgets.length; x++) {
+        // can't update TimeSliders
+        if (otherWidgets[x].label == "TimeSlider") continue;
+        updateHistogram(otherWidgets[x], layerView, otherWidgets[x].fieldName, whereClause, features);
+      }
+    }
+    const throttledUpdateOthers = _.throttle(updateOthers, 100, {trailing: false});
+
+    // list all known widget DOM elements
+    function listWidgetElements() {
+      return document.getElementById('widgetsDiv').querySelectorAll('[whereClause]')
+    }
+
+    // concatenate all the where clauses from all the widgets
+    function concatWheres() {
+      let whereClause = '';
+      let widgets = listWidgetElements();
+      // generate master here clause with simple string concatenation
+      for (var x = 0; x < widgets.length; x++) {
+        if (x > 0) whereClause += ' AND ';
+        whereClause += '(' + widgets[x].getAttribute('whereClause') + ')';
+      }
+      return whereClause;
+    }
+
+    // update the map view with a new where clause
+    async function updateLayerViewEffect(layerView, { where = null, updateExtent = false } = {}) {
+      layerView.filter = null;
+
+      if (where) {
+        layerView.effect = {
+          filter: {
+            where,
+            // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
+          },
+          excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
+        };
+      }
+
+      // adjust view extent (in or out) to fit all filtered data
+      if (updateExtent && layerView.effect && layerView.effect.filter) {
+        try {
+          const featureExtent = await layer.queryExtent({
+            where: layerView.effect.filter.where,
+            outSpatialReference: layerView.view.spatialReference
+          });
+
+          if (featureExtent.count > 0) {
+            const extent = featureExtent.extent;
+            // const extent = webMercatorUtils.project(featureExtent.extent, layerView.view.spatialReference);
+            const expanded = extent.expand(1.10);
+            // view.extent =
+            if (!layerView.view.extent.contains(expanded) ||
+                (expanded.width * expanded.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
+              layerView.view.goTo(expanded, { duration: 350 });
+            }
+          }
+        } catch(e) {
+          console.log('could not query or project feature extent to update viewport', e);
+        }
       }
     }
 
