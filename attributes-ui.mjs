@@ -47,7 +47,7 @@
       'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
     }
 
-    let widgets = document.getElementById('widgetsDiv');
+    let widgetsDiv = document.getElementById('widgetsDiv');
     let filterResults = document.getElementById('filterResults');
 
     // dataset switcher
@@ -69,7 +69,9 @@
     var timeSlider = null;
     var dataset = null;
     var layer = null;
+    var view = null;
     var layerView = null;
+    var widgets = [];
     // var zoomToDataCheckbox;
     var attributeList;
 
@@ -93,7 +95,7 @@
 
       // Reset UI state
 
-      widgets.innerHTML = ''; // clear previous widget
+      widgetsDiv.innerHTML = ''; // clear previous widget
 
       // guess at a style for this field
       try {
@@ -458,7 +460,7 @@
       var field;
       try {
         if (!view) {
-          var view = await drawMap(layer, dataset)
+          view = await drawMap(layer, dataset)
         }
         widgets.innerText += '\nDrawing '+fieldName+'.';
 
@@ -486,7 +488,7 @@
         basemap: "dark-gray-vector",
         layers: layer,
       });
-      const view = new MapView({
+      view = new MapView({
         container: "viewDiv",
         map: map,
         extent: getDatasetExtent(dataset),
