@@ -1071,7 +1071,11 @@
     }
 
     function attributeSearchChange(e) {
-      console.log(e.srcElement.value);
+      let filtered = Array.from(attributeList.children)
+        .map(x => {
+          let field = x.getAttribute('data-field');
+          x.style.display = field.toLowerCase().indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
+        });
     }
 
     let attributeSearchElement = document.getElementById("attributeSearch")
