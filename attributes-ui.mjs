@@ -133,9 +133,9 @@
 
       let filtersList = document.getElementById('filtersList');
       filtersList.appendChild(filter);
-      let widget = document.createElement('div');
-      widget.classList.add('histogramWidget');
-      filter.appendChild(widget);
+      let container = document.createElement('div');
+      container.classList.add('histogramWidget');
+      filter.appendChild(container);
 
       // Numeric fields - histogram
       if (field.simpleType === 'numeric' || field.simpleType === 'date') {
@@ -143,15 +143,13 @@
           view = await drawMap(layer, dataset)
         }
         layerView = await view.whenLayerView(layer);
-        widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container: widget, slider: true });
+        var widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container, slider: true });
       }
       // if (field.simpleType === 'date') {
       //   // Time slider
       //   widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       // }
       widget.container.setAttribute('fieldName', fieldName);
-
-      return widget
     }
 
     // create a histogram
@@ -317,7 +315,6 @@
         }
         // set whereClause attribute
         widget.container.setAttribute('whereClause', whereClause);
-        // debugger
         const where = concatWheres();
         await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
       },
@@ -339,6 +336,7 @@
 
         const whereClause = currentWidget.container.getAttribute('whereClause');
         try {
+          // query layer for all features in the other layers, filtered by the state of current layer
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
           // update other widgets, passing in the filtered feature set
           throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
@@ -381,7 +379,7 @@
       for (var x = 0; x < otherWidgets.length; x++) {
         // can't update TimeSliders
         if (otherWidgets[x].label == "TimeSlider") continue;
-        updateHistogram(otherWidgets[x], layerView, otherWidgets[x].getAttribute('fieldName'), whereClause, features);
+        updateHistogram(otherWidgets[x].widget, layerView, otherWidgets[x].getAttribute('fieldName'), whereClause, features);
       }
     }
     const throttledUpdateOthers = _.throttle(updateOthers, 100, {trailing: false});
@@ -445,7 +443,6 @@
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       let filter = event.currentTarget.parentElement;
       let filterList = filter.parentElement;
-      // debugger
       filter.remove();
       if (filterList.children.length == 0) {
         let firstFilter = document.createElement('div');
