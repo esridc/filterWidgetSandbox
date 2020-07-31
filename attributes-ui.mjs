@@ -1082,6 +1082,7 @@
 
     // TESTS
 
-    addFilter(null, "phenomenonTime");
+    addFilter(null, "locationLatitude");
+    addFilter(null, "locationLongitude");
 
   })();
