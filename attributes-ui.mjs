@@ -143,8 +143,15 @@
           view = await drawMap(layer, dataset)
         }
         layerView = await view.whenLayerView(layer);
-        const histogram = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container: widget, slider: true });
+        widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container: widget, slider: true });
       }
+      // if (field.simpleType === 'date') {
+      //   // Time slider
+      //   widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+      // }
+      widget.container.setAttribute('fieldName', fieldName);
+
+      return widget
     }
 
     // create a histogram
@@ -295,36 +302,38 @@
         widgets.push(histogram.widget)
       }
       return histogram.widget;
-  }
+    }
 
-      // update layerview filter based on widget, throttled
-      const updateLayerView = _.throttle(
-        async (layerView, fieldName, widget, value = null) => {
-          let whereClause;
-          if (widget.label === "Histogram Range Slider") {
-            whereClause = widget.generateWhereClause(fieldName);
-          }
-          if (widget.label === "TimeSlider") {
-            // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
-            whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
-          }
-          // set whereClause attribute
-          widget.container.setAttribute('whereClause', whereClause);
-          const where = concatWheres();
-          await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
-        },
-        10,
-        {trailing: false}
-      );
+    // update layerview filter based on widget, throttled
+    const updateLayerView = _.throttle(
+      async (layerView, fieldName, widget, value = null) => {
+        let whereClause;
+        if (widget.label === "Histogram Range Slider") {
+          whereClause = widget.generateWhereClause(fieldName);
+        }
+        if (widget.label === "TimeSlider") {
+          // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
+          whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
+        }
+        // set whereClause attribute
+        widget.container.setAttribute('whereClause', whereClause);
+        // debugger
+        const where = concatWheres();
+        await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
+      },
+      10,
+      {trailing: false}
+    );
 
     // update the bins of all histograms except the current widget, throttled
     const updateWidgets = _.throttle(
       async (layerView, fieldName, currentWidget) => {
+        let widgets = Array.from(listWidgetElements());
         // if there's only one widget, skip this
         if (widgets.length === 1) return
         // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
-        let otherWidgets = widgets.filter(w => w.fieldName != fieldName);
-        let fieldNames = otherWidgets.map(w => w.fieldName);
+        let otherWidgets = widgets.filter(w => w.getAttribute('fieldname') != fieldName);
+        let fieldNames = otherWidgets.map(w => w.getAttribute('fieldname'));
         // convert to a set to remove any duplicates (nested widgets), then back to array
         fieldNames = [...new Set(fieldNames)];
 
@@ -372,14 +381,14 @@
       for (var x = 0; x < otherWidgets.length; x++) {
         // can't update TimeSliders
         if (otherWidgets[x].label == "TimeSlider") continue;
-        updateHistogram(otherWidgets[x], layerView, otherWidgets[x].fieldName, whereClause, features);
+        updateHistogram(otherWidgets[x], layerView, otherWidgets[x].getAttribute('fieldName'), whereClause, features);
       }
     }
     const throttledUpdateOthers = _.throttle(updateOthers, 100, {trailing: false});
 
     // list all known widget DOM elements
     function listWidgetElements() {
-      return document.getElementById('widgetsDiv').querySelectorAll('[whereClause]')
+      return document.getElementById('filtersList').querySelectorAll('[whereClause]')
     }
 
     // concatenate all the where clauses from all the widgets
@@ -434,8 +443,6 @@
 
     async function removeFilter(event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
-      // const field = getDatasetField(dataset, fieldName);
-
       let filter = event.currentTarget.parentElement;
       let filterList = filter.parentElement;
       // debugger
@@ -519,10 +526,10 @@
 
     // update layerview filter based on histogram widget, throttled
     const updateLayerViewWithHistogram = _.throttle(
-    async (layerView, fieldName, where) => {
-      await updateLayerViewEffect(layerView, { where: where, updateExtent: true });
-    },
-    50
+      async (layerView, fieldName, where) => {
+        await updateLayerViewEffect(layerView, { where: where, updateExtent: true });
+      },
+      50
     );
 
 
