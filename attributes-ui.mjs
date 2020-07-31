@@ -91,7 +91,7 @@
     async function switchSelected (event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       const field = getDatasetField(dataset, fieldName);
-      document.querySelector('#attributeListButton').innerHTML = fieldName;
+      // document.querySelector('#attributeListButton').innerHTML = fieldName;
 
       // Reset UI state
 
@@ -553,8 +553,8 @@
       }
 
       attributeList = updateAttributeList(dataset, '#attributeList')
-      updateAttributeList(dataset, '#displayListItems')
-      updateAttributeList(dataset, '#styleListItems')
+      // updateAttributeList(dataset, '#displayListItems')
+      // updateAttributeList(dataset, '#styleListItems')
 
       let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 
