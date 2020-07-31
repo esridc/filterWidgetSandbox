@@ -402,42 +402,7 @@
     }
 
     // update the map view with a new where clause
-    async function updateLayerViewEffect(layerView, { where = null, updateExtent = false } = {}) {
-      layerView.filter = null;
 
-      if (where) {
-        layerView.effect = {
-          filter: {
-            where,
-            // geometry: layerView.view.extent.clone().expand(0.5) // testing limiting query by geom/viewport
-          },
-          excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
-        };
-      }
-
-      // adjust view extent (in or out) to fit all filtered data
-      if (updateExtent && layerView.effect && layerView.effect.filter) {
-        try {
-          const featureExtent = await layer.queryExtent({
-            where: layerView.effect.filter.where,
-            outSpatialReference: layerView.view.spatialReference
-          });
-
-          if (featureExtent.count > 0) {
-            const extent = featureExtent.extent;
-            // const extent = webMercatorUtils.project(featureExtent.extent, layerView.view.spatialReference);
-            const expanded = extent.expand(1.10);
-            // view.extent =
-            if (!layerView.view.extent.contains(expanded) ||
-                (expanded.width * expanded.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
-              layerView.view.goTo(expanded, { duration: 350 });
-            }
-          }
-        } catch(e) {
-          console.log('could not query or project feature extent to update viewport', e);
-        }
-      }
-    }
 
     async function removeFilter(event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
@@ -877,6 +842,7 @@
       return attributeList;
     }
 
+    // update the map view with a new where clause
     async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = true } = {}) {
       layerView.filter = null;
 
@@ -886,6 +852,7 @@
             where,
           },
           excludedEffect: 'grayscale(100%) opacity(15%)'
+          // excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
         };
       }
 
