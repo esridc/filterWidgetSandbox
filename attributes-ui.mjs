@@ -848,7 +848,10 @@
         //   .forEach(([fieldName, field]) => {
         const field = getDatasetField(dataset, fieldName);
         // const fieldStats = field.statistics.values;
+
+        // make list entry for attribute
         const item = document.createElement('calcite-dropdown-item');
+        item.setAttribute('class', 'attribute');
         item.innerHTML = `${field.alias || fieldName}`;
         if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
           if (field.simpleType === 'numeric') {

@@ -165,9 +165,13 @@ body,
 }
 
 .attribute {
-  border: 1px solid pink;
-  padding: 1px;
-  margin: 1px;
+  color: black;
+}
+
+.attributeRange {
+  color: #666;
+  font-size: .7em;
+  margin-left: 5px;
 }
 
 .filterIcons {
