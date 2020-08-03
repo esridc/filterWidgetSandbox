@@ -857,9 +857,12 @@
         var max = fieldStats.values.max;
         if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
           if (field.simpleType === 'numeric') {
-            // TODO: vary precision based on value range
-            min = countDecimals(min) > 2 ? min.toFixed(2) : min;
-            max = countDecimals(max) > 2 ? max.toFixed(2) : max;
+            // vary precision based on value range
+            let digits = getDigits(max - min);
+            let precision = digits[0] > 1 ? 0 : digits[1];
+            min = min.toFixed(precision);
+            max = max.toFixed(precision);
+            console.log('precision:', precision)
             item.innerHTML += `<span class="attributeRange">(${min} to ${max})</span>`;
           } else if (field.simpleType === 'date') {
             item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
@@ -884,11 +887,13 @@
       return attributeList;
     }
 
-    var countDecimals = function (value) {
-      if ((value % 1) != 0)
-          return value.toString().split(".")[1].length;
-      return 0;
-    };
+    function getDigits(num) {
+      var s = num.toString();
+      s = s.split('.');
+      console.log(s)
+      if (s.length = 1) s.push(0);
+      return [s[0].length, s[1].length];
+    }
 
     async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = true } = {}) {
       layerView.filter = null;
