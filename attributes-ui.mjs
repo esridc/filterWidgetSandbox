@@ -853,10 +853,14 @@
         const item = document.createElement('calcite-dropdown-item');
         item.setAttribute('class', 'attribute');
         item.innerHTML = `${field.alias || fieldName}`;
+        var min = fieldStats.values.min;
+        var max = fieldStats.values.max;
         if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
           if (field.simpleType === 'numeric') {
             // TODO: vary precision based on value range
-            item.innerHTML += `<br><small>(${fieldStats.values.min.toFixed(2)} to ${fieldStats.values.max.toFixed(2)})</small>`;
+            min = countDecimals(min) > 2 ? min.toFixed(2) : min;
+            max = countDecimals(max) > 2 ? max.toFixed(2) : max;
+            item.innerHTML += `<span class="attributeRange">(${min} to ${max})</span>`;
           } else if (field.simpleType === 'date') {
             item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
           }
@@ -879,6 +883,12 @@
       });
       return attributeList;
     }
+
+    var countDecimals = function (value) {
+      if ((value % 1) != 0)
+          return value.toString().split(".")[1].length;
+      return 0;
+    };
 
     async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = true } = {}) {
       layerView.filter = null;
