@@ -813,12 +813,22 @@
         //   .forEach(([fieldName, field]) => {
         const field = getDatasetField(dataset, fieldName);
         // const fieldStats = field.statistics.values;
+
+        // make list entry for attribute
         const item = document.createElement('calcite-dropdown-item');
+        item.setAttribute('class', 'attribute');
         item.innerHTML = `${field.alias || fieldName}`;
+        var min = fieldStats.values.min;
+        var max = fieldStats.values.max;
         if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
           if (field.simpleType === 'numeric') {
-            // TODO: vary precision based on value range
-            item.innerHTML += `<br><small>(${fieldStats.values.min.toFixed(2)} to ${fieldStats.values.max.toFixed(2)})</small>`;
+            // vary precision based on value range
+            let digits = getDigits(max - min);
+            let precision = digits[0] > 1 ? 0 : digits[1];
+            min = min.toFixed(precision);
+            max = max.toFixed(precision);
+            console.log('precision:', precision)
+            item.innerHTML += `<span class="attributeRange">(${min} to ${max})</span>`;
           } else if (field.simpleType === 'date') {
             item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
           }
@@ -840,6 +850,14 @@
         attributeList.appendChild(item);
       });
       return attributeList;
+    }
+
+    function getDigits(num) {
+      var s = num.toString();
+      s = s.split('.');
+      console.log(s)
+      if (s.length = 1) s.push(0);
+      return [s[0].length, s[1].length];
     }
 
     // update the map view with a new where clause
