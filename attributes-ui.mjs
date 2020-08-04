@@ -550,7 +550,7 @@
         // set whereClause attribute
         widget.container.setAttribute('whereClause', whereClause);
         const where = concatWheres();
-        await updateLayerViewEffect(layerView, {where: where, updateExtent: false });
+        await updateLayerViewEffect({where: where, updateExtent: false });
       },
       10,
       {trailing: false}
@@ -681,7 +681,7 @@
 
       // clear previous filters
       if (typeof layerView != 'undefined') {
-        updateLayerViewEffect(layerView, { updateExtent: true });
+        updateLayerViewEffect({ updateExtent: true });
       }
 
     };
@@ -723,7 +723,7 @@
     // update layerview filter based on histogram widget, throttled
     const updateLayerViewWithHistogram = _.throttle(
       async (layerView, fieldName, where) => {
-        await updateLayerViewEffect(layerView, { where: where, updateExtent: true });
+        await updateLayerViewEffect({ where: where, updateExtent: true });
       },
       50
     );
@@ -1097,7 +1097,7 @@
     }
 
     // update the map view with a new where clause
-    async function updateLayerViewEffect(layerView, { where = undefined, updateExtent = true } = {}) {
+    async function updateLayerViewEffect({ where = undefined, updateExtent = true } = {}) {
       layerView.filter = null;
 
       if (where) {
