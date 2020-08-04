@@ -1302,6 +1302,12 @@
     let attributeSearchElement = document.getElementById("attributeSearch")
     attributeSearchElement.addEventListener("input", attributeSearchChange);
 
+    view.ui.add('zoomToData', 'bottom-right');
+    const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
+    zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
+      updateLayerViewEffect({ updateExtent: zoomToDataCheckbox.checked });
+    });
+
     // TESTS
 
     addFilter(null, "locationLatitude");
