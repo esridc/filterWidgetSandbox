@@ -139,21 +139,25 @@
       filtersList.appendChild(filter);
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
       let container = document.createElement('div');
-      container.classList.add('histogramWidget');
       filter.appendChild(container);
 
+      if (!view) {
+        view = await drawMap(layer, dataset)
+      }
+      layerView = await view.whenLayerView(layer);
       // Numeric fields - histogram
       if (field.simpleType === 'numeric' || field.simpleType === 'date') {
-        if (!view) {
-          view = await drawMap(layer, dataset)
-        }
-        layerView = await view.whenLayerView(layer);
         var widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container, slider: true });
+        container.classList.add('histogramWidget');
       }
       // if (field.simpleType === 'date') {
       //   // Time slider
       //   widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       // }
+      if (field.simpleType === 'string') {
+        // value list
+          widget = await makeStringWidget({ dataset, fieldName, layer, layerView, container, slider: true });
+      }
       widget.container.setAttribute('fieldName', fieldName);
     }
 
@@ -305,6 +309,231 @@
         widgets.push(histogram.widget)
       }
       return histogram.widget;
+    }
+
+    // make and place a value list of checkboxes
+    async function makeStringWidget({ dataset, fieldName, layer, container = null, slider = true }) {
+      // const listContainer = document.createElement('div');
+      // const listContainer = document.createElement('div');
+      container.classList.add('valueListWidget');
+      const field = getDatasetField(dataset, fieldName);
+
+      // Build filter/where clause and update layer
+      const onCheckboxChange = ({ checkboxes, layerView }) => {
+        let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
+        let where = '1=1';
+        if (checked.length > 0) {
+          const hasNull = checked.find(c => c.value == null) ? true : false;
+          checked = checked.filter(c => c.value != null);
+
+          let whereVals;
+          if (field.simpleType === 'date') {
+            whereVals = checked.map(c => +new Date(c.value));
+            where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
+          } else {
+            whereVals = checked.map(c => {
+              if (typeof c.value === 'string') {
+                return `'${c.value}'`
+              } else {
+                return c.value;
+              }
+            });
+            where = `${fieldName} IN (${whereVals.join(', ')})`;
+          }
+
+          if (hasNull) {
+            where = whereVals ? `${where} OR ` : '';
+            where = `${fieldName} IS NULL`; // need special SQL handling for null vales
+          }
+        }
+        updateLayerViewEffect({ where, updateExtent: zoomToDataCheckbox.checked });
+      };
+
+      const { fieldStats } = await createValueList({ dataset, fieldName, layer, container, onUpdateValues: onCheckboxChange });
+
+      fieldStats.container = container;
+
+      // register widget
+      widgets.push(fieldStats)
+
+      return fieldStats;
+    }
+
+    async function createValueList ({ dataset, fieldName, layer, container, onUpdateValues }) {
+      // <label>
+      //   <calcite-checkbox checked="true"></calcite-checkbox> Switch is on
+      // </label>
+
+      const list = document.createElement('div');
+
+      const header = document.createElement('div');
+      header.innerText = 'Values';
+      header.classList.add('sidebarItemHeader');
+      list.appendChild(header);
+
+      const checkboxList = document.createElement('div');
+      list.appendChild(checkboxList);
+
+      const field = getDatasetField(dataset, fieldName);
+      const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+      // if (!stats.topValues || stats.topValues.length === 0) {
+      //   return {};
+      // }
+
+      let checkboxListenerDisabled = false;
+
+      function addValueListCheckbox (value, checkboxes) {
+        const checkbox = document.createElement('calcite-checkbox');
+        checkbox.value = JSON.stringify(value);
+
+        // const labelText = document.createTextNode(`${value.value} (${(value.pct * 100).toFixed(2)}% of records)`);
+        const labelText = document.createElement('span');
+
+        // handle null-ish, date, and other field formatting
+        if (value.value == null || (typeof value.value === 'string' && value.value.trim() === '')) {
+          labelText.innerHTML = '<span style="color: gray">No value</span>';
+        } else if (field.simpleType === 'date') {
+          labelText.innerHTML = formatDate(value.value);
+        } else {
+          labelText.innerHTML = value.value;
+        }
+
+        const labelSubText = document.createElement('span');
+        labelSubText.classList.add('subText');
+        labelSubText.innerText = value.pct != null ? `${(value.pct * 100).toFixed(2)}%` : '';
+
+        const onlyLink = document.createElement('a');
+        onlyLink.classList.add('valueListSideLink');
+        onlyLink.href = '#';
+        onlyLink.innerText = 'only';
+
+        const label = document.createElement('label');
+        label.classList.add('valueListCheckbox');
+        label.appendChild(checkbox);
+        label.appendChild(labelText);
+        label.appendChild(labelSubText);
+        label.appendChild(onlyLink);
+
+        checkbox.addEventListener('calciteCheckboxChange', (event) => {
+          if (!checkboxListenerDisabled) {
+            onUpdateValues({ checkboxes, event });
+          }
+        });
+
+        onlyLink.addEventListener('click', event => {
+          // disable change listener to keep it from firing as all checkboxes are updated
+          checkboxListenerDisabled = true;
+
+          // check selected box and un-check all others
+          checkboxes.forEach(c => {
+            c.checked = c === checkbox ? true : false;
+          });
+
+          // re-enable listener and invoke update handler just once
+          checkboxListenerDisabled = false;
+          onUpdateValues({ checkboxes, event });
+        });
+
+        checkboxList.appendChild(label);
+        return checkbox;
+      }
+
+      // clear all link
+      const clearLink = document.createElement('a');
+      clearLink.classList.add('valueListSideLink');
+      clearLink.href = '#';
+      clearLink.innerText = 'clear';
+      header.appendChild(clearLink);
+
+      clearLink.addEventListener('click', event => {
+        // disable change listener to keep it from firing as all checkboxes are updated
+        checkboxListenerDisabled = true;
+
+        // un-check all checkboxes
+        checkboxes.forEach(c => c.checked = false);
+
+        // re-enable listener and invoke update handler just once
+        checkboxListenerDisabled = false;
+        onUpdateValues({ checkboxes, event });
+      });
+
+      const checkboxes = [];
+      checkboxes.push(...stats.topValues.map(value => addValueListCheckbox(value, checkboxes)));
+
+      container.appendChild(list);
+
+      // search box
+      if (stats.uniqueCount > stats.topValues.length) {
+        const searchBox = document.createElement('input');
+        searchBox.classList.add('valueListSearchBox');
+        searchBox.type = 'text';
+        searchBox.placeholder = `Search ${fieldName} values...`;
+        list.appendChild(searchBox);
+
+        function searchSource(params) {
+          return async function doSearch(query, callback) {
+            const where = field.simpleType === 'date' ?
+              `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')` : // convert dates to strings
+              `lower(${fieldName}) LIKE lower('%${query}%')`
+
+            const { features } = await layer.queryFeatures({
+              // where: `lower(${fieldName}) LIKE lower('%${query}%')`,
+              // where: `CAST(${fieldName} AS VARCHAR(256)) LIKE lower('%${query}%')`,
+              where,
+              orderByFields: [fieldName],
+              outFields: [fieldName],
+              returnDistinctValues: true,
+              num: 10
+            });
+
+            // de-dupe results (by turning into set)
+            const vals = new Set(features
+              .map(f => f.attributes[fieldName])
+              .map(v => typeof v === 'string' ? v.trim() : v)
+              .filter(value => {
+                // exclude any results already selected in checkboxes
+                return !checkboxes
+                  .filter(c => c.checked)
+                  .map(c => JSON.parse(c.value))
+                  .map(v => v.value)
+                  .includes(value);
+              })
+            );
+
+            // return values
+            callback([...vals].map(value => ({
+              value,
+              label: field.simpleType === 'date' ? formatDate(value) : value
+            })));
+          };
+        }
+
+        autocomplete(searchBox, { hint: false, clearOnSelected: true, }, [{
+          source: searchSource({ hitsPerPage: 5 }),
+          displayKey: 'label',
+          templates: {
+            suggestion: function(suggestion) {
+              return suggestion.label;
+            }
+          }
+        }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
+          // console.log(event, suggestion, dataset, context);
+          let checkbox = checkboxes
+            .filter(c => !c.checked)
+            .find(c => JSON.parse(c.value).value === suggestion.value);
+
+          if (!checkbox) {
+            checkbox = addValueListCheckbox(suggestion, checkboxes);
+            checkboxes.push(checkbox);
+          }
+
+          checkbox.checked = true;
+          // TODO: why is this necessary? calcite event listener doesn't fire when checkbox added and set to checked in this flow
+          onUpdateValues({ checkboxes });
+        });
+      }
+
+      return { checkboxes, fieldStats: stats };
     }
 
     // update layerview filter based on widget, throttled
