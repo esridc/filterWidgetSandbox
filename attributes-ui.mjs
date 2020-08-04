@@ -831,10 +831,9 @@
           if (field.simpleType === 'numeric') {
             // vary precision based on value range
             let digits = getDigits(max - min);
-            let precision = digits[0] > 1 ? 0 : digits[1];
+            let precision = digits[1] == 1 ? 0 : digits[0] > 3 ? 0 : digits[1];
             min = min.toFixed(precision);
             max = max.toFixed(precision);
-            console.log('precision:', precision)
             item.innerHTML += `<span class="attributeRange">(${min} to ${max})</span>`;
           } else if (field.simpleType === 'date') {
             item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
@@ -862,9 +861,10 @@
     function getDigits(num) {
       var s = num.toString();
       s = s.split('.');
-      console.log(s)
-      if (s.length = 1) s.push(0);
-      return [s[0].length, s[1].length];
+      if (s.length == 1) {
+        s = [s[0], "0"];
+      }
+      return [s[0].length, Math.min(s[1].length, 4)];
     }
 
     // update the map view with a new where clause
