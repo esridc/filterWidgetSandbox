@@ -128,11 +128,16 @@
       icons.innerText = "🅧";
       icons.onclick = removeFilter;
       icons.classList.add('filterIcons');
+      let tooltip = document.createElement('span');
+      tooltip.classList.add('tooltip')
+      tooltip.innerText = "Delete filter";
 
       filter.appendChild(icons);
+      icons.appendChild(tooltip)
 
       let filtersList = document.getElementById('filtersList');
       filtersList.appendChild(filter);
+      document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
       let container = document.createElement('div');
       container.classList.add('histogramWidget');
       filter.appendChild(container);
@@ -517,6 +522,8 @@
         } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
       }
 
+      let attributesCountDiv = document.getElementById('attributesCount');
+      attributesCountDiv.innerHTML = `Showing ${dataset.attributes.fields.length} attributes`
       attributeList = updateAttributeList(dataset, '#attributeList')
       // updateAttributeList(dataset, '#displayListItems')
       // updateAttributeList(dataset, '#styleListItems')

@@ -137,6 +137,7 @@ body,
   overflow-x: hidden;
   overflow-y: scroll;
   margin: 0 0 10px 0;
+  padding-right: 10px;
   border: 1px solid lightgray;
 }
 
@@ -166,17 +167,18 @@ body,
 
 .attribute {
   color: black;
+  margin-left: 5px;
 }
 
 .attributeRange {
-  color: #666;
+  color: #227cb4;
   font-size: .7em;
   margin-left: 5px;
 }
 
 .filterIcons {
   float: right;
-  padding: 5px;
+  padding: 0 3px;;
 }
 
 .filterIcons:hover {
@@ -184,3 +186,36 @@ body,
   background-color: darkred;
   cursor: pointer
 }
+
+.filterIcons:hover .tooltip {
+  visibility: visible;
+}
+
+#attributeSearch {
+  margin: 0;
+  /* padding: 0; */
+}
+
+#attributesCount {
+  float: right;
+}
+
+.tooltip {
+  visibility: hidden;
+  color: black;
+  background-color: white;
+  border: 2px solid red;
+  position: absolute;
+  z-index: 100;
+  padding: 2px;
+  margin: -2px 2px;
+}
+
+.sectionHead {
+  font-weight: bold;
+}
+
+#filtersCount {
+  float: right;
+}
+
