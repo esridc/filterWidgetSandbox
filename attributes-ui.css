@@ -170,6 +170,10 @@ body,
   margin-left: 5px;
 }
 
+/* hide bullet */
+.attribute:hover::before {
+  display: none;
+}
 .attributeRange {
   color: #227cb4;
   font-size: .7em;
