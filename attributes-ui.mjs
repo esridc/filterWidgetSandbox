@@ -112,16 +112,20 @@
 
     }
 
-    async function addFilter(event, fieldName = null) {
-      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
+    async function addFilter(event = null, fieldName = null, fieldStats = null) {
+      let target = event ? event.currentTarget : document.getElementById(fieldName);
+      fieldName = fieldName ? fieldName : target.dataset.field;
       const field = getDatasetField(dataset, fieldName);
+      console.log('field?', field)
       // document.querySelector('#attributeListButton').innerHTML = fieldName;
 
       let firstFilter = document.getElementById('firstfilter');
       firstFilter ? firstFilter.remove() : null;
 
       let filter = document.createElement('div');
-      filter.innerText = fieldName;
+      filter.classList.add('filterDiv');
+      fieldStats = fieldStats ? fieldStats : field.statistics;
+      filter.innerHTML = generateLabel(field, fieldStats);
 
       // actions
       let icons = document.createElement('span');
@@ -1053,23 +1057,7 @@
         // make list entry for attribute
         const item = document.createElement('calcite-dropdown-item');
         item.setAttribute('class', 'attribute');
-        item.innerHTML = `${field.alias || fieldName}`;
-        var min = fieldStats.values.min;
-        var max = fieldStats.values.max;
-        if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
-          if (field.simpleType === 'numeric') {
-            // vary precision based on value range
-            let digits = getDigits(max - min);
-            let precision = digits[1] == 1 ? 0 : digits[0] > 3 ? 0 : digits[1];
-            min = min.toFixed(precision);
-            max = max.toFixed(precision);
-            item.innerHTML += `<span class="attributeRange">(${min} to ${max})</span>`;
-          } else if (field.simpleType === 'date') {
-            item.innerHTML += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
-          }
-        } else if (fieldStats && fieldStats.uniqueCount && field.simpleType === 'string') {
-          item.innerHTML += ` (${fieldStats.uniqueCount} values)`;
-        }
+        item.innerHTML = generateLabel(field, fieldStats);
 
         // add icon for field type
         if (field.simpleType === 'numeric') {
@@ -1094,6 +1082,27 @@
         s = [s[0], "0"];
       }
       return [s[0].length, Math.min(s[1].length, 4)];
+    }
+
+    function generateLabel(field, fieldStats) {
+      var label = `${field.alias || fieldName}`;
+      var min = fieldStats.values.min;
+      var max = fieldStats.values.max;
+      if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
+        if (field.simpleType === 'numeric') {
+          // vary precision based on value range
+          let digits = getDigits(max - min);
+          let precision = digits[1] == 1 ? 0 : digits[0] > 3 ? 0 : digits[1];
+          min = min.toFixed(precision);
+          max = max.toFixed(precision);
+          label += `<span class="attributeRange">(${min} to ${max})</span>`;
+        } else if (field.simpleType === 'date') {
+          label += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
+        }
+      } else if (fieldStats && fieldStats.uniqueCount && field.simpleType === 'string') {
+        label += ` (${fieldStats.uniqueCount} values)`;
+      }
+      return label
     }
 
     // update the map view with a new where clause
@@ -1310,7 +1319,9 @@
 
     // TESTS
 
-    addFilter(null, "locationLatitude");
-    addFilter(null, "locationLongitude");
+    // addFilter(null, "locationLatitude");
+    // addFilter(null, "locationLongitude");
+    // addFilter(null, "parametersBottom");
+    addFilter(null, "resultQuality");
 
   })();

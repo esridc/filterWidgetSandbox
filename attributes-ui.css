@@ -150,6 +150,10 @@ body,
   border: 1px solid lightgray;
 }
 
+.filterDiv {
+  font-size: 14px;
+}
+
 ::-webkit-scrollbar {
   -webkit-appearance: none;
   width: 7px;
@@ -235,13 +239,17 @@ body,
   font-size: 14px;
 }
 
+.valueListWidget > .valueListCheckbox {
+  font-size: 10px;
+}
+
 .valueListWidget label:hover .subText {
 /*     display: inline; */
 }
 
 .valueListSearchBox {
   font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   margin-top: 4px;
   margin-left: 4px;
   width: calc(100% - 4px);
