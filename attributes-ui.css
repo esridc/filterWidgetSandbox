@@ -14,7 +14,7 @@
   background-color: #fff;
   border: 1px solid #999;
   border-top: none;
-  position: absolute;
+  /* position: absolute; */
 }
 .algolia-autocomplete .aa-dropdown-menu .aa-suggestion {
   cursor: pointer;
@@ -44,12 +44,11 @@ body,
   padding: 0;
   margin: 0;
   flex: auto;
-  overflow: hidden;
 }
 
 #sidebar {
   min-width: 325px;
-  /* max-width: 375px; */
+  max-width: 375px;
   height: 100%;
   padding: 20px;
   /* margin: 0px 12px; */
@@ -75,7 +74,7 @@ body,
 
 .sidebarItemHeader {
   font-weight: bold;
-  position: relative;
+  /* position: relative; */
 }
 
 #datasetName {
@@ -135,8 +134,9 @@ body,
 }
 
 #attributeList {
-  height: 10.5em;
-  max-height: 15.5em;
+  height: auto;
+  min-height: 100px;
+  max-height: 10.5em;
   overflow-x: hidden;
   overflow-y: scroll;
   margin: 0 0 10px 0;
@@ -145,30 +145,23 @@ body,
 }
 
 #filtersList {
-  height: 10.5em;
-  max-height: 15.5em;
+  height: auto;
+  min-height: 10em;
+  max-height: 20.5em;
   line-height: normal;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: scroll;
   margin: 0 0 10px 0;
   border: 1px solid lightgray;
 }
 
 .filterDiv {
   font-size: 14px;
-  margin: 5px;
-  padding-bottom: 5px;
-  border-bottom: 2px solid grey
+  margin: 5px 3px 15px 3px;
+  padding: 8px;
+  border: 1px solid grey;
+  box-shadow: 2px 2px 5px lightgrey;
 }
-
-.clearfix:before,
-.clearfix:after {
-    content: ".";
-    display: block;
-    height: 0;
-    overflow: hidden;
-}
-.clearfix:after { clear: both; }
 
 ::-webkit-scrollbar {
   -webkit-appearance: none;
@@ -238,20 +231,24 @@ body,
 
 .sectionHead {
   font-weight: bold;
+  /* margin-bottom: -10px; */
 }
 
 #filtersCount {
   float: right;
 }
 
-.valueListWidget label {
-  display: block;
-  padding: 4px;
+.valueListWidget {
+  white-space: nowrap;
   position: relative;
+}
+.valueListWidget label {
+  padding: 4px 0px;
+  overflow-y: auto;
+  height: 100%;
 }
 
 .valueListWidget label > .subText {
-/*     display: none; */
   margin-left: 8px;
   color: #828282;
   font-size: 14px;
@@ -259,10 +256,14 @@ body,
 
 .valueListWidget > .valueListCheckbox {
   font-size: 10px;
+  padding: 0;
+  position: relative;
+  display: inline-block;
 }
 
-.valueListCheckbox {
-  position: relative;
+.valueListCheckbox > calcite-checkbox {
+  top: 2px;
+  margin-right: 2px;
 }
 
 .valueListWidget label:hover .subText {
@@ -277,10 +278,8 @@ body,
 }
 
 .valueListSearchBoxWrapper {
-  position: relative;
-  border: 2px solid gold;
-  overflow-x: visible;
-  overflow-y: visible;
+  /* position: absolute; */
+  /* overflow: visible; */
 }
 
 .valueListSideLink {

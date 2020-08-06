@@ -162,6 +162,7 @@
         // value list
           widget = await makeStringWidget({ dataset, fieldName, layer, layerView, container, slider: true });
       }
+      filtersList.scrollTop = filtersList.scrollHeight;
       widget.container.setAttribute('fieldName', fieldName);
     }
 
@@ -419,7 +420,6 @@
         label.appendChild(labelText);
         label.appendChild(labelSubText);
         label.appendChild(onlyLink);
-        debugger
 
         checkbox.addEventListener('calciteCheckboxChange', (event) => {
           if (!checkboxListenerDisabled) {
@@ -476,9 +476,8 @@
         searchBox.type = 'text';
         searchBox.placeholder = `Search ${stats.uniqueCount} ${fieldName} values...`;
         const wrapper = document.createElement('div');
-        wrapper.classList.add('valueListSearchBoxWrapper');
-        wrapper.appendChild(searchBox);
-        list.appendChild(wrapper);
+        wrapper.classList.add('valueListSearchBoxWrapper', 'clearfix');
+        list.appendChild(searchBox);
 
         function searchSource(params) {
           return async function doSearch(query, callback) {
@@ -523,7 +522,6 @@
           displayKey: 'label',
           templates: {
             suggestion: function(suggestion) {
-              // debugger
               return suggestion.label;
             }
           }
@@ -563,7 +561,7 @@
         const where = concatWheres();
         await updateLayerViewEffect({where: where, updateExtent: false });
       },
-      10,
+      100,
       {trailing: false}
     );
 

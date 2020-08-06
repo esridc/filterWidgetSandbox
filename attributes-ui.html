@@ -64,24 +64,28 @@
       <div>
         <span class="sectionHead">Attributes:</span>
         <span id="attributesCount"></span>
+
+        <calcite-input type="search" scale="s" id="attributeSearch" placeholder="Search Attributes by Name" aria-label="Search stories"></calcite-input>
+
+        <div id="attributeList">
+        </div>
       </div>
 
-      <calcite-input type="search" scale="s" id="attributeSearch" placeholder="Search Attributes by Name" aria-label="Search stories"></calcite-input>
-
-      <div id="attributeList">
-      </div>
-
-      <div>
+      <div class="section">
         <span class="sectionHead">Filters:</span>
         <span id="filtersCount"></span>
-      </div>
 
 
       <div id="filtersList">
         <span id="firstfilter">None, all features shown</span>
       </div>
       <div id="filterResults"></div>
+    </div>
 
+  <div class="section">
+    <span class="sectionHead">Styling:</span>
+    <span id="attributesCount"></span>
+</div>
 
       <!-- <calcite-label>Change Display:
         <calcite-dropdown type="hover" width="l" id="displayList">
