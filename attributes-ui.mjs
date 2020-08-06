@@ -475,7 +475,10 @@
         searchBox.classList.add('valueListSearchBox');
         searchBox.type = 'text';
         searchBox.placeholder = `Search ${stats.uniqueCount} ${fieldName} values...`;
-        list.appendChild(searchBox);
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('valueListSearchBoxWrapper');
+        wrapper.appendChild(searchBox);
+        list.appendChild(wrapper);
 
         function searchSource(params) {
           return async function doSearch(query, callback) {

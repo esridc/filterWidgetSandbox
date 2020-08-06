@@ -276,6 +276,13 @@ body,
   /* margin: 4px; */
 }
 
+.valueListSearchBoxWrapper {
+  position: relative;
+  border: 2px solid gold;
+  overflow-x: visible;
+  overflow-y: visible;
+}
+
 .valueListSideLink {
   position: absolute;
   margin-top: 2px;
