@@ -129,7 +129,7 @@
 
       // actions
       let icons = document.createElement('span');
-      icons.innerText = "🅧";
+      icons.innerHTML = "&nbsp🅧&nbsp";
       icons.onclick = removeFilter;
       icons.classList.add('filterIcons');
       let tooltip = document.createElement('span');
@@ -319,7 +319,7 @@
     async function makeStringWidget({ dataset, fieldName, layer, container = null, slider = true }) {
       // const listContainer = document.createElement('div');
       // const listContainer = document.createElement('div');
-      container.classList.add('valueListWidget');
+      container.classList.add('valueListWidget', 'clearfix');
       const field = getDatasetField(dataset, fieldName);
 
       // Build filter/where clause and update layer
@@ -367,11 +367,13 @@
       // <label>
       //   <calcite-checkbox checked="true"></calcite-checkbox> Switch is on
       // </label>
+      container.classList.add('filter');
+
 
       const list = document.createElement('div');
 
       const header = document.createElement('div');
-      header.innerText = 'Values';
+      // header.innerText = 'Values';
       header.classList.add('sidebarItemHeader');
       list.appendChild(header);
 
@@ -417,6 +419,7 @@
         label.appendChild(labelText);
         label.appendChild(labelSubText);
         label.appendChild(onlyLink);
+        debugger
 
         checkbox.addEventListener('calciteCheckboxChange', (event) => {
           if (!checkboxListenerDisabled) {
@@ -471,7 +474,7 @@
         const searchBox = document.createElement('input');
         searchBox.classList.add('valueListSearchBox');
         searchBox.type = 'text';
-        searchBox.placeholder = `Search ${fieldName} values...`;
+        searchBox.placeholder = `Search ${stats.uniqueCount} ${fieldName} values...`;
         list.appendChild(searchBox);
 
         function searchSource(params) {
@@ -512,11 +515,12 @@
           };
         }
 
-        autocomplete(searchBox, { hint: false, clearOnSelected: true, }, [{
+        autocomplete(searchBox, { hint: false, clearOnSelected: false, }, [{
           source: searchSource({ hitsPerPage: 5 }),
           displayKey: 'label',
           templates: {
             suggestion: function(suggestion) {
+              // debugger
               return suggestion.label;
             }
           }

@@ -4,7 +4,7 @@
   width: 100%;
 }
 .algolia-autocomplete .aa-input, .algolia-autocomplete .aa-hint {
-  width: 100%;
+  width: calc(100% - 15px);
 }
 .algolia-autocomplete .aa-hint {
   color: #999;
@@ -14,6 +14,7 @@
   background-color: #fff;
   border: 1px solid #999;
   border-top: none;
+  position: absolute;
 }
 .algolia-autocomplete .aa-dropdown-menu .aa-suggestion {
   cursor: pointer;
@@ -134,7 +135,8 @@ body,
 }
 
 #attributeList {
-  max-height: 10.5em;
+  height: 10.5em;
+  max-height: 15.5em;
   overflow-x: hidden;
   overflow-y: scroll;
   margin: 0 0 10px 0;
@@ -143,6 +145,7 @@ body,
 }
 
 #filtersList {
+  height: 10.5em;
   max-height: 15.5em;
   line-height: normal;
   overflow-x: hidden;
@@ -153,7 +156,19 @@ body,
 
 .filterDiv {
   font-size: 14px;
+  margin: 5px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid grey
 }
+
+.clearfix:before,
+.clearfix:after {
+    content: ".";
+    display: block;
+    height: 0;
+    overflow: hidden;
+}
+.clearfix:after { clear: both; }
 
 ::-webkit-scrollbar {
   -webkit-appearance: none;
@@ -187,7 +202,8 @@ body,
 
 .filterIcons {
   float: right;
-  padding: 0 3px;;
+  /* padding: 0 3px; */
+  margin: -3px -2px 3px 0;
 }
 
 .filterIcons:hover {
@@ -231,6 +247,7 @@ body,
 .valueListWidget label {
   display: block;
   padding: 4px;
+  position: relative;
 }
 
 .valueListWidget label > .subText {
@@ -255,9 +272,8 @@ body,
 .valueListSearchBox {
   font-family: "Avenir Next W01", "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 14px;
-  margin-top: 4px;
-  margin-left: 4px;
-  width: calc(100% - 4px);
+  z-index: 10000;
+  /* margin: 4px; */
 }
 
 .valueListSideLink {
