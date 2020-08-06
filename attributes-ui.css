@@ -74,6 +74,7 @@ body,
 
 .sidebarItemHeader {
   font-weight: bold;
+  position: relative;
 }
 
 #datasetName {
@@ -243,6 +244,10 @@ body,
   font-size: 10px;
 }
 
+.valueListCheckbox {
+  position: relative;
+}
+
 .valueListWidget label:hover .subText {
 /*     display: inline; */
 }
@@ -256,6 +261,9 @@ body,
 }
 
 .valueListSideLink {
+  position: absolute;
+  margin-top: 2px;
+  right: 10px;
   display: none;
   float: right;
   color: #005e95; /* calcite dark-blue */
