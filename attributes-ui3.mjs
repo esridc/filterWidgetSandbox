@@ -529,7 +529,6 @@
             }
           }
         }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
-          // console.log(event, suggestion, dataset, context);
           let checkbox = checkboxes
             .filter(c => !c.checked)
             .find(c => JSON.parse(c.value).value === suggestion.value);
@@ -572,12 +571,10 @@
     const updateWidgets = _.throttle(
       async (layerView, fieldName, currentWidget) => {
         let widgets = Array.from(listWidgetElements());
-        console.log(widgets)
         // if there's only one widget, skip this
         if (widgets.length === 1) return
         // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
         let otherWidgets = widgets.filter(w => w.getAttribute('fieldname') != fieldName);
-        console.log('otherwidgets:', otherWidgets);
         let fieldNames = otherWidgets.map(w => w.getAttribute('fieldname'));
         // convert to a set to remove any duplicates (nested widgets), then back to array
         fieldNames = [...new Set(fieldNames)];
@@ -626,7 +623,6 @@
     function updateOthers(otherWidgets, layerView, whereClause, features) {
       for (var x = 0; x < otherWidgets.length; x++) {
         // can't update TimeSliders
-        console.log('otherwidgets', otherWidgets);
         if (otherWidgets[x].label == "TimeSlider") continue;
         updateHistogram(otherWidgets[x].widget, layerView, otherWidgets[x].getAttribute('fieldName'), whereClause, features);
       }
@@ -683,7 +679,7 @@
         layerView = await view.whenLayerView(layer);
       }
 
-      var {renderer} = await autoStyle(fieldName, dataset, layer);
+      var {renderer} = await autoStyle(null, fieldName, dataset, layer);
       field = getDatasetField(dataset, fieldName);
       layer.renderer = renderer;
       layer.minScale = 0; // draw at all scales
@@ -763,10 +759,9 @@
 
       let attributesCountDiv = document.getElementById('attributesCount');
       attributesCountDiv.innerHTML = `Showing ${dataset.attributes.fields.length} attributes`
-      // console.log('dataset.attributes.fields:', dataset.attributes.fieldNames)
-      attributeList = updateAttributeList(dataset, '#attributeList')
+      attributeList = updateAttributeList(dataset, '#attributeList', addFilter)
       // updateAttributeList(dataset, '#displayListItems')
-      // updateAttributeList(dataset, '#styleListItems')
+      updateAttributeList(dataset, '#styleListItems', async () => {var { renderer } = await autoStyle(event, null, dataset, null); layer.renderer = renderer})
 
       let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 
@@ -786,9 +781,12 @@
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
-    async function autoStyle(fieldName, dataset, layer) {
+    async function autoStyle(event = null, fieldName = null, dataset = null, layer = null) {
+      let target = event ? event.currentTarget : document.getElementById(fieldName);
+      fieldName = fieldName ? fieldName : target.getAttribute('data-field');
+      const field = getDatasetField(dataset, fieldName);
       const geometryType = dataset.attributes.geometryType;
-      var field = getDatasetField(dataset, fieldName);
+      // debugger
       let datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
       let fieldStats = field.statistics;
       let minValue = fieldStats.values.min;
@@ -918,7 +916,9 @@
 
       // choose ramp
 
-      let thisramp = colorRamps.byName("Heatmap 9");
+      let num = Math.floor(Math.random() * 19)+1;
+      console.log('num', num)
+      let thisramp = colorRamps.byName(`Heatmap ${num}`);
       var rampColors = thisramp.colors;
 
       filterResults.innerText = 'Showing '+fieldStats.values.count+' '+field.simpleType+' values.';
@@ -1032,7 +1032,7 @@
    }
 
     // Add an entry to the attribute dropdown
-    function updateAttributeList (dataset, list) {
+    function updateAttributeList (dataset, list, callback) {
       // create attributeitem for each attribute
       const attributeList = document.querySelector(list);
       // clear existing entries
@@ -1075,7 +1075,7 @@
         }
 
         item.setAttribute('data-field', field.name);
-        item.addEventListener('click', addFilter);
+        item.addEventListener('click', () => callback(null, field.name, dataset, null));
         attributeList.appendChild(item);
       });
       return attributeList;
