@@ -1123,7 +1123,19 @@
           excludedEffect: 'grayscale(100%) opacity(5%)'
           // excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
         };
+        layerView.queryFeatures({
+          where: where || '1=1',
+          outSpatialReference: layerView.view.spatialReference
+        }).then(result => {
+          console.log(result.features.length)
+          // debugger
+          let featuresCount = document.getElementById('featuresCount');
+          featuresCount.innerText = result.features.length;
+          let filterResults = document.getElementById('filterResults');
+          // filterResults.innerText = 'Showing '+result.features.length+' '+field.simpleType+' features.';
+        });
       }
+
 
       // adjust view extent (in or out) to fit all filtered data
       if (updateExtent) {
@@ -1325,6 +1337,8 @@
     let attributeSearchElement = document.getElementById("attributeSearch")
     attributeSearchElement.addEventListener("input", attributeSearchChange);
     attributeSearchElement.addEventListener("keydown", attributeSearchKeydown);
+    let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
+    attributeSearchElement.setAttribute('placeholder', placeholderText);
 
     view.ui.add('zoomToData', 'bottom-right');
     const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
