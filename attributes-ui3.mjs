@@ -116,8 +116,6 @@
       let target = event ? event.currentTarget : document.getElementById(fieldName);
       fieldName = fieldName ? fieldName : target.dataset.field;
       const field = getDatasetField(dataset, fieldName);
-      console.log('field?', field)
-      // document.querySelector('#attributeListButton').innerHTML = fieldName;
 
       let firstFilter = document.getElementById('firstfilter');
       firstFilter ? firstFilter.remove() : null;
@@ -137,9 +135,10 @@
       tooltip.innerText = "Delete filter";
 
       filter.appendChild(icons);
-      icons.appendChild(tooltip)
+      icons.insertBefore(tooltip, icons.firstChild)
 
       let filtersList = document.getElementById('filtersList');
+      // filtersList.insertBefore(filter, filtersList.firstChild);
       filtersList.appendChild(filter);
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
       let container = document.createElement('div');
@@ -165,7 +164,8 @@
         // value list
           widget = await makeStringWidget({ dataset, fieldName, layer, layerView, container, slider: true });
       }
-      filtersList.scrollTop = filtersList.scrollHeight;
+      let sidebar = document.getElementById('sidebar')
+      sidebar.scrollTop = sidebar.scrollHeight;
       widget.container.setAttribute('fieldName', fieldName);
     }
 
@@ -323,7 +323,7 @@
     async function makeStringWidget({ dataset, fieldName, layer, container = null, slider = true }) {
       // const listContainer = document.createElement('div');
       // const listContainer = document.createElement('div');
-      container.classList.add('valueListWidget', 'clearfix');
+      container.classList.add('valueListWidget');
       const field = getDatasetField(dataset, fieldName);
 
       // Build filter/where clause and update layer
@@ -479,7 +479,7 @@
         searchBox.type = 'text';
         searchBox.placeholder = `Search ${stats.uniqueCount} ${fieldName} values...`;
         const wrapper = document.createElement('div');
-        wrapper.classList.add('valueListSearchBoxWrapper', 'clearfix');
+        wrapper.classList.add('valueListSearchBoxWrapper');
         list.appendChild(searchBox);
 
         function searchSource(params) {
@@ -572,10 +572,12 @@
     const updateWidgets = _.throttle(
       async (layerView, fieldName, currentWidget) => {
         let widgets = Array.from(listWidgetElements());
+        console.log(widgets)
         // if there's only one widget, skip this
         if (widgets.length === 1) return
         // collect other widgets' fieldNames, skipping the current widget (handles nested widgets too)
         let otherWidgets = widgets.filter(w => w.getAttribute('fieldname') != fieldName);
+        console.log('otherwidgets:', otherWidgets);
         let fieldNames = otherWidgets.map(w => w.getAttribute('fieldname'));
         // convert to a set to remove any duplicates (nested widgets), then back to array
         fieldNames = [...new Set(fieldNames)];
@@ -624,6 +626,7 @@
     function updateOthers(otherWidgets, layerView, whereClause, features) {
       for (var x = 0; x < otherWidgets.length; x++) {
         // can't update TimeSliders
+        console.log('otherwidgets', otherWidgets);
         if (otherWidgets[x].label == "TimeSlider") continue;
         updateHistogram(otherWidgets[x].widget, layerView, otherWidgets[x].getAttribute('fieldName'), whereClause, features);
       }
@@ -653,14 +656,9 @@
     async function removeFilter(event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       let filter = event.currentTarget.parentElement;
-      let filterList = filter.parentElement;
+      let filtersList = filter.parentElement;
       filter.remove();
-      if (filterList.children.length == 0) {
-        let firstFilter = document.createElement('div');
-        firstFilter.setAttribute('id', 'firstfilter');
-        firstFilter.innerText = "None"
-        filterList.appendChild(firstFilter);
-      }
+      document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
     }
 
     async function switchAttribute(event, fieldName = null) {
@@ -765,7 +763,7 @@
 
       let attributesCountDiv = document.getElementById('attributesCount');
       attributesCountDiv.innerHTML = `Showing ${dataset.attributes.fields.length} attributes`
-      console.log('dataset.attributes.fields:', dataset.attributes.fieldNames)
+      // console.log('dataset.attributes.fields:', dataset.attributes.fieldNames)
       attributeList = updateAttributeList(dataset, '#attributeList')
       // updateAttributeList(dataset, '#displayListItems')
       // updateAttributeList(dataset, '#styleListItems')
@@ -923,7 +921,6 @@
       let thisramp = colorRamps.byName("Heatmap 9");
       var rampColors = thisramp.colors;
 
-      widgets.innerText += '\nShowing '+fieldStats.values.count+' '+field.simpleType+' values.';
       filterResults.innerText = 'Showing '+fieldStats.values.count+' '+field.simpleType+' values.';
       var rMin = rampColors[0];
       var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
@@ -1123,7 +1120,7 @@
           filter: {
             where,
           },
-          excludedEffect: 'grayscale(100%) opacity(15%)'
+          excludedEffect: 'grayscale(100%) opacity(5%)'
           // excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
         };
       }
@@ -1317,8 +1314,17 @@
         });
     }
 
+    function attributeSearchKeydown(e) {
+      let attributes = Array.from(document.getElementById('attributeList').getElementsByClassName('attribute'));
+      attributes = attributes.filter(a => window.getComputedStyle(a).getPropertyValue('display') == 'flex')
+      if (e.keyCode == 40) {
+        //
+      }
+    }
+
     let attributeSearchElement = document.getElementById("attributeSearch")
     attributeSearchElement.addEventListener("input", attributeSearchChange);
+    attributeSearchElement.addEventListener("keydown", attributeSearchKeydown);
 
     view.ui.add('zoomToData', 'bottom-right');
     const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
@@ -1328,9 +1334,10 @@
 
     // TESTS
 
-    // addFilter(null, "locationLatitude");
-    // addFilter(null, "locationLongitude");
+    addFilter(null, "locationLatitude");
+    addFilter(null, "locationLongitude");
     // addFilter(null, "parametersBottom");
-    addFilter(null, "resultQuality");
+    // addFilter(null, "resultQuality");
+    // addFilter(null, "sensorName");
 
   })();

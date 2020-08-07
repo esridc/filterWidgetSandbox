@@ -136,7 +136,7 @@ body,
 #attributeList {
   height: auto;
   min-height: 100px;
-  max-height: 10.5em;
+  /* max-height: 10.5em; */
   overflow-x: hidden;
   overflow-y: scroll;
   margin: 0 0 10px 0;
@@ -147,7 +147,7 @@ body,
 #filtersList {
   height: auto;
   min-height: 10em;
-  max-height: 20.5em;
+  /* max-height: 20.5em; */
   line-height: normal;
   overflow-x: hidden;
   overflow-y: scroll;
