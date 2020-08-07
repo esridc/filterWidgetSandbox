@@ -919,7 +919,7 @@
       let thisramp = colorRamps.byName(`Heatmap ${num}`);
       var rampColors = thisramp.colors;
 
-      filterResults.innerText = 'Showing '+fieldStats.values.count+' '+field.simpleType+' values.';
+      // filterResults.innerText = 'Showing '+fieldStats.values.count+' '+field.simpleType+' values.';
       var rMin = rampColors[0];
       var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
       var rMax = rampColors[rampColors.length-1];
