@@ -134,7 +134,7 @@ body,
 }
 
 #attributeList {
-  height: auto;
+  /* height: auto; */
   min-height: 100px;
   max-height: 10.5em;
   overflow-x: hidden;
