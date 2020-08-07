@@ -758,8 +758,7 @@
       }
 
       let attributesCountDiv = document.getElementById('attributesCount');
-      attributesCountDiv.innerHTML = `Showing ${dataset.attributes.fields.length} attributes`
-      attributeList = updateAttributeList(dataset, '#attributeList', addFilter)
+      attributeList = updateAttributeList(dataset, '#attributeList', () => { addFilter(event) });
       // updateAttributeList(dataset, '#displayListItems')
       updateAttributeList(dataset, '#styleListItems', async () => {var { renderer } = await autoStyle(event, null, dataset, null); layer.renderer = renderer})
 
