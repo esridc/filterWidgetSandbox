@@ -349,7 +349,7 @@
             // add a nested histogram
             const histogramContainer = document.createElement('div');
             histogramContainer.classList.add('miniHistogramWidget');
-            container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
+            let ready = await timeSlider.widget.render();
             const miniHistogram = await makeHistogram ({ dataset, fieldName, layer, layerView, container: histogramContainer });
             miniHistogram.widget.fieldName = fieldName;
             // register miniHistogram
