@@ -385,6 +385,8 @@
                 this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
               }
             });
+            // move down here to avoid race condition -_-
+            container.getElementsByClassName("esri-slider__track")[0].after(histogramContainer);
 
           } catch(e) {
             throw new Error(e);
