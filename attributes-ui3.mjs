@@ -679,7 +679,7 @@
         layerView = await view.whenLayerView(layer);
       }
 
-      var {renderer} = await autoStyle(null, fieldName, dataset, layer);
+      var {renderer} = await autoStyle(null, fieldName, dataset, layer, true);
       field = getDatasetField(dataset, fieldName);
       layer.renderer = renderer;
       layer.minScale = 0; // draw at all scales
@@ -781,7 +781,7 @@
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
-    async function autoStyle(event = null, fieldName = null, dataset = null, layer = null) {
+    async function autoStyle(event = null, fieldName = null, dataset = null, layer = null, first = false) {
       let target = event ? event.currentTarget : document.getElementById(fieldName);
       fieldName = fieldName ? fieldName : target.getAttribute('data-field');
       const field = getDatasetField(dataset, fieldName);
@@ -916,8 +916,12 @@
 
       // choose ramp
 
-      let num = Math.floor(Math.random() * 19)+1;
-      console.log('num', num)
+      var num = 9;
+      if (!first) {
+        while (num == 9) {
+          num = Math.floor(Math.random() * 19)+1;
+        }
+      }
       let thisramp = colorRamps.byName(`Heatmap ${num}`);
       var rampColors = thisramp.colors;
 
