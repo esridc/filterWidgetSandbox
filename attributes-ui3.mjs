@@ -91,11 +91,6 @@
     async function switchSelected (event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       const field = getDatasetField(dataset, fieldName);
-      // document.querySelector('#attributeListButton').innerHTML = fieldName;
-
-      // Reset UI state
-
-      widgetsDiv.innerHTML = ''; // clear previous widget
 
       // guess at a style for this field
       try {
