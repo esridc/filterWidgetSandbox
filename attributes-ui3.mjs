@@ -133,7 +133,6 @@
       icons.insertBefore(tooltip, icons.firstChild)
 
       let filtersList = document.getElementById('filtersList');
-      // filtersList.insertBefore(filter, filtersList.firstChild);
       filtersList.appendChild(filter);
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
       let container = document.createElement('div');
@@ -1134,7 +1133,6 @@
         });
       }
 
-
       // adjust view extent (in or out) to fit all filtered data
       if (updateExtent) {
         try {
@@ -1346,8 +1344,8 @@
 
     // TESTS
 
-    addFilter(null, "locationLatitude");
-    addFilter(null, "locationLongitude");
+    // addFilter(null, "locationLatitude");
+    // addFilter(null, "locationLongitude");
     // addFilter(null, "parametersBottom");
     // addFilter(null, "resultQuality");
     // addFilter(null, "sensorName");

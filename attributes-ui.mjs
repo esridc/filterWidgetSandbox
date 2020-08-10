@@ -91,11 +91,6 @@
     async function switchSelected (event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       const field = getDatasetField(dataset, fieldName);
-      // document.querySelector('#attributeListButton').innerHTML = fieldName;
-
-      // Reset UI state
-
-      widgetsDiv.innerHTML = ''; // clear previous widget
 
       // guess at a style for this field
       try {
@@ -116,8 +111,6 @@
       let target = event ? event.currentTarget : document.getElementById(fieldName);
       fieldName = fieldName ? fieldName : target.dataset.field;
       const field = getDatasetField(dataset, fieldName);
-      console.log('field?', field)
-      // document.querySelector('#attributeListButton').innerHTML = fieldName;
 
       let firstFilter = document.getElementById('firstfilter');
       firstFilter ? firstFilter.remove() : null;
@@ -154,7 +147,15 @@
         var widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container, slider: true });
         container.classList.add('histogramWidget');
         // set whereClause attribute
-        let whereClause = widget.generateWhereClause(fieldName);
+        if (field.simpleType === 'numeric') {
+          var whereClause = widget.generateWhereClause(fieldName);
+        }
+        if (field.simpleType === 'date') {
+          // console.log()
+            // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
+            var whereClause = `${fieldName} BETWEEN DATE ${formatSQLDate(value.start)} AND DATE ${formatSQLDate(value.end)}`;
+        }
+
         widget.container.setAttribute('whereClause', whereClause);
       }
       // if (field.simpleType === 'date') {
@@ -323,7 +324,7 @@
     async function makeStringWidget({ dataset, fieldName, layer, container = null, slider = true }) {
       // const listContainer = document.createElement('div');
       // const listContainer = document.createElement('div');
-      container.classList.add('valueListWidget', 'clearfix');
+      container.classList.add('valueListWidget');
       const field = getDatasetField(dataset, fieldName);
 
       // Build filter/where clause and update layer
@@ -479,7 +480,7 @@
         searchBox.type = 'text';
         searchBox.placeholder = `Search ${stats.uniqueCount} ${fieldName} values...`;
         const wrapper = document.createElement('div');
-        wrapper.classList.add('valueListSearchBoxWrapper', 'clearfix');
+        wrapper.classList.add('valueListSearchBoxWrapper');
         list.appendChild(searchBox);
 
         function searchSource(params) {
@@ -529,7 +530,6 @@
             }
           }
         }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
-          // console.log(event, suggestion, dataset, context);
           let checkbox = checkboxes
             .filter(c => !c.checked)
             .find(c => JSON.parse(c.value).value === suggestion.value);
@@ -583,6 +583,8 @@
         const whereClause = currentWidget.container.getAttribute('whereClause');
         try {
           // query layer for all features in the other layers, filtered by the state of current layer
+          console.log(whereClause);
+          // console.log(concatWheres());
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
           // update other widgets, passing in the filtered feature set
           throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
@@ -1309,6 +1311,18 @@
       return fieldTypes[fieldType] || '';
     }
 
+    function formatDate (timestamp) {
+      const date = new Date(timestamp);
+      return `${date.getMonth()+1}/${date.getDate()}/${date.getFullYear()}`;
+      // => 5/15/2020
+    }
+
+    function formatSQLDate (timestamp) {
+      const date = new Date(timestamp);
+      return `'${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}'`;
+      // => 2020-05-15
+    }
+
     function attributeSearchChange(e) {
       let filtered = Array.from(attributeList.children)
         .map(x => {
@@ -1328,9 +1342,10 @@
 
     // TESTS
 
-    // addFilter(null, "locationLatitude");
+    addFilter(null, "locationLatitude");
     // addFilter(null, "locationLongitude");
     // addFilter(null, "parametersBottom");
-    addFilter(null, "resultQuality");
+    // addFilter(null, "resultQuality");
+    addFilter(null, "resultTime");
 
   })();

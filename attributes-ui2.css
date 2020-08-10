@@ -261,6 +261,12 @@ body,
   display: inline-block;
 }
 
+.valueListCheckbox {
+  overflow-x: hidden;
+  display: flex;
+  font-size: 13px;
+}
+
 .valueListCheckbox > calcite-checkbox {
   top: 2px;
   margin-right: 2px;
