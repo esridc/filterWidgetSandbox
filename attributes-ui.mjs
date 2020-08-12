@@ -1124,7 +1124,6 @@
           where: where || '1=1',
           outSpatialReference: layerView.view.spatialReference
         }).then(result => {
-          console.log(result.features.length)
           // debugger
           let featuresCount = document.getElementById('featuresCount');
           featuresCount.innerText = result.features.length;
@@ -1344,8 +1343,8 @@
 
     // TESTS
 
-    // addFilter(null, "locationLatitude");
-    // addFilter(null, "locationLongitude");
+    addFilter(null, "locationLatitude");
+    addFilter(null, "locationLongitude");
     // addFilter(null, "parametersBottom");
     // addFilter(null, "resultQuality");
     // addFilter(null, "sensorName");
