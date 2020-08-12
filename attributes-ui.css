@@ -45,6 +45,7 @@ body,
   padding: 0;
   margin: 0;
   flex: auto;
+  overflow: hidden;
 }
 
 #sidebar {
@@ -151,6 +152,7 @@ body,
   line-height: normal;
   overflow-x: hidden;
   margin: 0;
+  overflow: visible;
   /* border: 1px solid lightgray; */
 }
 

@@ -25,14 +25,14 @@
     "esri/Map",
     "esri/views/MapView",
     "esri/layers/FeatureLayer",
-    "esri/renderers/smartMapping/statistics/histogram",
+    "esri/smartMapping/statistics/histogram",
     "esri/widgets/HistogramRangeSlider",
     "esri/widgets/Histogram",
-    "esri/renderers/smartMapping/statistics/uniqueValues",
+    "esri/smartMapping/statistics/uniqueValues",
     "esri/widgets/Legend",
     "esri/renderers/Renderer",
-    "esri/renderers/smartMapping/symbology/support/colorRamps",
-    "esri/renderers/smartMapping/symbology/color",
+    "esri/smartMapping/symbology/support/colorRamps",
+    "esri/smartMapping/symbology/color",
     ]);
 
 
@@ -142,29 +142,39 @@
         view = await drawMap(layer, dataset)
       }
       layerView = await view.whenLayerView(layer);
-      // Numeric fields - histogram
-      if (field.simpleType === 'numeric' || field.simpleType === 'date') {
+
+      const { categorical, pseudoCategorical } = await datasetFieldCategorical(dataset, fieldName, layer);
+      const numberLike = await datasetFieldIsNumberLike(dataset, fieldName, layer);
+
+      // (pseudo-)categorical - most records are covered by a limited # of unique values
+      // or all other string values
+
+      if (pseudoCategorical || (field.simpleType === 'string' && !numberLike)) {
+        // value list
+        widget = await makeStringWidget({ dataset, fieldName, layer, layerView, container, slider: true });
+      }
+      // numerics and dates
+      else {
         var widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container, slider: true });
         container.classList.add('histogramWidget');
         // set whereClause attribute
         let whereClause = widget.generateWhereClause(fieldName);
+        // whereClause = whereClause.replace(fieldName, `CAST(${fieldName} AS FLOAT)`); // for number-like fields
         widget.container.setAttribute('whereClause', whereClause);
       }
       // if (field.simpleType === 'date') {
       //   // Time slider
       //   widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
       // }
-      if (field.simpleType === 'string') {
-        // value list
-          widget = await makeStringWidget({ dataset, fieldName, layer, layerView, container, slider: true });
-      }
+
       let sidebar = document.getElementById('sidebar')
       sidebar.scrollTop = sidebar.scrollHeight;
       widget.container.setAttribute('fieldName', fieldName);
+      widget.container.setAttribute('numberLike', numberLike);
     }
 
     // create a histogram
-    async function makeHistogram ({dataset, fieldName, layer, layerView, container, slider = false, where = null }) {
+    async function makeHistogram ({dataset, fieldName, layer, layerView, container, slider = false, where = null, features = null }) {
       // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
       const parentContainer = container;
       let newcontainer = document.createElement('div');
@@ -175,8 +185,9 @@
           layer: layer,
           field: fieldName,
           numBins: 30,
+          where,
+          features // optional existing set of features
         };
-        if (where) params.where = where;
 
         let values, bins, source, coverage;
 
@@ -188,12 +199,17 @@
           try {
             // histogram generation failed with automated server call, try using features from server query
             console.log('histogram generation failed with automated server call, try using features from server query', e);
-            params.features = (await layer.queryFeatures()).features;
-            const featureCount = await layer.queryFeatureCount();
-            if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
+            // params.features = (await layer.queryFeatures()).features;
+            // const featureCount = await layer.queryFeatureCount();
+            // if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
+
+            const { features, exceededTransferLimit } = await layer.queryFeatures();
+            if (exceededTransferLimit) throw new Error('exceeded server limit querying features');
+            params.features = features;
+
             values = await generateHistogram(params);
             source = 'layerQuery';
-            coverage = params.features.length / featureCount;
+            // coverage = params.features.length / featureCount;
           } catch(e) {
             // histogram generation failed with automated server call, try using features from server query
             console.log('histogram generation failed with automated server call, try reconstructing from unique values', e);
@@ -241,17 +257,17 @@
             // histogram generation failed with unique values, try using features in layer view
             console.log('histogram generation failed with unique values, try using features in layer view', e);
             params.features = (await layerView.queryFeatures()).features;
-            const featureCount = await layer.queryFeatureCount();
+            // const featureCount = await layer.queryFeatureCount();
             values = await generateHistogram(params);
             source = 'layerView';
-            coverage = params.features.length / featureCount;
+            // coverage = params.features.length / featureCount;
             }
           }
         }
 
         // Determine if field is an integer
         const field = getDatasetField(dataset, fieldName);
-        const integer = await datasetFieldIsInteger(field);
+        const integer = await datasetFieldIsInteger(dataset, fieldName, layer);
         const widget =
           slider ?
             // Histogram range slider widget
@@ -297,18 +313,26 @@
       container = container ? container : document.getElementById('filters');
       container.appendChild(wrapper);
 
-      const histogram = await makeHistogram({ dataset, fieldName, layer, layerView, container: wrapper, slider: true });
+      // filter by existing widgets on creation?
+      let features;
+      if (widgets.length > 0) {
+        const where = concatWheres({ server: true });
+        // query layer for all features in the other layers, filtered by the state of current layer
+        features = (await layer.queryFeatures( { where, outFields: [fieldName] })).features;
+      }
+
+      const histogram = await makeHistogram({ dataset, fieldName, layer, layerView, features, container: wrapper, slider: true });
       if (histogram.widget) {
         wrapper.widget = histogram.widget;
 
         // set event handler to update map filter and histograms when handles are dragged
         histogram.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
           updateLayerView(layerView, fieldName, histogram.widget);
-          updateWidgets(layerView, fieldName, histogram.widget)
+          updateWidgets(layerView, fieldName, histogram.widget);
         });
 
         // register widget
-        widgets.push(histogram.widget)
+        widgets.push(histogram.widget);
       }
       return histogram.widget;
     }
@@ -323,7 +347,7 @@
       // Build filter/where clause and update layer
       const onCheckboxChange = ({ checkboxes, layerView }) => {
         let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
-        let where = '1=1';
+        let whereClause = '1=1';
         if (checked.length > 0) {
           const hasNull = checked.find(c => c.value == null) ? true : false;
           checked = checked.filter(c => c.value != null);
@@ -331,7 +355,7 @@
           let whereVals;
           if (field.simpleType === 'date') {
             whereVals = checked.map(c => +new Date(c.value));
-            where = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
+            whereClause = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
           } else {
             whereVals = checked.map(c => {
               if (typeof c.value === 'string') {
@@ -340,15 +364,18 @@
                 return c.value;
               }
             });
-            where = `${fieldName} IN (${whereVals.join(', ')})`;
+            whereClause = `${fieldName} IN (${whereVals.join(', ')})`;
           }
 
           if (hasNull) {
-            where = whereVals ? `${where} OR ` : '';
-            where = `${fieldName} IS NULL`; // need special SQL handling for null vales
+            whereClause = whereVals ? `${whereClause} OR ` : '';
+            whereClause = `${fieldName} IS NULL`; // need special SQL handling for null vales
           }
         }
-        updateLayerViewEffect({ where, updateExtent: zoomToDataCheckbox.checked });
+
+        container.setAttribute('whereClause', whereClause);
+        const where = concatWheres({ server: false });
+        updateLayerViewEffect({ where });
       };
 
       const { fieldStats } = await createValueList({ dataset, fieldName, layer, container, onUpdateValues: onCheckboxChange });
@@ -547,6 +574,7 @@
         let whereClause;
         if (widget.label === "Histogram Range Slider") {
           whereClause = widget.generateWhereClause(fieldName);
+          // whereClause = whereClause.replace(fieldName, `CAST(${fieldName} AS FLOAT)`); // for number-like fields
         }
         if (widget.label === "TimeSlider") {
           // instead of unix timestamps, use SQL date formatting, as expected by layer.queryFeatures()
@@ -554,8 +582,8 @@
         }
         // set whereClause attribute
         widget.container.setAttribute('whereClause', whereClause);
-        const where = concatWheres();
-        await updateLayerViewEffect({ where, updateExtent: zoomToDataCheckbox.checked });
+        const where = concatWheres({ server: false });
+        await updateLayerViewEffect({ where: where });
       },
       100,
       {trailing: false}
@@ -573,12 +601,16 @@
         // convert to a set to remove any duplicates (nested widgets), then back to array
         fieldNames = [...new Set(fieldNames)];
 
-        const whereClause = currentWidget.container.getAttribute('whereClause');
+        let whereClause = currentWidget.container.getAttribute('whereClause');
+        const numberLike = currentWidget.container.getAttribute('numberLike') === "true";
+        if (numberLike) {
+          whereClause = whereClause.replace(fieldName, `CAST(${fieldName} AS FLOAT)`); // for number-like fields
+        }
         try {
           // query layer for all features in the other layers, filtered by the state of current layer
           let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
           // update other widgets, passing in the filtered feature set
-          throttledUpdateOthers(otherWidgets, layerView, concatWheres(), features);
+          throttledUpdateOthers(otherWidgets, features);
         } catch(e) {
           throw new Error('Tried to update other widgets: '+e)
         }
@@ -588,13 +620,33 @@
     );
 
     // update the bins of a histogram
-    async function updateHistogram(widget, layerView, fieldName, where, features) {
+    async function updateHistogram(widget, fieldName, features, { numberLike } = {}) {
       let values;
       if (features) {
+
+        let valueExpression;
+        let sqlExpression;
+        if (numberLike) {
+          // copy features and cast string field to number
+          // features = features.map(f => {
+          //   const clone = f.clone();
+          //   const value = Number(clone.getAttribute(fieldName));
+          //   clone.setAttribute(fieldName, value);
+          //   // clone.sourceLayer = null;
+          //   return clone;
+          // });
+          valueExpression = `Number($feature.${fieldName})`;
+          sqlExpression = `CAST(${fieldName} AS FLOAT})`;
+        }
+
         let params = {
           layer,
+          view: layerView.view,
           features,
-          field: fieldName,
+          field: valueExpression ? null : fieldName,
+          valueExpression,
+          // field: fieldName,
+          // sqlExpression,
           numBins: 30,
           // minValue: widget.min,
           // maxValue: widget.max,
@@ -614,28 +666,40 @@
       }
     }
 
-    function updateOthers(otherWidgets, layerView, whereClause, features) {
-      for (var x = 0; x < otherWidgets.length; x++) {
+    function updateOthers(otherWidgets, features) {
+      for (const widget of otherWidgets) {
         // can't update TimeSliders
-        if (otherWidgets[x].label == "TimeSlider") continue;
-        updateHistogram(otherWidgets[x].widget, layerView, otherWidgets[x].getAttribute('fieldName'), whereClause, features);
+        if (widget.label == "TimeSlider") continue;
+        const numberLike = widget.getAttribute('numberLike') === "true";
+        updateHistogram(widget.widget, widget.getAttribute('fieldName'), features, { numberLike });
       }
     }
     const throttledUpdateOthers = _.throttle(updateOthers, 100, {trailing: false});
 
     // list all known widget DOM elements
     function listWidgetElements() {
-      return document.getElementById('filtersList').querySelectorAll('[whereClause]')
+      return [...document.getElementById('filtersList').querySelectorAll('[whereClause]')];
     }
 
     // concatenate all the where clauses from all the widgets
-    function concatWheres() {
+    function concatWheres( { server }) {
       let whereClause = '';
       let widgets = listWidgetElements();
       // generate master here clause with simple string concatenation
-      for (var x = 0; x < widgets.length; x++) {
+      for (const [x, widget] of widgets.entries()) {
         if (x > 0) whereClause += ' AND ';
-        whereClause += '(' + widgets[x].getAttribute('whereClause') + ')';
+        let widgetWhere = widget.getAttribute('whereClause');
+
+        // explicit cast for number-likes, for feature layer (server-side) queries ONLY
+        // skip for feature layer view (client-side) queries, which work *without* the cast (but fail with it)
+        const numberLike = widget.getAttribute('numberLike') === "true";
+        if (server && numberLike) {
+          const fieldName = widget.getAttribute('fieldName');
+          widgetWhere = widgetWhere.replace(fieldName, `CAST(${fieldName} AS FLOAT)`); // for number-like fields
+        }
+
+        whereClause += '(' + widgetWhere + ')';
+        // whereClause += '(' + widget.getAttribute('whereClause') + ')';
       }
       return whereClause;
     }
@@ -688,7 +752,7 @@
 
     async function drawMap(layer, dataset) {
       const map = new Map({
-        basemap: "dark-gray-vector",
+        basemap: "gray-vector",
         layers: layer,
       });
       view = new MapView({
@@ -706,7 +770,12 @@
         //   }]
         // });
         // view.ui.add(legend, "bottom-right");
+      });
 
+      view.ui.add('zoomToData', 'bottom-right');
+      const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
+      zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
+        updateLayerViewEffect({ updateExtent: zoomToDataCheckbox.checked });
       });
 
       // put vars on window for debugging
@@ -723,7 +792,7 @@
     // update layerview filter based on histogram widget, throttled
     const updateLayerViewWithHistogram = _.throttle(
       async (layerView, fieldName, where) => {
-        await updateLayerViewEffect({ where: where, updateExtent: true });
+        await updateLayerViewEffect({ where });
       },
       50
     );
@@ -1018,13 +1087,39 @@
       return DATASET_FIELD_UNIQUE_VALUES[fieldName];
     }
 
+    // Determine if field is categorical or pseudo-categorical
+    async function datasetFieldCategorical (dataset, fieldName, layer) {
+      const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+
+      const categoricalMax = 20;
+      const categorical = stats.uniqueCount <= categoricalMax;
+
+      const pseudoCategoricalMax = 80; // categorical max N values must cover at least this % of total records
+      const coverage = stats.values.slice(0, categoricalMax).reduce((sum, val) => sum + val.pct);
+      const pseudoCategorical = categorical || coverage <= pseudoCategoricalMax;
+
+      return { categorical, pseudoCategorical };
+    }
+
     // Determine if field is an integer
-    async function datasetFieldIsInteger (field) {
+    async function datasetFieldIsInteger (dataset, fieldName, layer) {
+      const field = getDatasetField(dataset, fieldName);
       if (field.type.toLowerCase().includes('integer')) { // explicit integer type
         return true;
       } else { // or check the known values to see if they're all integers
         const stats = await getDatasetFieldUniqueValues(dataset, field.name, layer);
         return stats.values.every(v => v.value == null || Number.isInteger(v.value));
+      }
+   }
+
+    // Determine if field is number-like, e.g. is a number or all non-null values can be parsed as such
+    async function datasetFieldIsNumberLike (dataset, fieldName, layer) {
+      const field = getDatasetField(dataset, fieldName);
+      if (field.simpleType === 'numeric') { // explicit number type
+        return true;
+      } else { // or check the known values to see if they're all integers
+        const stats = await getDatasetFieldUniqueValues(dataset, field.name, layer);
+        return stats.values.every(v => v.value == null || !isNaN(Number(v.value)));
       }
    }
 
@@ -1109,7 +1204,10 @@
     }
 
     // update the map view with a new where clause
-    async function updateLayerViewEffect({ where = undefined, updateExtent = true } = {}) {
+    async function updateLayerViewEffect({
+      where = undefined,
+      updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
+
       layerView.filter = null;
 
       if (where) {
@@ -1117,18 +1215,17 @@
           filter: {
             where,
           },
-          excludedEffect: 'grayscale(100%) opacity(5%)'
-          // excludedEffect: 'grayscale(100%) brightness(0%) opacity(25%)'
+          // excludedEffect: 'grayscale(100%) opacity(5%)'
+          excludedEffect: 'grayscale(100%) brightness(25%) opacity(25%)'
         };
-        layerView.queryFeatures({
+        layerView.queryFeatureCount({
           where: where || '1=1',
           outSpatialReference: layerView.view.spatialReference
-        }).then(result => {
-          // debugger
+        }).then(count => {
           let featuresCount = document.getElementById('featuresCount');
-          featuresCount.innerText = result.features.length;
+          featuresCount.innerText = count;
           let filterResults = document.getElementById('filterResults');
-          // filterResults.innerText = 'Showing '+result.features.length+' '+field.simpleType+' features.';
+          // filterResults.innerText = 'Showing '+count+' '+field.simpleType+' features.';
         });
       }
 
@@ -1138,7 +1235,8 @@
           let featureExtent;
 
           const queriedExtent = await layerView.layer.queryExtent({
-            where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
+            // where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
+            where: layerView.effect?.filter?.where ? concatWheres({ server: true }) : '1=1',
             outSpatialReference: layerView.view.spatialReference
           });
 
@@ -1155,139 +1253,6 @@
         } catch(e) {
           console.log('could not query or project feature extent to update viewport', e);
         }
-      }
-    }
-
-    async function createHistogram ({dataset, fieldName, layer, layerView, container, slider = false }) {
-      // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
-      const parentContainer = container;
-      container = document.createElement('div');
-      parentContainer.appendChild(container);
-
-      let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
-      var numBins = (uniqueValues.length > 30 ? 30 : uniqueValues.length)
-
-      try {
-        const params = {
-          layer: layer,
-          field: fieldName,
-          numBins: numBins
-        };
-
-        let values, source, coverage;
-        try {
-          values = await generateHistogram(params);
-          source = 'widget';
-          coverage = 1;
-        } catch(e) {
-          try {
-            // histogram generation failed with automated server call, try using features from server query
-            console.log('histogram generation failed with automated server call, try using features from server query');
-            params.features = (await layer.queryFeatures()).features;
-            const featureCount = await layer.queryFeatureCount();
-            values = await generateHistogram(params);
-            source = 'layerQuery';
-            // coverage = params.features.length / featureCount;
-            coverage = 1;
-          } catch(e) {
-            // histogram generation failed with server call, try using features in layer view
-            console.log('histogram generation failed with server call, try using features in layer view');
-            params.features = (await layerView.queryFeatures()).features;
-            const featureCount = await layer.queryFeatureCount();
-            values = await generateHistogram(params);
-            source = 'layerView';
-            coverage = params.features.length / featureCount;
-          }
-        }
-
-        // Determine if field is an integer
-        const field = getDatasetField(dataset, fieldName);
-        const integer = await datasetFieldIsInteger(field);
-        let widget;
-        if (slider) {
-          // Histogram range slider widget
-          widget = new HistogramRangeSlider({
-            bins: values.bins,
-            min: values.minValue,
-            max: values.maxValue+1,
-            values: [values.minValue, values.maxValue+1],
-            precision: integer ? 0 : 2,
-            container: container,
-            excludedBarColor: "#dddddd",
-            rangeType: "between",
-            labelFormatFunction: (value, type) => {
-              // apply date formatting to histogram
-              if (field.simpleType == 'date') {
-                return formatDate(value);
-              }
-              return value;
-            }
-          });
-        } else {
-          // plain histogram, for miniHistogram nested in timeSlider
-          widget = new Histogram({
-            bins: values.bins,
-            min: values.minValue,
-            max: values.maxValue,
-            container: container,
-            rangeType: "between",
-          });
-        }
-        return { widget, values, source, coverage };
-      }
-      catch(e) {
-        console.log('histogram generation failed', e);
-        return {};
-      }
-    }
-
-    async function createTimeSlider ({ dataset, fieldName, layerView, container }) {
-      try {
-        const field = getDatasetField(dataset, fieldName);
-        // let {min: startDate, max: endDate } = dataset.attributes.statistics.date[fieldname.toLowerCase()].statistics.values;
-        const startDate = new Date(field.statistics.values.min);
-        const endDate = new Date(field.statistics.values.max);
-        const widget = new TimeSlider({
-          container: container,
-          //   view: view,
-          mode: "time-window",
-          fullTimeExtent: {
-            start: startDate,
-            end: endDate,
-          },
-          values: [
-          startDate,
-          endDate
-          ],
-        });
-
-        // handle play button behavior
-        let selectionWasFullExtent;
-        widget.watch('viewModel.state', function(state){
-          if (state == "playing") {
-            // check values (date selection) against fullTimeExtent
-            // convert to numeric values with unary + operator to check equivalence (with a 10% tolerance)
-            if ( +this.values[0] == +this.fullTimeExtent.start &&
-            Math.abs(+this.values[1] - +this.fullTimeExtent.end) <
-            (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start))/ 10 ) {
-              // make a note
-              selectionWasFullExtent = true;
-              // set new selection end to 10% through the date range
-              this.values[1] = new Date(+new Date(this.fullTimeExtent.start) + (+new Date(this.fullTimeExtent.end) - +new Date(this.fullTimeExtent.start)) / 10);
-            }
-          }
-          else if (state == "ready" && selectionWasFullExtent) {
-            // reset note
-            selectionWasFullExtent = false;
-            this.values = [this.fullTimeExtent.start, this.fullTimeExtent.end];
-          }
-        });
-
-        return { widget };
-      }
-      catch(e) {
-        console.log(e);
-        return {};
       }
     }
 
@@ -1335,16 +1300,11 @@
     let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
     attributeSearchElement.setAttribute('placeholder', placeholderText);
 
-    view.ui.add('zoomToData', 'bottom-right');
-    const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
-    zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
-      updateLayerViewEffect({ updateExtent: zoomToDataCheckbox.checked });
-    });
 
     // TESTS
 
-    addFilter(null, "locationLatitude");
-    addFilter(null, "locationLongitude");
+    // addFilter(null, "locationLatitude");
+    // addFilter(null, "locationLongitude");
     // addFilter(null, "parametersBottom");
     // addFilter(null, "resultQuality");
     // addFilter(null, "sensorName");
