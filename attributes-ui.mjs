@@ -25,14 +25,14 @@
     "esri/Map",
     "esri/views/MapView",
     "esri/layers/FeatureLayer",
-    "esri/renderers/smartMapping/statistics/histogram",
+    "esri/smartMapping/statistics/histogram",
     "esri/widgets/HistogramRangeSlider",
     "esri/widgets/Histogram",
-    "esri/renderers/smartMapping/statistics/uniqueValues",
+    "esri/smartMapping/statistics/uniqueValues",
     "esri/widgets/Legend",
     "esri/renderers/Renderer",
-    "esri/renderers/smartMapping/symbology/support/colorRamps",
-    "esri/renderers/smartMapping/symbology/color",
+    "esri/smartMapping/symbology/support/colorRamps",
+    "esri/smartMapping/symbology/color",
     ]);
 
 
