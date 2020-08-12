@@ -555,7 +555,7 @@
         // set whereClause attribute
         widget.container.setAttribute('whereClause', whereClause);
         const where = concatWheres();
-        await updateLayerViewEffect({where: where, updateExtent: false });
+        await updateLayerViewEffect({ where, updateExtent: zoomToDataCheckbox.checked });
       },
       100,
       {trailing: false}
