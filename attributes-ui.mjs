@@ -750,6 +750,29 @@
         updateLayerViewEffect({ updateExtent: true });
       }
 
+      // wait for renderer to finish
+      var watcher = await layerView.watch("updating", value => {
+        console.log('updating?', value)
+        if (renderer) {
+          console.log('renderer:', renderer)
+          // debugger
+          layerView.queryFeatureCount({
+            where: '1=1',
+            outSpatialReference: layerView.view.spatialReference
+          }).then(count => {
+            let featuresCount = document.getElementById('featuresCount');
+            featuresCount.innerText = count;
+            console.log('??', featuresCount.innerText);
+            let filterResults = document.getElementById('filterResults');
+            // filterResults.innerText = 'Showing '+count+' '+field.simpleType+' features.';
+            cleanup();
+          });
+        }
+      });
+      // remove watcher as soon as it finishes
+      function cleanup() {
+        watcher.remove()
+      }
     };
 
     async function drawMap(layer, dataset) {
