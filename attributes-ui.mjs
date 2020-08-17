@@ -1210,29 +1210,28 @@
 
     // update the map view with a new where clause
     async function updateLayerViewEffect({
+      // set where to be explicitly undefined if it isn't passed as an argument
       where = undefined,
       updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
 
       layerView.filter = null;
-
-      if (where) {
-        layerView.effect = {
-          filter: {
-            where,
-          },
-          // excludedEffect: 'grayscale(100%) opacity(5%)'
-          excludedEffect: 'grayscale(100%) brightness(25%) opacity(25%)'
-        };
-        layerView.queryFeatureCount({
-          where: where || '1=1',
-          outSpatialReference: layerView.view.spatialReference
-        }).then(count => {
-          let featuresCount = document.getElementById('featuresCount');
-          featuresCount.innerText = count;
-          let filterResults = document.getElementById('filterResults');
-          // filterResults.innerText = 'Showing '+count+' '+field.simpleType+' features.';
-        });
-      }
+      layerView.effect = {
+        filter: {
+          where,
+        },
+        // excludedEffect: 'grayscale(100%) opacity(5%)'
+        excludedEffect: 'grayscale(100%) brightness(25%) opacity(25%)'
+      };
+      layerView.queryFeatureCount({
+        where: where || '1=1',
+        outSpatialReference: layerView.view.spatialReference
+      }).then(count => {
+        let featuresCount = document.getElementById('featuresCount');
+        featuresCount.innerText = count;
+        console.log(featuresCount.innerText);
+        let filterResults = document.getElementById('filterResults');
+        // filterResults.innerText = 'Showing '+count+' '+field.simpleType+' features.';
+      });
 
       // adjust view extent (in or out) to fit all filtered data
       if (updateExtent) {
