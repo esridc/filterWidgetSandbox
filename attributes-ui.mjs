@@ -21,7 +21,8 @@
     Renderer,
     colorRamps,
     Color,
-    ] = await loadModules([
+    viewColorUtils,
+  ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
     "esri/layers/FeatureLayer",
@@ -33,7 +34,8 @@
     "esri/renderers/Renderer",
     "esri/smartMapping/symbology/support/colorRamps",
     "esri/smartMapping/symbology/color",
-    ]);
+    "esri/views/support/colorUtils",
+  ]);
 
 
     // data urls
@@ -939,6 +941,9 @@
       }
 
       var opacity = .5;
+
+      // get basemap color theme: "light" or "dark"
+      let bgColor = await viewColorUtils.getBackgroundColorTheme(view);
 
       if (geometryType === 'esriGeometryPoint') {
         let stats = dataset.attributes.statistics
