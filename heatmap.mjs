@@ -982,7 +982,7 @@
           }]
         }]
       };
-      var heatmapRenderer = {
+      renderer = {
         type: "heatmap", // autocasts as new HeatmapRenderer()
           colorStops: [
             { color: "rgba(63, 40, 102, 0)", ratio: 0 },
@@ -991,8 +991,7 @@
           maxPixelIntensity: 25,
           minPixelIntensity: 0
         };
-      // return {renderer};
-      return {heatmapRenderer};
+      return {renderer};
     }
 
     function getDatasetExtent (dataset) {
@@ -1189,19 +1188,28 @@
       updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
       console.log('updateLayerViewEffect, where:', where)
       layerView.filter = null;
-      // layerView.filter = where;
-      // layerView.definitionExpression = where;
-      // layerView.effect = {
-      // layerView.filter = {
-          // where,
+      // none of this does anything with a heatmap, oh well
+      layerView.definitionExpression = where;
+      layerView.definitionExpression = {
+        where
+      }
+      layerView.filter = {
+        where,
+      }
+
+      layerView.effect = {
+          filter: {
+            where,
+          }
         // excludedEffect: 'grayscale(100%) opacity(5%)'
         // excludedEffect: 'grayscale(100%) brightness(25%) opacity(25%)'
-      // };
+      };
       layerView.queryFeatureCount({
         where: where || '1=1',
         outSpatialReference: layerView.view.spatialReference
       }).then(count => {
-        console.log('count:', count)
+        // does not work:
+        layer.renderer = layer.renderer.clone(); // clone to force renderer refresh
         let featuresCount = document.getElementById('featuresCount');
         featuresCount.innerText = count;
         // let filterResults = document.getElementById('filterResults');
