@@ -22,6 +22,7 @@
     colorRamps,
     Color,
     viewColorUtils,
+    FeatureFilter,
   ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
@@ -35,6 +36,7 @@
     "esri/smartMapping/symbology/support/colorRamps",
     "esri/smartMapping/symbology/color",
     "esri/views/support/colorUtils",
+    "esri/views/layers/support/FeatureFilter",
   ]);
 
 
@@ -1193,9 +1195,12 @@
       layerView.definitionExpression = {
         where
       }
-      layerView.filter = {
+      // layerView.filter = {
+      //   where,
+      // }
+      layerView.filter = new FeatureFilter({
         where,
-      }
+      });
 
       layerView.effect = {
           filter: {
