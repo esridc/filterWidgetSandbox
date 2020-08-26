@@ -865,15 +865,16 @@
       let attributesCountDiv = document.getElementById('attributesCount');
       attributeList = updateAttributeList(dataset, '#attributeList', () => { addFilter(event) });
       // updateAttributeList(dataset, '#displayListItems')
-      updateAttributeList(dataset, '#styleListItems', async () => {var { renderer } = await autoStyle(event, null, dataset, null); layer.renderer = renderer})
+      updateAttributeList(dataset, '#styleListItems', async () => {
+        var { renderer } = await autoStyle(event, null,  dataset, null);
+        layer.renderer = renderer
+      })
 
       let attributeSearchElement = document.getElementById("attributeSearch")
       attributeSearchElement.addEventListener("input", attributeSearchChange);
       attributeSearchElement.addEventListener("keydown", attributeSearchKeydown);
       let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
-      attributeSearchElement.setAttribute('placeholder', placeholderText);  
-
-      let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
+      attributeSearchElement.setAttribute('placeholder', placeholderText);
 
       var renderer;
       let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
