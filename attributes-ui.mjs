@@ -22,6 +22,7 @@
     colorRamps,
     Color,
     viewColorUtils,
+    jsonUtils,
   ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
@@ -35,6 +36,7 @@
     "esri/smartMapping/symbology/support/colorRamps",
     "esri/smartMapping/symbology/color",
     "esri/views/support/colorUtils",
+    "esri/renderers/support/jsonUtils",
   ]);
 
 
@@ -93,20 +95,30 @@
     async function switchSelected (event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       const field = getDatasetField(dataset, fieldName);
+      const url = dataset.attributes.url;
+      // check for built-in style passed in with the dataset
+      let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 
-      // guess at a style for this field
-      try {
-        // initialize a new layer
-        layer = new FeatureLayer({
-          renderer: {type: 'simple'},
-          url: dataset.attributes.url
+      if (predefinedStyle) {
+        layer = await new FeatureLayer({
+          renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+          url
         });
+      } else {
 
-        switchStyles(null, layer, fieldName);
-      } catch(e) {
-        console.log('e:', e)
+        // guess at a style for this field
+        try {
+          // initialize a new layer
+          layer = new FeatureLayer({
+            renderer: {type: 'simple'},
+            url
+          });
+
+        } catch(e) {
+          console.log('e:', e)
+        }
       }
-
+      switchStyles(null, layer, fieldName);
     }
 
     async function addFilter(event = null, fieldName = null, fieldStats = null) {
@@ -739,7 +751,7 @@
         layerView = await view.whenLayerView(layer);
       }
 
-      var {renderer} = await autoStyle(null, fieldName, dataset, layer, true);
+      var {renderer} = await autoStyle(null, fieldName, dataset, layer);
       field = getDatasetField(dataset, fieldName);
       layer.renderer = renderer;
       layer.minScale = 0; // draw at all scales
@@ -879,7 +891,7 @@
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
-    async function autoStyle(event = null, fieldName = null, dataset = null, layer = null, first = false) {
+    async function autoStyle(event = null, fieldName = null, dataset = null, layer = null) {
       let target = event ? event.currentTarget : document.getElementById(fieldName);
       fieldName = fieldName ? fieldName : target.getAttribute('data-field');
       const field = getDatasetField(dataset, fieldName);
@@ -975,9 +987,6 @@
       }
 
       var opacity = .5;
-
-      // get basemap color theme: "light" or "dark"
-      let bgColor = await viewColorUtils.getBackgroundColorTheme(view);
 
       if (geometryType === 'esriGeometryPoint') {
         let stats = dataset.attributes.statistics
