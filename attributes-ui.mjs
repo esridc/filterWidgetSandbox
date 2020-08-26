@@ -748,6 +748,7 @@
       // clear previous filters
       if (typeof layerView != 'undefined') {
         updateLayerViewEffect({ updateExtent: true });
+        let filtersList = document.getElementById('filtersList');  
       }
 
       // wait for renderer to finish
@@ -841,10 +842,24 @@
         } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
       }
 
+      // clear filters list
+      for (var i = 0; i < filtersList.children.length; i++) {
+        // debugger
+        filtersList.children[i].remove();
+      }
+      document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
+      document.getElementById('featuresCount').innerHTML = '';
+
       let attributesCountDiv = document.getElementById('attributesCount');
       attributeList = updateAttributeList(dataset, '#attributeList', () => { addFilter(event) });
       // updateAttributeList(dataset, '#displayListItems')
       updateAttributeList(dataset, '#styleListItems', async () => {var { renderer } = await autoStyle(event, null, dataset, null); layer.renderer = renderer})
+
+      let attributeSearchElement = document.getElementById("attributeSearch")
+      attributeSearchElement.addEventListener("input", attributeSearchChange);
+      attributeSearchElement.addEventListener("keydown", attributeSearchKeydown);
+      let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
+      attributeSearchElement.setAttribute('placeholder', placeholderText);  
 
       let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 
@@ -1315,12 +1330,6 @@
         //
       }
     }
-
-    let attributeSearchElement = document.getElementById("attributeSearch")
-    attributeSearchElement.addEventListener("input", attributeSearchChange);
-    attributeSearchElement.addEventListener("keydown", attributeSearchKeydown);
-    let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
-    attributeSearchElement.setAttribute('placeholder', placeholderText);
 
 
     // TESTS
