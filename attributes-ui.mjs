@@ -1027,14 +1027,21 @@
 
       // choose ramp
 
-      var num = 9;
-      if (!first) {
-        while (num == 9) {
-          num = Math.floor(Math.random() * 19)+1;
-        }
+      // a more full exploration in auto-style.html
+      // get basemap color theme: "light" or "dark"
+      let bgColor = await viewColorUtils.getBackgroundColorTheme(view);
+      let tags = ["bright"]
+      let theme = "high-to-low";
+
+      let useRamp = false;
+      if (useRamp) {
+        let allRamps = colorRamps.byTag({includedTags: tags});
+        var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
+      } else {
+        let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
+        console.log(allSchemes)
+        var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
       }
-      let thisramp = colorRamps.byName(`Heatmap ${num}`);
-      var rampColors = thisramp.colors;
 
       // filterResults.innerText = 'Showing '+fieldStats.values.count+' '+field.simpleType+' values.';
       var rMin = rampColors[0];
