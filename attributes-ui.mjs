@@ -42,9 +42,9 @@
 
     // data urls
     var datasets = {
+      'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
       'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
-      'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
       'Black Cat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
       'King County Photos': "383878300c4c4f8c940272ba5bfcce34_1036",
@@ -91,7 +91,7 @@
       await loadDataset({ datasetId, env });
     }
 
-    async function addFilter(event = null, fieldName = null, fieldStats = null) {
+    async function addFilter({event = null, fieldName = null, fieldStats = null}) {
       let {view, layer, layerView} = state;
       let target = event ? event.currentTarget : document.getElementById(fieldName);
       fieldName = fieldName ? fieldName : target.dataset.field;
@@ -125,9 +125,7 @@
 
       if (!view) {
         view = await drawMap(layer)
-        view.whenLayerView(layer).then( r => {
-          layerView = view.layerViews.items[0];
-        });
+        layerView = await view.whenLayerView(layer);
       }
 
       const { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
@@ -167,13 +165,20 @@
       const parentContainer = container;
       let newcontainer = document.createElement('div');
       parentContainer.appendChild(newcontainer);
+      const numberLike = await datasetFieldIsNumberLike(fieldName);
+      if (!where) {
+        where = "1=1";
+      }
+      if (numberLike) {
+        where = where.replace(fieldName, `CAST(${fieldName} AS FLOAT)`); // for number-like fields
+      }
 
       try {
         let params = {
           layer: state.layer,
           field: fieldName,
           numBins: 30,
-          where,
+          where, // optional where clause
           features // optional existing set of features
         };
 
@@ -191,7 +196,7 @@
             // const featureCount = await layer.queryFeatureCount();
             // if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
 
-            const { features, exceededTransferLimit } = await layer.queryFeatures();
+            const { features, exceededTransferLimit } = await state.layer.queryFeatures();
             if (exceededTransferLimit) throw new Error('exceeded server limit querying features');
             params.features = features;
 
@@ -210,7 +215,7 @@
               var filtered = uniqueValues.filter(a => a.value != null);
               // manually reconstruct a feature values array from the unique values and their counts -
               // normalize array length to 1000, as precision isn't as important as speed here
-              const divisor = dataset.attributes.recordCount / 1000;
+              const divisor = state.dataset.attributes.recordCount / 1000;
               let arr = [];
               for (let x = 0; x < filtered.length; x++) {
                 for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
@@ -244,7 +249,7 @@
             } catch(e) {
             // histogram generation failed with unique values, try using features in layer view
             console.log('histogram generation failed with unique values, try using features in layer view', e);
-            params.features = (await layerView.queryFeatures()).features;
+            params.features = (await state.layerView.queryFeatures()).features;
             // const featureCount = await layer.queryFeatureCount();
             values = await generateHistogram(params);
             source = 'layerView';
@@ -773,6 +778,8 @@
         //   }]
         // });
         // view.ui.add(legend, "bottom-right");
+        // pass layerView back to complete variable assignment
+        return layerView;
       });
 
       view.ui.add('zoomToData', 'bottom-right');
@@ -828,20 +835,21 @@
 
       // clear filters list
       for (var i = 0; i < filtersList.children.length; i++) {
-        // debugger
         filtersList.children[i].remove();
       }
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
       document.getElementById('featuresCount').innerHTML = '';
 
-      let attributesCountDiv = document.getElementById('attributesCount');
-      state.attributeList = updateAttributeList('#attributeList', () => { addFilter(event) });
+      // clear widgets list
+      state.widgets = [];
+
+      // update attributes list
+      state.attributeList = updateAttributeList('#attributeList', () => { addFilter({event}) });
       // updateAttributeList('#displayListItems')
       updateAttributeList('#styleListItems', async () => {
         var { renderer } = await autoStyle({event});
         layer.renderer = renderer
       })
-      state.layer = layer;
 
       let attributeSearchElement = document.getElementById("attributeSearch")
       attributeSearchElement.addEventListener("input", attributeSearchChange);
@@ -877,7 +885,7 @@
       }
       state.layer = layer;
       autoStyle({});
-      state.view = await drawMap(layer)
+      state.view = await drawMap(layer);
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
@@ -1180,6 +1188,7 @@
         //   .filter(([fieldName, field]) => !field.statistics || field.statistics.values.min !== field.statistics.values.max)
         //   .forEach(([fieldName, field]) => {
         const field = getDatasetField(fieldName);
+        fieldName = field.name;
         // const fieldStats = field.statistics.values;
 
         // make list entry for attribute
@@ -1196,8 +1205,8 @@
           item.iconEnd = 'calendar';
         }
 
-        item.setAttribute('data-field', field.name);
-        item.addEventListener('click', () => callback(null, field.name, null));
+        item.setAttribute('data-field', fieldName);
+        item.addEventListener('click', () => callback({fieldName}));
         attributeList.appendChild(item);
       });
       return attributeList;
@@ -1331,12 +1340,14 @@
         state.view = await drawMap(state.layer)
       }
       state.layerView = await state.view.whenLayerView(state.layer);
+      console.log('init state:', state)
     }
-    // addFilter(null, "locationLatitude");
-    // addFilter(null, "locationLongitude");
-    // addFilter(null, "parametersBottom");
-    // addFilter(null, "resultQuality");
-    // addFilter(null, "sensorName");
-    // addFilter(null, "resultTime");
+    // addFilter({fieldName:"locationLatitude"});
+    // addFilter({fieldName="locationLongitude});
+    // addFilter({fieldName="parametersBottom});
+    // addFilter({fieldName="resultQuality});
+    // addFilter({fieldName="sensorName});
+    // addFilter({fieldName="resultTime});
+    addFilter({fieldName:"PROJECT_NUMBER"});
 
   })();
