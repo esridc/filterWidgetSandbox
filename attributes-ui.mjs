@@ -42,8 +42,8 @@
 
     // data urls
     var datasets = {
-      'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
+      'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
       'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
       'Black Cat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
@@ -93,12 +93,9 @@
 
     async function addFilter({event = null, fieldName = null, fieldStats = null}) {
       let {view, layer, layerView} = state;
-      let target = event ? event.currentTarget : document.getElementById(fieldName);
-      fieldName = fieldName ? fieldName : target.dataset.field;
-      const field = getDatasetField(fieldName);
-
-      let firstFilter = document.getElementById('firstfilter');
-      firstFilter ? firstFilter.remove() : null;
+      // if no fieldName is passed directly, get it from the attribute selection event
+      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
+      const field = await getDatasetField(fieldName);
 
       let filter = document.createElement('div');
       filter.classList.add('filterDiv');
@@ -191,7 +188,7 @@
         } catch(e) {
           try {
             // histogram generation failed with automated server call, try using features from server query
-            console.log('histogram generation failed with automated server call, try using features from server query', e);
+            console.warn('histogram generation failed with automated server call, try using features from server query', e);
             // params.features = (await layer.queryFeatures()).features;
             // const featureCount = await layer.queryFeatureCount();
             // if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
@@ -205,7 +202,7 @@
             // coverage = params.features.length / featureCount;
           } catch(e) {
             // histogram generation failed with automated server call, try using features from server query
-            console.log('histogram generation failed with automated server call, try reconstructing from unique values', e);
+            console.warn('histogram generation failed with automated server call, try reconstructing from unique values', e);
 
             try {
               let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
@@ -248,12 +245,11 @@
               coverage = 1;
             } catch(e) {
             // histogram generation failed with unique values, try using features in layer view
-            console.log('histogram generation failed with unique values, try using features in layer view', e);
+            console.warn('histogram generation failed with unique values, try using features in layer view', e);
             params.features = (await state.layerView.queryFeatures()).features;
             // const featureCount = await layer.queryFeatureCount();
             values = await generateHistogram(params);
             source = 'layerView';
-            // coverage = params.features.length / featureCount;
             }
           }
         }
@@ -760,7 +756,8 @@
     async function drawMap() {
       var {dataset, layer} = state;
       const map = new Map({
-        basemap: "gray-vector",
+        // basemap: "gray-vector",
+        basemap: "dark-gray-vector",
         layers: layer,
       });
       var view = new MapView({
@@ -831,6 +828,7 @@
           dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
         } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
       }
+      // update state so dataset it available for attribute list update
       state.dataset = dataset;
 
       // clear filters list
@@ -857,9 +855,6 @@
       let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
       attributeSearchElement.setAttribute('placeholder', placeholderText);
 
-      let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
-
-      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
       const url = dataset.attributes.url;
       // check for built-in style passed in with the dataset
       let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
@@ -883,7 +878,9 @@
           console.log('e:', e)
         }
       }
-      state.layer = layer;
+      // update state
+      state = {...state, layer};
+      // draw map once before autoStyling because theme detection requires an initialized view object
       state.view = await drawMap(layer);
       autoStyle({});
     }
@@ -1212,22 +1209,27 @@
       return attributeList;
     }
 
+    // find the number of significant digits of a numberic valeue, for truncation in generateLabel()
     function getDigits(num) {
       var s = num.toString();
       s = s.split('.');
       if (s.length == 1) {
         s = [s[0], "0"];
       }
+      // return number of digits to the left and right of the decimal point
       return [s[0].length, Math.min(s[1].length, 4)];
     }
 
     function generateLabel(field, fieldStats) {
-      var label = `${field.alias || fieldName}`;
+      var label = `${field.alias || field.name}`;
       var min = fieldStats.values.min;
       var max = fieldStats.values.max;
       if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
         if (field.simpleType === 'numeric') {
-          // vary precision based on value range
+          // vary precision based on value range – round to integers if range is > 100, otherwise
+          // find the decimal exponent of the most sigfig of the value range, and truncate two decimal places past that -
+          // eg: if the range is .000999999, most sigfig exponent is -4 (.0001), values will be truncated to -6 (.000001)
+          // TODO: test if this is actually working (seems to in practice)
           let digits = getDigits(max - min);
           let precision = digits[1] == 1 ? 0 : digits[0] > 3 ? 0 : digits[1];
           min = min.toFixed(precision);
@@ -1251,6 +1253,7 @@
       var {view, layer, layerView} = state;
       if (!layerView) {
         layerView = await view.whenLayerView(layer);
+        // update state
         state = {...state, layerView};
       }
       layerView.filter = null;
