@@ -51,9 +51,6 @@
       'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
     }
 
-    let widgetsDiv = document.getElementById('widgetsDiv');
-    let filterResults = document.getElementById('filterResults');
-
     // dataset switcher
     var datasetList = document.getElementById('datasetList');
     // populate dropdown with all attributes
