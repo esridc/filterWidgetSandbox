@@ -884,8 +884,8 @@
         }
       }
       state.layer = layer;
-      autoStyle({});
       state.view = await drawMap(layer);
+      autoStyle({});
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
