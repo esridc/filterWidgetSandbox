@@ -63,18 +63,20 @@
     }
 
     datasetList.addEventListener('change', async event => {
-      ({ layer, dataset } = await loadDataset({ datasetId: event.target.value, env: 'prod' }));
+      await loadDataset({ datasetId: event.target.value, env: 'prod' });
     });
 
-    // track widgets and state
-    var timeSlider = null;
-    var dataset = null;
-    var layer = null;
-    var view = null;
-    var layerView = null;
-    var widgets = [];
-    // var zoomToDataCheckbox;
-    var attributeList;
+    // track state
+    var state = {
+      timeSlider: null,
+      dataset: null,
+      layer: null,
+      view: null,
+      layerView: null,
+      widgets: [],
+      attributeList: [],
+    }
+    // zoomToDataCheckbox,
 
     // URL params
     const params = new URLSearchParams(window.location.search);
@@ -82,46 +84,18 @@
     if (Array.from(params).length != 0) {
       var datasetId = params.get('dataset');
       const datasetSlug = params.get('slug');
-      ({ layer, dataset } = await loadDataset({ datasetId: datasetId, datasetSlug: datasetSlug, env: env }));
+      await loadDataset({ datasetId, datasetSlug, env });
       env = params.get('env');
     } else {
       var datasetId = datasetList.options[datasetList.selectedIndex].value;
-      ({ layer, dataset } = await loadDataset({ datasetId: datasetId, env: env }));
-    }
-
-    async function switchSelected (event, fieldName = null) {
-      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
-      const field = getDatasetField(dataset, fieldName);
-      const url = dataset.attributes.url;
-      // check for built-in style passed in with the dataset
-      let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
-
-      if (predefinedStyle) {
-        layer = await new FeatureLayer({
-          renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
-          url
-        });
-      } else {
-
-        // guess at a style for this field
-        try {
-          // initialize a new layer
-          layer = new FeatureLayer({
-            renderer: {type: 'simple'},
-            url
-          });
-
-        } catch(e) {
-          console.log('e:', e)
-        }
-      }
-      switchStyles(null, layer, fieldName);
+      await loadDataset({ datasetId, env });
     }
 
     async function addFilter(event = null, fieldName = null, fieldStats = null) {
+      let {view, layer, layerView} = state;
       let target = event ? event.currentTarget : document.getElementById(fieldName);
       fieldName = fieldName ? fieldName : target.dataset.field;
-      const field = getDatasetField(dataset, fieldName);
+      const field = getDatasetField(fieldName);
 
       let firstFilter = document.getElementById('firstfilter');
       firstFilter ? firstFilter.remove() : null;
@@ -150,23 +124,25 @@
       filter.appendChild(container);
 
       if (!view) {
-        view = await drawMap(layer, dataset)
+        view = await drawMap(layer)
+        view.whenLayerView(layer).then( r => {
+          layerView = view.layerViews.items[0];
+        });
       }
-      layerView = await view.whenLayerView(layer);
 
-      const { categorical, pseudoCategorical } = await datasetFieldCategorical(dataset, fieldName, layer);
-      const numberLike = await datasetFieldIsNumberLike(dataset, fieldName, layer);
+      const { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
+      const numberLike = await datasetFieldIsNumberLike(fieldName);
 
       // (pseudo-)categorical - most records are covered by a limited # of unique values
       // or all other string values
 
       if (pseudoCategorical || (field.simpleType === 'string' && !numberLike)) {
         // value list
-        widget = await makeStringWidget({ dataset, fieldName, layer, layerView, container, slider: true });
+        widget = await makeStringWidget({ fieldName, container, slider: true });
       }
       // numerics and dates
       else {
-        var widget = await makeHistogramWidget({ dataset, fieldName, layer, layerView, container, slider: true });
+        var widget = await makeHistogramWidget({ fieldName, container, slider: true });
         container.classList.add('histogramWidget');
         // set whereClause attribute
         let whereClause = widget.generateWhereClause(fieldName);
@@ -175,17 +151,18 @@
       }
       // if (field.simpleType === 'date') {
       //   // Time slider
-      //   widget = await makeTimeSliderWidget({ dataset, fieldName, layer, layerView, slider: true });
+      //   widget = await makeTimeSliderWidget({ fieldName, container, slider: true });
       // }
 
       let sidebar = document.getElementById('sidebar')
       sidebar.scrollTop = sidebar.scrollHeight;
       widget.container.setAttribute('fieldName', fieldName);
       widget.container.setAttribute('numberLike', numberLike);
+      state = {...state, view, layer, layerView};
     }
 
     // create a histogram
-    async function makeHistogram ({dataset, fieldName, layer, layerView, container, slider = false, where = null, features = null }) {
+    async function makeHistogram ({fieldName, container, slider = false, where = null, features = null }) {
       // wrap in another container to handle height without fighting w/JSAPI and rest of sidebar
       const parentContainer = container;
       let newcontainer = document.createElement('div');
@@ -193,7 +170,7 @@
 
       try {
         let params = {
-          layer: layer,
+          layer: state.layer,
           field: fieldName,
           numBins: 30,
           where,
@@ -226,7 +203,7 @@
             console.log('histogram generation failed with automated server call, try reconstructing from unique values', e);
 
             try {
-              let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+              let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
               let domain = [Math.min(...uniqueValues.map(a => a.value)),
                             Math.max(...uniqueValues.map(a => a.value))]
               // remove nulls
@@ -277,8 +254,8 @@
         }
 
         // Determine if field is an integer
-        const field = getDatasetField(dataset, fieldName);
-        const integer = await datasetFieldIsInteger(dataset, fieldName, layer);
+        const field = getDatasetField(fieldName);
+        const integer = await datasetFieldIsInteger(fieldName);
         const widget =
           slider ?
             // Histogram range slider widget
@@ -318,7 +295,8 @@
     }
 
     // make and place a histogram
-    async function makeHistogramWidget({ dataset, fieldName, layer, layerView, container = null, slider = true }) {
+    async function makeHistogramWidget({ fieldName, container = null, slider = true }) {
+      var {widgets, layer} = state;
       const wrapper = document.createElement('div');
       wrapper.classList.add('histogramWidget');
       container = container ? container : document.getElementById('filters');
@@ -332,31 +310,31 @@
         features = (await layer.queryFeatures( { where, outFields: [fieldName] })).features;
       }
 
-      const histogram = await makeHistogram({ dataset, fieldName, layer, layerView, features, container: wrapper, slider: true });
+      const histogram = await makeHistogram({ fieldName, features, container: wrapper, slider: true });
       if (histogram.widget) {
         wrapper.widget = histogram.widget;
 
         // set event handler to update map filter and histograms when handles are dragged
         histogram.widget.on(["thumb-change", "thumb-drag", "segment-drag"], event => {
-          updateLayerView(layerView, fieldName, histogram.widget);
-          updateWidgets(layerView, fieldName, histogram.widget);
+          updateLayerView(fieldName, histogram.widget);
+          updateWidgets(fieldName, histogram.widget);
         });
 
         // register widget
-        widgets.push(histogram.widget);
+        state.widgets.push(histogram.widget);
       }
       return histogram.widget;
     }
 
     // make and place a value list of checkboxes
-    async function makeStringWidget({ dataset, fieldName, layer, container = null, slider = true }) {
+    async function makeStringWidget({ fieldName, container = null, slider = true }) {
       // const listContainer = document.createElement('div');
       // const listContainer = document.createElement('div');
       container.classList.add('valueListWidget');
-      const field = getDatasetField(dataset, fieldName);
+      const field = getDatasetField(fieldName);
 
       // Build filter/where clause and update layer
-      const onCheckboxChange = ({ checkboxes, layerView }) => {
+      const onCheckboxChange = ({ checkboxes }) => {
         let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
         let whereClause = '1=1';
         if (checked.length > 0) {
@@ -389,20 +367,18 @@
         updateLayerViewEffect({ where });
       };
 
-      const { fieldStats } = await createValueList({ dataset, fieldName, layer, container, onUpdateValues: onCheckboxChange });
+      const { fieldStats } = await createValueList({ fieldName, container, onUpdateValues: onCheckboxChange });
 
       fieldStats.container = container;
 
       // register widget
-      widgets.push(fieldStats)
+      state.widgets.push(fieldStats)
 
       return fieldStats;
     }
 
-    async function createValueList ({ dataset, fieldName, layer, container, onUpdateValues }) {
-      // <label>
-      //   <calcite-checkbox checked="true"></calcite-checkbox> Switch is on
-      // </label>
+    async function createValueList ({ fieldName, container, onUpdateValues }) {
+      var {dataset, layer} = state;
       container.classList.add('filter');
 
 
@@ -416,8 +392,8 @@
       const checkboxList = document.createElement('div');
       list.appendChild(checkboxList);
 
-      const field = getDatasetField(dataset, fieldName);
-      const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+      const field = getDatasetField(fieldName);
+      const stats = await getDatasetFieldUniqueValues(fieldName, layer);
       // if (!stats.topValues || stats.topValues.length === 0) {
       //   return {};
       // }
@@ -560,7 +536,7 @@
               return suggestion.label;
             }
           }
-        }]).on('autocomplete:selected', function(event, suggestion, dataset, context) {
+        }]).on('autocomplete:selected', function(event, suggestion, context) {
           let checkbox = checkboxes
             .filter(c => !c.checked)
             .find(c => JSON.parse(c.value).value === suggestion.value);
@@ -581,7 +557,7 @@
 
     // update layerview filter based on widget, throttled
     const updateLayerView = _.throttle(
-      async (layerView, fieldName, widget, value = null) => {
+      async (fieldName, widget, value = null) => {
         let whereClause;
         if (widget.label === "Histogram Range Slider") {
           whereClause = widget.generateWhereClause(fieldName);
@@ -602,7 +578,7 @@
 
     // update the bins of all histograms except the current widget, throttled
     const updateWidgets = _.throttle(
-      async (layerView, fieldName, currentWidget) => {
+      async (fieldName, currentWidget) => {
         let widgets = Array.from(listWidgetElements());
         // if there's only one widget, skip this
         if (widgets.length === 1) return
@@ -619,7 +595,11 @@
         }
         try {
           // query layer for all features in the other layers, filtered by the state of current layer
-          let { features } = await layer.queryFeatures( { where: whereClause, outFields: fieldNames });
+          var { features } = await state.layer.queryFeatures( { where: whereClause, outFields: fieldNames });
+        } catch(e) {
+          throw new Error(`Failed to query layer for ${fieldName}: ${e}`)
+        }
+        try {
           // update other widgets, passing in the filtered feature set
           throttledUpdateOthers(otherWidgets, features);
         } catch(e) {
@@ -632,6 +612,7 @@
 
     // update the bins of a histogram
     async function updateHistogram(widget, fieldName, features, { numberLike } = {}) {
+      var {layer, view} = state;
       let values;
       if (features) {
 
@@ -652,7 +633,7 @@
 
         let params = {
           layer,
-          view: layerView.view,
+          view,
           features,
           field: valueExpression ? null : fieldName,
           valueExpression,
@@ -728,36 +709,28 @@
 
     async function switchAttribute(event, fieldName = null) {
       fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
-      const field = getDatasetField(dataset, fieldName);
+      const field = getDatasetField(fieldName);
       document.querySelector('#attributeListButton').innerHTML = fieldName;
 
-      switchStyles(null, layer, fieldName);
+      switchStyles(fieldName);
     }
 
-    async function switchStyles(view, layer, fieldName) {
-      var field;
-      try {
-        if (!view) {
-          view = await drawMap(layer, dataset)
-        }
-        widgets.innerText += '\nDrawing '+fieldName+'.';
-
-        layerView = await view.whenLayerView(layer);
-      } catch(e) {
-        console.error(new Error(e));
+    async function switchStyles(fieldName) {
+      var {view, layer, layerView} = state;
+      if (!view) {
+        view = await drawMap(layer)
         layerView = await view.whenLayerView(layer);
       }
 
-      var {renderer} = await autoStyle(null, fieldName, dataset, layer);
-      field = getDatasetField(dataset, fieldName);
+      var {renderer} = await autoStyle({fieldName});
       layer.renderer = renderer;
       layer.minScale = 0; // draw at all scales
       layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
 
-      // clear previous filters
+      // TODO: clear previous filters
       if (typeof layerView != 'undefined') {
         updateLayerViewEffect({ updateExtent: true });
-        let filtersList = document.getElementById('filtersList');  
+        let filtersList = document.getElementById('filtersList');
       }
 
       // wait for renderer to finish
@@ -765,12 +738,10 @@
         if (renderer) {
           layerView.queryFeatureCount({
             where: '1=1',
-            outSpatialReference: layerView.view.spatialReference
+            outSpatialReference: view.spatialReference
           }).then(count => {
             let featuresCount = document.getElementById('featuresCount');
             featuresCount.innerText = count;
-            let filterResults = document.getElementById('filterResults');
-            // filterResults.innerText = 'Showing '+count+' '+field.simpleType+' features.';
             cleanup();
           });
         }
@@ -781,18 +752,19 @@
       }
     };
 
-    async function drawMap(layer, dataset) {
+    async function drawMap() {
+      var {dataset, layer} = state;
       const map = new Map({
         basemap: "gray-vector",
         layers: layer,
       });
-      view = new MapView({
+      var view = new MapView({
         container: "viewDiv",
         map: map,
         extent: getDatasetExtent(dataset),
         ui: { components: [] }
       });
-      layerView = await view.whenLayerView(layer).then((layerView) => {
+      var layerView = await view.whenLayerView(layer).then((layerView) => {
         // var legend = await new Legend({
         //   view: view,
         //   layerInfos: [{
@@ -810,13 +782,14 @@
       });
 
       // put vars on window for debugging
-      Object.assign(window, { view, map, dataset, layer, layerView, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
+      Object.assign(window, { state, map, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
 
       // Dataset info
       document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
       document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
       document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
-
+      state.view = view;
+      state.layerView = layerView;
       return view;
     }
 
@@ -830,6 +803,7 @@
 
 
     async function loadDataset (args) {
+      var {dataset, layer} = state;
       if (args.url) { // dataset url provided directly
         const datasetURL = args.url;
         try {
@@ -850,6 +824,7 @@
           dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
         } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
       }
+      state.dataset = dataset;
 
       // clear filters list
       for (var i = 0; i < filtersList.children.length; i++) {
@@ -860,12 +835,13 @@
       document.getElementById('featuresCount').innerHTML = '';
 
       let attributesCountDiv = document.getElementById('attributesCount');
-      attributeList = updateAttributeList(dataset, '#attributeList', () => { addFilter(event) });
-      // updateAttributeList(dataset, '#displayListItems')
-      updateAttributeList(dataset, '#styleListItems', async () => {
-        var { renderer } = await autoStyle(event, null,  dataset, null);
+      state.attributeList = updateAttributeList('#attributeList', () => { addFilter(event) });
+      // updateAttributeList('#displayListItems')
+      updateAttributeList('#styleListItems', async () => {
+        var { renderer } = await autoStyle({event});
         layer.renderer = renderer
       })
+      state.layer = layer;
 
       let attributeSearchElement = document.getElementById("attributeSearch")
       attributeSearchElement.addEventListener("input", attributeSearchChange);
@@ -873,47 +849,52 @@
       let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
       attributeSearchElement.setAttribute('placeholder', placeholderText);
 
-      var renderer;
       let fieldName = Object.keys(dataset.attributes.statistics.numeric)[0]
-      let field = getDatasetField(dataset, fieldName)
-      switchSelected(null, field.name);
 
-      // iterate through all attributes and run stat & style generation for all
-      // for (let x in Object.keys(dataset.attributes.statistics.numeric)) {
-      //   let fieldName = Object.keys(dataset.attributes.statistics.numeric)[x]
-      //   let field = getDatasetField(dataset, fieldName)
-      //   switchSelected(null, field.name);
-      // }
+      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
+      const url = dataset.attributes.url;
+      // check for built-in style passed in with the dataset
+      let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
 
-      return { dataset, layer };
+      if (predefinedStyle) {
+        layer = await new FeatureLayer({
+          renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+          url
+        });
+      } else {
+
+        // guess at a style for this field
+        try {
+          // initialize a new layer
+          layer = new FeatureLayer({
+            renderer: {type: 'simple'},
+            url
+          });
+
+        } catch(e) {
+          console.log('e:', e)
+        }
+      }
+      state.layer = layer;
+      autoStyle({});
+      state.view = await drawMap(layer)
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
-    async function autoStyle(event = null, fieldName = null, dataset = null, layer = null) {
+    async function autoStyle({event = null, fieldName = null}) {
+      var {dataset, layer} = state;
       let target = event ? event.currentTarget : document.getElementById(fieldName);
-      fieldName = fieldName ? fieldName : target.getAttribute('data-field');
-      const field = getDatasetField(dataset, fieldName);
-      const geometryType = dataset.attributes.geometryType;
-      // debugger
-      let datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
-      let fieldStats = field.statistics;
-      let minValue = fieldStats.values.min;
-      let maxValue = fieldStats.values.max;
-      let symbol;
+      if (target) {
 
-      var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
-                  : (geometryType == 'esriGeometryMultiPoint') ? 'point'
-                  : (geometryType == 'esriGeometryPolygon') ? 'polygon'
-                  : (geometryType == 'esriGeometryLine') ? 'line'
-                  : (geometryType == 'esriGeometryPolyline') ? 'line'
-                  : geometryType;
+        fieldName = fieldName ? fieldName : target.getAttribute('data-field');
+        const field = getDatasetField(fieldName);
+        var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
+        var fieldStats = field.statistics;
+        var minValue = fieldStats.values.min;
+        var maxValue = fieldStats.values.max;
 
-      if (!!layer) {
-
-        var query = layer.createQuery();
-        // query.outFields = [fieldName]
         try {
-          let uniqueValues = (await getDatasetFieldUniqueValues(dataset, fieldName, layer)).values;
+          let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
           let domain = [Math.min(...uniqueValues.map(a => a.value)),
                         Math.max(...uniqueValues.map(a => a.value))]
           // remove nulls
@@ -961,43 +942,40 @@
           // histogram generation failed with unique values, try using features in layer view
           console.log('histogram generation failed with unique values, try using features in layer view:');
           console.error(new Error(e));
-          if (typeof layerView != 'undefined') {
-            const { features } = await layerView.queryFeatures();
-            const featureCount = await layer.queryFeatureCount();
-            var values = await generateHistogram(params);
-            var source = 'layerView';
-            var coverage = params.features.length / featureCount;
-          } else {
-            console.warn('No layerView')
-          }
         }
 
-        var {features} = await layer.queryFeatures(query);
+        if (!!layer) {
 
-        var numValues = datasetStats.values.count;
+          var query = layer.createQuery();
+          // query.outFields = [fieldName]
 
-        if (features) {
-          var values = Object.values(features).map(v => v.attributes[fieldName])
-        } else {
-          console.log('no features returned for', fieldName)
+          var {features} = await layer.queryFeatures(query);
+
+          var numValues = datasetStats.values.count;
+
+          if (features) {
+            var values = Object.values(features).map(v => v.attributes[fieldName])
+          } else {
+            console.log('no features returned for', fieldName)
+          }
+
         }
 
       }
+      const geometryType = dataset.attributes.geometryType;
+      let symbol;
+
+      var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
+                  : (geometryType == 'esriGeometryMultiPoint') ? 'point'
+                  : (geometryType == 'esriGeometryPolygon') ? 'polygon'
+                  : (geometryType == 'esriGeometryLine') ? 'line'
+                  : (geometryType == 'esriGeometryPolyline') ? 'line'
+                  : geometryType;
+
 
       var opacity = .5;
 
       if (geometryType === 'esriGeometryPoint') {
-        let stats = dataset.attributes.statistics
-        // scale point size based on viewport size, number of points, and "clumpiness" of the data,
-        // in order to reduce overlap of points
-
-        // if there's still a lot of points, adjust opacity to show points through each other
-
-        // pick a color scheme based on distribution of the data:
-        // if a linear distribution, choose a linear–
-        // if a log or exp distribution, choose log or exp –
-        // if a normal distribution or something similar, choose "extremes"
-
         // choose colors based on background theme – dark on light, light on dark
 
         symbol = {
@@ -1026,7 +1004,7 @@
 
       // a more full exploration in auto-style.html
       // get basemap color theme: "light" or "dark"
-      let bgColor = await viewColorUtils.getBackgroundColorTheme(view);
+      let bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
       let tags = ["bright"]
       let theme = "high-to-low";
 
@@ -1036,11 +1014,9 @@
         var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
       } else {
         let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-        console.log(allSchemes)
         var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
       }
 
-      // filterResults.innerText = 'Showing '+fieldStats.values.count+' '+field.simpleType+' values.';
       var rMin = rampColors[0];
       var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
       var rMax = rampColors[rampColors.length-1];
@@ -1080,10 +1056,10 @@
       };
     }
 
-    function getDatasetField (dataset, fieldName) {
+    function getDatasetField (fieldName) {
       fieldName = fieldName.toLowerCase();
-      const field = dataset.attributes.fields.find(f => f.name.toLowerCase() === fieldName);
-      const stats = [...Object.entries(dataset.attributes.statistics).values()].find(([, fields]) => fields[fieldName]);
+      const field = state.dataset.attributes.fields.find(f => f.name.toLowerCase() === fieldName);
+      const stats = [...Object.entries(state.dataset.attributes.statistics).values()].find(([, fields]) => fields[fieldName]);
 
       // add "simple type" (numeric, date, string) and stats into rest of field definition
       return {
@@ -1095,14 +1071,14 @@
 
     const DATASET_FIELD_UNIQUE_VALUES = {}; // cache by field name
 
-    async function getDatasetFieldUniqueValues (dataset, fieldName, layer) {
+    async function getDatasetFieldUniqueValues (fieldName) {
       if (!DATASET_FIELD_UNIQUE_VALUES[fieldName]) {
-        const field = getDatasetField(dataset, fieldName);
+        const field = getDatasetField(fieldName);
         let stats;
         if (field.statistics && field.statistics.uniqueCount) {
           stats = { ...field.statistics };
         } else {
-          const uniqueValueInfos = (await uniqueValues({ layer, field: fieldName }))
+          const uniqueValueInfos = (await uniqueValues({ layer: state.layer, field: fieldName }))
           .uniqueValueInfos
           .sort((a, b) => a.count > b.count ? -1 : 1);
           const count = uniqueValueInfos.reduce((count, f) => count + f.count, 0);
@@ -1141,8 +1117,8 @@
     }
 
     // Determine if field is categorical or pseudo-categorical
-    async function datasetFieldCategorical (dataset, fieldName, layer) {
-      const stats = await getDatasetFieldUniqueValues(dataset, fieldName, layer);
+    async function datasetFieldCategorical (fieldName) {
+      const stats = await getDatasetFieldUniqueValues(fieldName);
 
       const categoricalMax = 20;
       const categorical = stats.uniqueCount <= categoricalMax;
@@ -1155,29 +1131,30 @@
     }
 
     // Determine if field is an integer
-    async function datasetFieldIsInteger (dataset, fieldName, layer) {
-      const field = getDatasetField(dataset, fieldName);
+    async function datasetFieldIsInteger (fieldName) {
+      const field = getDatasetField(fieldName);
       if (field.type.toLowerCase().includes('integer')) { // explicit integer type
         return true;
       } else { // or check the known values to see if they're all integers
-        const stats = await getDatasetFieldUniqueValues(dataset, field.name, layer);
+        const stats = await getDatasetFieldUniqueValues(field.name);
         return stats.values.every(v => v.value == null || Number.isInteger(v.value));
       }
    }
 
     // Determine if field is number-like, e.g. is a number or all non-null values can be parsed as such
-    async function datasetFieldIsNumberLike (dataset, fieldName, layer) {
-      const field = getDatasetField(dataset, fieldName);
+    async function datasetFieldIsNumberLike (fieldName) {
+      const field = getDatasetField(fieldName);
       if (field.simpleType === 'numeric') { // explicit number type
         return true;
       } else { // or check the known values to see if they're all integers
-        const stats = await getDatasetFieldUniqueValues(dataset, field.name, layer);
+        const stats = await getDatasetFieldUniqueValues(field.name);
         return stats.values.every(v => v.value == null || !isNaN(Number(v.value)));
       }
    }
 
     // Add an entry to the attribute dropdown
-    function updateAttributeList (dataset, list, callback) {
+    function updateAttributeList (list, callback) {
+      var {dataset} = state;
       // create attributeitem for each attribute
       const attributeList = document.querySelector(list);
       // clear existing entries
@@ -1199,10 +1176,10 @@
       })
       .forEach(([fieldName, fieldStats]) => {
         // dataset.attributes.fieldNames
-        //   .map(fieldName => [fieldName, getDatasetField(dataset, fieldName)])
+        //   .map(fieldName => [fieldName, getDatasetField(fieldName)])
         //   .filter(([fieldName, field]) => !field.statistics || field.statistics.values.min !== field.statistics.values.max)
         //   .forEach(([fieldName, field]) => {
-        const field = getDatasetField(dataset, fieldName);
+        const field = getDatasetField(fieldName);
         // const fieldStats = field.statistics.values;
 
         // make list entry for attribute
@@ -1220,7 +1197,7 @@
         }
 
         item.setAttribute('data-field', field.name);
-        item.addEventListener('click', () => callback(null, field.name, dataset, null));
+        item.addEventListener('click', () => callback(null, field.name, null));
         attributeList.appendChild(item);
       });
       return attributeList;
@@ -1262,6 +1239,11 @@
       where = undefined,
       updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
 
+      var {view, layer, layerView} = state;
+      if (!layerView) {
+        layerView = await view.whenLayerView(layer);
+        state = {...state, layerView};
+      }
       layerView.filter = null;
       layerView.effect = {
         filter: {
@@ -1272,23 +1254,20 @@
       };
       layerView.queryFeatureCount({
         where: where || '1=1',
-        outSpatialReference: layerView.view.spatialReference
+        outSpatialReference: view.spatialReference
       }).then(count => {
         let featuresCount = document.getElementById('featuresCount');
         featuresCount.innerText = count;
-        // let filterResults = document.getElementById('filterResults');
-        // filterResults.innerText = 'Showing '+count+' '+field.simpleType+' features.';
       });
-
       // adjust view extent (in or out) to fit all filtered data
       if (updateExtent) {
         try {
           let featureExtent;
 
-          const queriedExtent = await layerView.layer.queryExtent({
+          const queriedExtent = await layer.queryExtent({
             // where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
             where: layerView.effect?.filter?.where ? concatWheres({ server: true }) : '1=1',
-            outSpatialReference: layerView.view.spatialReference
+            outSpatialReference: view.spatialReference
           });
 
           if (queriedExtent.count > 0) {
@@ -1297,9 +1276,9 @@
             return;
           }
 
-          if (!layerView.view.extent.contains(featureExtent) ||
-          (featureExtent.width * featureExtent.height) / (layerView.view.extent.width * layerView.view.extent.height) < 0.20) {
-            layerView.view.goTo(featureExtent, { duration: 350 });
+          if (!view.extent.contains(featureExtent) ||
+          (featureExtent.width * featureExtent.height) / (view.extent.width * view.extent.height) < 0.20) {
+            view.goTo(featureExtent, { duration: 350 });
           }
         } catch(e) {
           console.log('could not query or project feature extent to update viewport', e);
@@ -1347,11 +1326,17 @@
 
 
     // TESTS
-
+    if (!state.layerView) {
+      if (!state.view) {
+        state.view = await drawMap(state.layer)
+      }
+      state.layerView = await state.view.whenLayerView(state.layer);
+    }
     // addFilter(null, "locationLatitude");
     // addFilter(null, "locationLongitude");
     // addFilter(null, "parametersBottom");
     // addFilter(null, "resultQuality");
     // addFilter(null, "sensorName");
+    // addFilter(null, "resultTime");
 
   })();
