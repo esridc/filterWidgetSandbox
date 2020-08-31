@@ -1062,15 +1062,18 @@
     }
 
     function getDatasetField (fieldName) {
-      fieldName = fieldName.toLowerCase();
-      const field = state.dataset.attributes.fields.find(f => f.name.toLowerCase() === fieldName);
-      const stats = [...Object.entries(state.dataset.attributes.statistics).values()].find(([, fields]) => fields[fieldName]);
+      let lc_fieldName = fieldName.toLowerCase();
+      const field = state.dataset.attributes.fields.find(f => f.name.toLowerCase() === lc_fieldName);
+      if (!field) {
+        throw new Error(`Could not find field "${fieldName}" in dataset.`);
+      }
+      const stats = [...Object.entries(state.dataset.attributes.statistics).values()].find(([, fields]) => fields[lc_fieldName]);
 
       // add "simple type" (numeric, date, string) and stats into rest of field definition
       return {
         ...field,
         simpleType: stats && stats[0],
-        statistics: stats && stats[1][fieldName].statistics
+        statistics: stats && stats[1][lc_fieldName].statistics
       }
     }
 
