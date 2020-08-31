@@ -754,8 +754,8 @@
     async function drawMap() {
       var {dataset, layer} = state;
       const map = new Map({
-        // basemap: "gray-vector",
-        basemap: "dark-gray-vector",
+        basemap: "gray-vector",
+        // basemap: "dark-gray-vector",
         layers: layer,
       });
       var view = new MapView({
@@ -982,19 +982,18 @@
                   : (geometryType == 'esriGeometryPolyline') ? 'line'
                   : geometryType;
 
-
-      var opacity = .5;
+      var opacity = .25;
 
       if (geotype === 'point') {
         // choose colors based on background theme – dark on light, light on dark
         symbol = {
           type: "simple-marker",
-          color: "blue",
+          color: bgColor == "dark" ? "lightblue" : "steelblue",
           outline: {
-            // makes the outlines of all features consistently light gray
-            color: "lightgray",
-            width: 0.05
+            color: bgColor == "dark" ? "black" : "white",
+            width: 0.5,
           },
+          // TODO: vary size with number of points and maybe clustering factor
           size: '5px',
           opacity: opacity,
         }
@@ -1010,8 +1009,6 @@
       // choose ramp
 
       // a more full exploration in auto-style.html
-      // get basemap color theme: "light" or "dark"
-      let bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
       let tags = ["bright"]
       let theme = "high-to-low";
 
