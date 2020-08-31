@@ -882,7 +882,9 @@
       state = {...state, layer};
       // draw map once before autoStyling because theme detection requires an initialized view object
       state.view = await drawMap(layer);
-      autoStyle({});
+      // guess at a style for this field
+      var {renderer} = await autoStyle({});
+      layer.renderer = renderer;
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
