@@ -188,13 +188,13 @@
         } catch(e) {
           try {
             // histogram generation failed with automated server call, try using features from server query
-            console.warn('histogram generation failed with automated server call, try using features from server query', e);
+            console.warn('Histogram generation failed with automated server call, try using features from server query\n', e);
             // params.features = (await layer.queryFeatures()).features;
             // const featureCount = await layer.queryFeatureCount();
             // if (params.features.length != featureCount) throw new Error('params.features.length != featureCount');
 
             const { features, exceededTransferLimit } = await state.layer.queryFeatures();
-            if (exceededTransferLimit) throw new Error('exceeded server limit querying features');
+            if (exceededTransferLimit) throw new Error('Exceeded server limit querying features');
             params.features = features;
 
             values = await generateHistogram(params);
@@ -202,7 +202,7 @@
             // coverage = params.features.length / featureCount;
           } catch(e) {
             // histogram generation failed with automated server call, try using features from server query
-            console.warn('histogram generation failed with automated server call, try reconstructing from unique values', e);
+            console.warn('Histogram generation failed with server query, try reconstructing from unique values\n', e);
 
             try {
               let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
@@ -245,7 +245,7 @@
               coverage = 1;
             } catch(e) {
             // histogram generation failed with unique values, try using features in layer view
-            console.warn('histogram generation failed with unique values, try using features in layer view', e);
+            console.warn('Histogram generation failed with unique values, try using features in layer view\n', e);
             params.features = (await state.layerView.queryFeatures()).features;
             // const featureCount = await layer.queryFeatureCount();
             values = await generateHistogram(params);
