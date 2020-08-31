@@ -178,9 +178,7 @@
           where, // optional where clause
           features // optional existing set of features
         };
-
-        let values, bins, source, coverage;
-
+        let values, source, coverage;
         try {
           values = await generateHistogram(params);
           source = 'widgets';
@@ -199,7 +197,7 @@
 
             values = await generateHistogram(params);
             source = 'layerQuery';
-            // coverage = params.features.length / featureCount;
+            coverage = params.features.length / featureCount;
           } catch(e) {
             // histogram generation failed with automated server call, try using features from server query
             console.warn('Histogram generation failed with server query, try reconstructing from unique values\n', e);
@@ -226,7 +224,7 @@
               .thresholds(29) // separated into 30 bins
               (arr);          // pass the array
               // convert the d3 bins array to a bins object
-              bins = [];
+              var bins = [];
               for (let x = 0; x < d3bins.length; x++) {
                 bins.push({
                   minValue: d3bins[x]['x0'],
@@ -828,7 +826,7 @@
           dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
         } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
       }
-      // update state so dataset it available for attribute list update
+      // update state so dataset is available for attribute list update
       state.dataset = dataset;
 
       // clear filters list
@@ -856,31 +854,30 @@
       attributeSearchElement.setAttribute('placeholder', placeholderText);
 
       const url = dataset.attributes.url;
+
       // check for built-in style passed in with the dataset
       let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
-
-      if (predefinedStyle) {
+      let usePredefinedStyle = false; // disable for now
+      if (predefinedStyle && usePredefinedStyle) {
         layer = await new FeatureLayer({
           renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
           url
         });
-      } else {
-
-        // guess at a style for this field
+      }
+      else {
         try {
           // initialize a new layer
           layer = new FeatureLayer({
             renderer: {type: 'simple'},
             url
           });
-
         } catch(e) {
           console.log('e:', e)
         }
       }
       // update state
       state = {...state, layer};
-      // draw map once before autoStyling because theme detection requires an initialized view object
+      // draw map once before autoStyling because theme detection requires an initialized layerView object
       state.view = await drawMap(layer);
       // guess at a style for this field
       var {renderer} = await autoStyle({});
@@ -890,10 +887,9 @@
     // analyze a dataset and choose an initial best-guess symbology for it
     async function autoStyle({event = null, fieldName = null}) {
       var {dataset, layer} = state;
-      let target = event ? event.currentTarget : document.getElementById(fieldName);
-      if (target) {
-
-        fieldName = fieldName ? fieldName : target.getAttribute('data-field');
+      // if there's either a fieldName or event object
+      var fieldName = fieldName ? fieldName : event?.currentTarget?.getAttribute('data-field');
+      if (fieldName) {
         const field = getDatasetField(fieldName);
         var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
         var fieldStats = field.statistics;
@@ -968,10 +964,17 @@
 
         }
 
+      } else {
+        // console.log("autostyle, no fieldname")
       }
-      const geometryType = dataset.attributes.geometryType;
+
+      // Choose symbology based on various dataset and theme attributes
+
+      // get basemap color theme: "light" or "dark"
+      let bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
       let symbol;
 
+      const geometryType = dataset.attributes.geometryType;
       var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
                   : (geometryType == 'esriGeometryMultiPoint') ? 'point'
                   : (geometryType == 'esriGeometryPolygon') ? 'polygon'
@@ -982,11 +985,11 @@
 
       var opacity = .5;
 
-      if (geometryType === 'esriGeometryPoint') {
+      if (geotype === 'point') {
         // choose colors based on background theme – dark on light, light on dark
-
         symbol = {
           type: "simple-marker",
+          color: "blue",
           outline: {
             // makes the outlines of all features consistently light gray
             color: "lightgray",
@@ -995,18 +998,15 @@
           size: '5px',
           opacity: opacity,
         }
-
       }
 
-
-      else if (geometryType === 'esriGeometryPolyline') {
+      else if (geotype === 'polyline') {
         symbol = {type: 'simple-line', width: '4px' };
       }
 
-      else if (geometryType === 'esriGeometryPolygon') {
+      else if (geotype === 'polygon') {
         symbol = {type: 'simple-fill' };
       }
-
       // choose ramp
 
       // a more full exploration in auto-style.html
@@ -1030,9 +1030,11 @@
       var renderer = {
         type: "simple", // autocasts as new SimpleRenderer()
         symbol: symbol,
-        visualVariables: [{
+      };
+      if (fieldName) {
+        renderer.visualVariables = [{
           type: "color", // indicates this is a color visual variable
-          field: fieldName,
+          // field: fieldName,
           // normalizationField: "TOTPOP_CY", // total population
           stops: [{
             value: minValue,
@@ -1047,8 +1049,8 @@
             color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
             label: maxValue
           }]
-        }]
-      };
+        }];
+      }
       return {renderer};
     }
 
@@ -1356,6 +1358,6 @@
     // addFilter({fieldName="resultQuality});
     // addFilter({fieldName="sensorName});
     // addFilter({fieldName="resultTime});
-    addFilter({fieldName:"PROJECT_NUMBER"});
+    // addFilter({fieldName:"PROJECT_NUMBER"});
 
   })();
