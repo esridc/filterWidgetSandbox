@@ -42,8 +42,8 @@
 
     // data urls
     var datasets = {
-      'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
       'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
+      'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
       'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
       'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
       'Black Cat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
@@ -984,13 +984,16 @@
 
       var opacity = .25;
 
+      // choose colors based on background theme – dark on light, light on dark
+      var color = bgColor == "dark" ? "lightblue" : "steelblue";
+      var outlineColor = bgColor == "dark" ? "black" : "white";
+
       if (geotype === 'point') {
-        // choose colors based on background theme – dark on light, light on dark
         symbol = {
           type: "simple-marker",
-          color: bgColor == "dark" ? "lightblue" : "steelblue",
+          color: color,
           outline: {
-            color: bgColor == "dark" ? "black" : "white",
+            color: outlineColor,
             width: 0.5,
           },
           // TODO: vary size with number of points and maybe clustering factor
@@ -999,15 +1002,22 @@
         }
       }
 
-      else if (geotype === 'polyline') {
-        symbol = {type: 'simple-line', width: '4px' };
+      else if (geotype === 'line') {
+        symbol = {
+          type: 'simple-line',
+          width: '4px',
+          color: color,
+        };
       }
 
       else if (geotype === 'polygon') {
-        symbol = {type: 'simple-fill' };
+        symbol = {
+          type: 'simple-fill',
+          color: color,
+        };
       }
-      // choose ramp
 
+      // choose ramp
       // a more full exploration in auto-style.html
       let tags = ["bright"]
       let theme = "high-to-low";
