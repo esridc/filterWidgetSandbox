@@ -45,10 +45,10 @@
     // data urls
     var datasets = {
       'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
+      'Black Rat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
       'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
       'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
-      'Black Cat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
       'King County Photos': "383878300c4c4f8c940272ba5bfcce34_1036",
       'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
     }
@@ -723,8 +723,7 @@
         layerView = await view.whenLayerView(layer);
       }
 
-      var {renderer} = await autoStyle({fieldName});
-      layer.renderer = renderer;
+      var {layer, renderer} = await autoStyle({fieldName});
       layer.minScale = 0; // draw at all scales
       layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
 
@@ -756,6 +755,7 @@
     async function drawMap() {
       var {dataset, layer} = state;
       const map = new Map({
+        // choose a light or dark background theme
         basemap: "gray-vector",
         // basemap: "dark-gray-vector",
         layers: layer,
@@ -845,8 +845,7 @@
       state.attributeList = updateAttributeList('#attributeList', () => { addFilter({event}) });
       // updateAttributeList('#displayListItems')
       updateAttributeList('#styleListItems', async () => {
-        var { renderer } = await autoStyle({event});
-        layer.renderer = renderer
+        autoStyle({event});
       })
 
       let attributeSearchElement = document.getElementById("attributeSearch")
@@ -857,52 +856,52 @@
 
       const url = dataset.attributes.url;
 
-      // check for built-in style passed in with the dataset
-      let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
-      let usePredefinedStyle = false; // disable for now
-      if (predefinedStyle && usePredefinedStyle) {
-        layer = await new FeatureLayer({
-          renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+      state.usePredefinedStyle = false; // disable for now
+      try {
+        // initialize a new layer
+        layer = new FeatureLayer({
+          renderer: {type: 'simple'},
           url
         });
-      }
-      else {
-        try {
-          // initialize a new layer
-          layer = new FeatureLayer({
-            renderer: {type: 'simple'},
-            url
-          });
-        } catch(e) {
-          console.log('e:', e)
-        }
+      } catch(e) {
+        console.log('e:', e)
       }
       // update state
       state = {...state, layer};
       // draw map once before autoStyling because theme detection requires an initialized layerView object
       state.view = await drawMap(layer);
       // guess at a style for this field
-      var {renderer} = await autoStyle({});
-      layer.renderer = renderer;
+      autoStyle({});
+    }
 
-      // set up custom labels
-      const labels = new LabelClass({
-        labelExpressionInfo: { expression: "$feature.NAME" },
-        symbol: {
-          type: "text",  // autocasts as new TextSymbol()
-          color: "black",
-          haloSize: 1,
-          haloColor: "white"
-        }
-      });
-      // somehow labels appear even if this isn't set??
-      // layer.labelingInfo = [ labels ];
+    // manually reconstruct a feature values array from unique values and their counts
+    function reconstructDataset(uniqueValues) {
+      // normalize array length to 1000, as precision isn't as important as speed here
+      // const divisor = dataset.attributes.recordCount / 1000;
+
+      // use the whole set
+      const divisor = 1;
+      let arr = [];
+      for (let x = 0; x < filtered.length; x++) {
+        for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
+          arr.push(filtered[x].value);
+        };
+      }
+      return arr;
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
     async function autoStyle({event = null, fieldName = null}) {
-      var {dataset, layer} = state;
-      // if there's either a fieldName or event object
+      var {dataset, layer, view, usePredefinedStyle} = state;
+      var bgColor;
+      // get basemap color theme: "light" or "dark"
+      try {
+        bgColor = await viewColorUtils.getBackgroundColorTheme(view);
+      } catch(e) {
+        throw new Error("Couldn't detect basemap color theme (only works if tab is visible).", e)
+      }
+
+      // if there's either a fieldName or event object:
       var fieldName = fieldName ? fieldName : event?.currentTarget?.getAttribute('data-field');
       if (fieldName) {
         const field = getDatasetField(fieldName);
@@ -913,23 +912,11 @@
 
         try {
           let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
-          let domain = [Math.min(...uniqueValues.map(a => a.value)),
-                        Math.max(...uniqueValues.map(a => a.value))]
           // remove nulls
           var filtered = uniqueValues.filter(a => a.value != null);
-          // manually reconstruct a feature values array from the unique values and their counts -
 
-          // normalize array length to 1000, as precision isn't as important as speed here
-          // const divisor = dataset.attributes.recordCount / 1000;
-
-          // use the whole set
-          const divisor = 1;
-          let arr = [];
-          for (let x = 0; x < filtered.length; x++) {
-            for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
-              arr.push(filtered[x].value);
-            };
-          }
+          // inflate a whole dataset from unique values and a count
+          var arr = reconstructDataset(filtered);
 
           var numBins = (uniqueValues.length > 30 ? 30 : uniqueValues.length)
           // use d3 to bin histograms
@@ -979,106 +966,137 @@
 
         }
 
+      } else if (usePredefinedStyle) {
+        // check for built-in style passed in with the dataset
+        let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
+        if (predefinedStyle && usePredefinedStyle) {
+          layer = await new FeatureLayer({
+            renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+            url
+          });
+        }
       } else {
-        // console.log("autostyle, no fieldname")
-      }
 
-      // Choose symbology based on various dataset and theme attributes
+        // Choose symbology based on various dataset and theme attributes
 
-      // get basemap color theme: "light" or "dark"
-      let bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
-      let symbol;
+        let symbol;
 
-      const geometryType = dataset.attributes.geometryType;
-      var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
-                  : (geometryType == 'esriGeometryMultiPoint') ? 'point'
-                  : (geometryType == 'esriGeometryPolygon') ? 'polygon'
-                  : (geometryType == 'esriGeometryLine') ? 'line'
-                  : (geometryType == 'esriGeometryPolyline') ? 'line'
-                  : geometryType;
+        const geometryType = dataset.attributes.geometryType;
+        var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
+                    : (geometryType == 'esriGeometryMultiPoint') ? 'point'
+                    : (geometryType == 'esriGeometryPolygon') ? 'polygon'
+                    : (geometryType == 'esriGeometryLine') ? 'line'
+                    : (geometryType == 'esriGeometryPolyline') ? 'line'
+                    : geometryType;
 
-      var opacity = .25;
+        var opacity = .25;
 
-      // choose colors based on background theme – dark on light, light on dark
-      var color = bgColor == "dark" ? "lightblue" : "steelblue";
-      var outlineColor = bgColor == "dark" ? "black" : "white";
+        // choose colors based on background theme – dark on light, light on dark
+        var color = bgColor == "dark" ? "lightblue" : "steelblue";
+        var outlineColor = bgColor == "dark" ? "black" : "white";
 
-      if (geotype === 'point') {
-        symbol = {
-          type: "simple-marker",
-          color: color,
-          outline: {
-            color: outlineColor,
-            width: 0.5,
-          },
-          // TODO: vary size with number of points and maybe clustering factor
-          size: '5px',
-          opacity: opacity,
+        if (geotype === 'point') {
+          symbol = {
+            type: "simple-marker",
+            color: color,
+            outline: {
+              color: outlineColor,
+              width: 0.5,
+            },
+            // TODO: vary size with number of points and maybe clustering factor
+            size: '5px',
+            opacity: opacity,
+          }
+        }
+
+        else if (geotype === 'line') {
+          symbol = {
+            type: 'simple-line',
+            width: '2px',
+            color: color,
+            opacity: opacity,
+          };
+        }
+
+        else if (geotype === 'polygon') {
+          symbol = {
+            type: 'simple-fill',
+            color: color,
+            outline: {
+              color: outlineColor,
+              width: 0.5,
+            },
+          };
+        }
+
+        // choose ramp
+        // a more full exploration in auto-style.html
+        let tags = ["bright"]
+        let theme = "high-to-low";
+
+        let useRamp = false;
+        if (useRamp) {
+          let allRamps = colorRamps.byTag({includedTags: tags});
+          var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
+        } else {
+          let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
+          var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
+        }
+
+        var rMin = rampColors[0];
+        var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
+        var rMax = rampColors[rampColors.length-1];
+        var renderer = {
+          type: "simple", // autocasts as new SimpleRenderer()
+          symbol: symbol,
+        };
+        if (fieldName) {
+          renderer.visualVariables = [{
+            type: "color", // indicates this is a color visual variable
+            // field: fieldName,
+            // normalizationField: "TOTPOP_CY", // total population
+            stops: [{
+              value: minValue,
+              color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
+              label: minValue
+            },{
+              value: (maxValue+minValue)/2,
+              color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
+              label: (maxValue+minValue)/2,
+            },{
+              value: maxValue,
+              color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
+              label: maxValue
+            }]
+          }];
         }
       }
 
-      else if (geotype === 'line') {
-        symbol = {
-          type: 'simple-line',
-          width: '2px',
-          color: color,
-          opacity: opacity,
-        };
-      }
+      layer.renderer = renderer;
 
-      else if (geotype === 'polygon') {
-        symbol = {
-          type: 'simple-fill',
-          color: color,
-          outline: {
-            color: outlineColor,
-            width: 0.5,
-          },
-        };
+      // set up custom labels – this should be done to override any labelingInfo sent from the server –
+      // bgcolor might not be set if the tab wasn't visible when loaded
+      try {
+        if (!bgColor) {
+          console.warn("Skipping labeling, bgColor not defined.")
+        } else if (layer.labelingInfo && !usePredefinedStyle) {
+          const labels = new LabelClass({
+            labelExpressionInfo: { expression: "$feature.NAME" },
+            symbol: {
+              type: "text",  // autocasts as new TextSymbol()
+              color: "white",
+              haloSize: 2,
+              haloColor: bgColor == "light" ? "steelblue" : "black",
+            }
+          });
+          layer.labelingInfo = [ labels ];
+        }
+      } catch(e) {
+        console.error("Labeling failed:", e);
       }
-
-      // choose ramp
-      // a more full exploration in auto-style.html
-      let tags = ["bright"]
-      let theme = "high-to-low";
-
-      let useRamp = false;
-      if (useRamp) {
-        let allRamps = colorRamps.byTag({includedTags: tags});
-        var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
-      } else {
-        let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-        var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
-      }
-
-      var rMin = rampColors[0];
-      var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-      var rMax = rampColors[rampColors.length-1];
-      var renderer = {
-        type: "simple", // autocasts as new SimpleRenderer()
-        symbol: symbol,
-      };
-      if (fieldName) {
-        renderer.visualVariables = [{
-          type: "color", // indicates this is a color visual variable
-          // field: fieldName,
-          // normalizationField: "TOTPOP_CY", // total population
-          stops: [{
-            value: minValue,
-            color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
-            label: minValue
-          },{
-            value: (maxValue+minValue)/2,
-            color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
-            label: (maxValue+minValue)/2,
-          },{
-            value: maxValue,
-            color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
-            label: maxValue
-          }]
-        }];
-      }
-      return {renderer};
+    // update state
+      state = {...state, layer, renderer}
+      return {layer, renderer};
     }
 
     function getDatasetExtent (dataset) {
