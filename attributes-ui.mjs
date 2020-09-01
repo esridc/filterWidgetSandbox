@@ -23,6 +23,7 @@
     Color,
     viewColorUtils,
     jsonUtils,
+    LabelClass,
   ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
@@ -37,14 +38,15 @@
     "esri/smartMapping/symbology/color",
     "esri/views/support/colorUtils",
     "esri/renderers/support/jsonUtils",
+    "esri/layers/support/LabelClass",
   ]);
 
 
     // data urls
     var datasets = {
+      'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
       'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
-      'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
       'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
       'Black Cat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
       'King County Photos': "383878300c4c4f8c940272ba5bfcce34_1036",
@@ -882,6 +884,19 @@
       // guess at a style for this field
       var {renderer} = await autoStyle({});
       layer.renderer = renderer;
+
+      // set up custom labels
+      const labels = new LabelClass({
+        labelExpressionInfo: { expression: "$feature.NAME" },
+        symbol: {
+          type: "text",  // autocasts as new TextSymbol()
+          color: "black",
+          haloSize: 1,
+          haloColor: "white"
+        }
+      });
+      // somehow labels appear even if this isn't set??
+      // layer.labelingInfo = [ labels ];
     }
 
     // analyze a dataset and choose an initial best-guess symbology for it
@@ -1005,8 +1020,9 @@
       else if (geotype === 'line') {
         symbol = {
           type: 'simple-line',
-          width: '4px',
+          width: '2px',
           color: color,
+          opacity: opacity,
         };
       }
 
@@ -1014,6 +1030,10 @@
         symbol = {
           type: 'simple-fill',
           color: color,
+          outline: {
+            color: outlineColor,
+            width: 0.5,
+          },
         };
       }
 
