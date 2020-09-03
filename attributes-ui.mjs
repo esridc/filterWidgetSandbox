@@ -24,6 +24,7 @@
     viewColorUtils,
     jsonUtils,
     LabelClass,
+    CIMSymbol,
   ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
@@ -39,6 +40,7 @@
     "esri/views/support/colorUtils",
     "esri/renderers/support/jsonUtils",
     "esri/layers/support/LabelClass",
+    "esri/symbols/CIMSymbol",
   ]);
 
     // data urls
@@ -1029,6 +1031,41 @@
                 value: 591657527
               }
             ]
+          });
+
+          // TODO: switch to CIMSymbols
+          let cimsymbol = new CIMSymbol({ // unused for now
+            data:  {
+              type: "CIMSymbolReference",
+              symbol: {
+                 type: "CIMPointSymbol",
+                 symbolLayers: [{
+                     type: "CIMVectorMarker",
+                     enable: true,
+                     size: 32,
+                     frame: {
+                       xmin: 0,
+                       ymin: 0,
+                       xmax: 16,
+                       ymax: 16
+                     },
+                     markerGraphics: [{
+                       type: "CIMMarkerGraphic",
+                       geometry: {
+                         rings: [[[8, 16],[0, 0],[16, 0],[8, 16]]]
+                       },
+                       symbol: {
+                         type: "CIMPolygonSymbol",
+                         symbolLayers: [{
+                           type: "CIMSolidStroke",
+                           width: .05,
+                           color: [240, 94, 35, 255]
+                         }]
+                       }
+                     }]
+                 }]
+              }
+            }
           });
         }
 
