@@ -5,7 +5,7 @@
     setDefaultOptions({
       css: true,
       // url: 'http://localhost:8000/buildOutput/init.js',
-      // url: 'https://jscore.esri.com/debug/4.16/dojo/dojo.js',
+      // url: 'http://jscore.esri.com/debug/4.16/dojo/dojo.js',
       // version: 'next',
     });
 
@@ -46,12 +46,12 @@
     // data urls
     var datasets = {
       'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
-      'Black Rat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
-      'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
       'Citclops Water': "8581a7460e144ae09ad25d47f8e82af8_0",
+      'Seattle Bike Facilities': "f4f509fa13504fb7957cef168fad74f0_1",
+      'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
+      'Black Rat Range': "28b0a8a0727d4cc5a2b9703cf6ca4425_0",
       'Traffic Circles': "717b10434d4945658355eba78b66971a_6",
       'King County Photos': "383878300c4c4f8c940272ba5bfcce34_1036",
-      'NYC bags': "7264acdf886941199f7c01648ba04e6b_0",
     }
 
     // dataset switcher
@@ -731,7 +731,7 @@
       layer.minScale = 0; // draw at all scales
       layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
 
-      // TODO: clear previous filters
+      clearFilters();
       if (typeof layerView != 'undefined') {
         updateLayerViewEffect({ updateExtent: true });
         let filtersList = document.getElementById('filtersList');
@@ -827,13 +827,7 @@
       state.dataset = dataset;
 
       // clear filters list
-
-      for (var i = filtersList.children.length; i > 0 ; i--) {
-        // remove the top one in the list
-        filtersList.children[0].remove();
-      }
-      document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
-      document.getElementById('featuresCount').innerHTML = '';
+      clearFilters();
 
       // clear widgets list
       state.widgets = [];
@@ -910,7 +904,6 @@
                   : (geometryType == 'esriGeometryLine') ? 'line'
                   : (geometryType == 'esriGeometryPolyline') ? 'line'
                   : geometryType;
-      console.log('geotype:', geotype)
 
       // if there's either a fieldName or event object:
       var fieldName = fieldName ? fieldName : event?.currentTarget?.getAttribute('data-field');
@@ -1141,7 +1134,6 @@
         }
 
       renderer = {...renderer, symbol: symbol};
-      console.log('renderer', renderer)
       layer.renderer = renderer;
 
       // set up custom labels – this should be done to override any labelingInfo sent from the server –
@@ -1476,6 +1468,17 @@
       }
     }
 
+    // clear filters list and reset filters UI
+    function clearFilters() {
+      let filtersList = document.getElementById('filtersList');
+      for (var i = filtersList.children.length; i > 0 ; i--) {
+        // remove the top one in the list
+        filtersList.children[0].remove();
+      }
+      document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
+      document.getElementById('featuresCount').innerHTML = '';
+    }
+
 
     // TESTS
     if (!state.layerView) {
@@ -1485,7 +1488,7 @@
       state.layerView = await state.view.whenLayerView(state.layer);
       console.log('init state:', state)
     }
-    addFilter({fieldName:"observationResult"});
+    // addFilter({fieldName:"observationResult"});
     // addFilter({fieldName="locationLongitude});
     // addFilter({fieldName="parametersBottom});
     // addFilter({fieldName="resultQuality});
