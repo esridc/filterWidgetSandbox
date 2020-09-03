@@ -41,19 +41,6 @@
     "esri/layers/support/LabelClass",
   ]);
 
-    // URL params
-    const params = new URLSearchParams(window.location.search);
-    var env = 'prod';
-    if (Array.from(params).length != 0) {
-      var datasetId = params.get('dataset');
-      const datasetSlug = params.get('slug');
-      ({ layer, dataset } = await loadDataset({ datasetId: datasetId, datasetSlug: datasetSlug, env: env }));
-      env = params.get('env');
-    } else {
-      var datasetId = datasetList.options[datasetList.selectedIndex].value;
-      ({ layer, dataset } = await loadDataset({ datasetId: datasetId, env: env }));
-    }
-
     // data urls
     var datasets = {
       'Tucson Demographics': "35fda63efad14a7b8c2a0a68d77020b7_0",
