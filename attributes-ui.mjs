@@ -965,15 +965,15 @@
 
         }
 
-      } else if (usePredefinedStyle) {
-        // check for built-in style passed in with the dataset
-        let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
-        if (predefinedStyle && usePredefinedStyle) {
-          layer = await new FeatureLayer({
-            renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
-            url
-          });
-        }
+      // } else if (usePredefinedStyle) {
+      //   // check for built-in style passed in with the dataset
+      //   let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
+      //   if (predefinedStyle && usePredefinedStyle) {
+      //     layer = await new FeatureLayer({
+      //       // renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+      //       // url
+      //     });
+      //   }
       } else {
 
         // Choose symbology based on various dataset and theme attributes
