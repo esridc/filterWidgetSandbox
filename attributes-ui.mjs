@@ -905,6 +905,21 @@
         throw new Error("Couldn't detect basemap color theme (only works if tab is visible).", e)
       }
 
+      var symbol;
+      var renderer = {
+        type: "simple", // autocasts as new SimpleRenderer()
+        visualVariables: [],
+      };
+
+      const geometryType = dataset.attributes.geometryType;
+      var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
+                  : (geometryType == 'esriGeometryMultiPoint') ? 'point'
+                  : (geometryType == 'esriGeometryPolygon') ? 'polygon'
+                  : (geometryType == 'esriGeometryLine') ? 'line'
+                  : (geometryType == 'esriGeometryPolyline') ? 'line'
+                  : geometryType;
+      console.log('geotype:', geotype)
+
       // if there's either a fieldName or event object:
       var fieldName = fieldName ? fieldName : event?.currentTarget?.getAttribute('data-field');
       if (fieldName) {
@@ -982,20 +997,6 @@
       } else {
 
         // Choose symbology based on various dataset and theme attributes
-
-        var symbol;
-        var renderer = {
-          type: "simple", // autocasts as new SimpleRenderer()
-          visualVariables: [],
-        };
-
-        const geometryType = dataset.attributes.geometryType;
-        var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
-                    : (geometryType == 'esriGeometryMultiPoint') ? 'point'
-                    : (geometryType == 'esriGeometryPolygon') ? 'polygon'
-                    : (geometryType == 'esriGeometryLine') ? 'line'
-                    : (geometryType == 'esriGeometryPolyline') ? 'line'
-                    : geometryType;
 
         var opacity = 1;
 
@@ -1148,7 +1149,8 @@
         }
       }
 
-      renderer.symbol = symbol;
+      renderer = {...renderer, symbol: symbol};
+      console.log('renderer', renderer)
       layer.renderer = renderer;
 
       // set up custom labels – this should be done to override any labelingInfo sent from the server –
