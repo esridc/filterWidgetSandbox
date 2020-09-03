@@ -1010,6 +1010,26 @@
             size: '5px',
             opacity: opacity,
           }
+          // scale values from:
+          // https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
+          renderer.visualVariables.push({
+            type: "size",
+            valueExpression: "$view.scale",
+            stops: [
+              {
+                size: 4,
+                value: 9244648
+              },
+              {
+                size: 3,
+                value: 73957190
+              },
+              {
+                size: 1.5,
+                value: 591657527
+              }
+            ]
+          });
         }
 
         else if (geotype === 'line') {
@@ -1019,6 +1039,24 @@
             color: color,
             opacity: opacity,
           };
+          renderer.visualVariables.push({
+            type: "size",
+            valueExpression: "$view.scale",
+            stops: [
+              {
+                size: .5,
+                value: 1155581.108577 // z8 on map, z9 in docs, etc
+              },
+              {
+                size: 1,
+                value: 577790.554289 // z9
+              },
+              {
+                size: 2,
+                value: 144447.638572 // z11
+              },
+            ]
+          });
         }
 
         else if (geotype === 'polygon') {
@@ -1050,7 +1088,7 @@
         var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
         var rMax = rampColors[rampColors.length-1];
         if (fieldName) {
-          renderer.visualVariables = [{
+          renderer.visualVariables.push({
             type: "color", // indicates this is a color visual variable
             // field: fieldName,
             // normalizationField: "TOTPOP_CY", // total population
