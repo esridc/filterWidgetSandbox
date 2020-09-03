@@ -880,16 +880,16 @@
     }
 
     // manually reconstruct a feature values array from unique values and their counts
-    function reconstructDataset(uniqueValues) {
+    function reconstructDataset(values) {
       // normalize array length to 1000, as precision isn't as important as speed here
       // const divisor = dataset.attributes.recordCount / 1000;
 
       // use the whole set
       const divisor = 1;
       let arr = [];
-      for (let x = 0; x < filtered.length; x++) {
-        for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
-          arr.push(filtered[x].value);
+      for (let x = 0; x < values.length; x++) {
+        for (let y = 0; y < Math.ceil(values[x].count/divisor); y++) {
+          arr.push(values[x].value);
         };
       }
       return arr;
