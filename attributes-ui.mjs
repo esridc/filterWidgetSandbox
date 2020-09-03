@@ -835,8 +835,10 @@
       state.dataset = dataset;
 
       // clear filters list
-      for (var i = 0; i < filtersList.children.length; i++) {
-        filtersList.children[i].remove();
+
+      for (var i = filtersList.children.length; i > 0 ; i--) {
+        // remove the top one in the list
+        filtersList.children[0].remove();
       }
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
       document.getElementById('featuresCount').innerHTML = '';
