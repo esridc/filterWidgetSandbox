@@ -712,50 +712,6 @@
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
     }
 
-    async function switchAttribute(event, fieldName = null) {
-      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
-      const field = getDatasetField(fieldName);
-      document.querySelector('#attributeListButton').innerHTML = fieldName;
-
-      switchStyles(fieldName);
-    }
-
-    async function switchStyles(fieldName) {
-      var {view, layer, layerView} = state;
-      if (!view) {
-        view = await drawMap(layer)
-        layerView = await view.whenLayerView(layer);
-      }
-
-      var {layer, renderer} = await autoStyle({fieldName});
-      layer.minScale = 0; // draw at all scales
-      layer.outFields = ["*"]; // get all fields (easier for prototyping, optimize by managing for necessary fields)
-
-      clearFilters();
-      if (typeof layerView != 'undefined') {
-        updateLayerViewEffect({ updateExtent: true });
-        let filtersList = document.getElementById('filtersList');
-      }
-
-      // wait for renderer to finish
-      var watcher = await layerView.watch("updating", value => {
-        if (renderer) {
-          layerView.queryFeatureCount({
-            where: '1=1',
-            outSpatialReference: view.spatialReference
-          }).then(count => {
-            let featuresCount = document.getElementById('featuresCount');
-            featuresCount.innerText = count;
-            cleanup();
-          });
-        }
-      });
-      // remove watcher as soon as it finishes
-      function cleanup() {
-        watcher.remove()
-      }
-    };
-
     async function drawMap() {
       var {dataset, layer} = state;
       const map = new Map({
@@ -914,49 +870,9 @@
         var minValue = fieldStats.values.min;
         var maxValue = fieldStats.values.max;
 
-        try {
-          let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
-          // remove nulls
-          var filtered = uniqueValues.filter(a => a.value != null);
-
-          // inflate a whole dataset from unique values and a count
-          var arr = reconstructDataset(filtered);
-
-          var numBins = (uniqueValues.length > 30 ? 30 : uniqueValues.length)
-          // use d3 to bin histograms
-          let d3bins = d3.histogram()  // create layout object
-            .domain([Math.min(...filtered.map(a => a.value)),
-            Math.max(...filtered.map(a => a.value))])  // to cover range
-            .thresholds(numBins - 1) // separated into 30 bins
-            (arr);          // pass the array
-          // convert the d3 bins array to a bins object
-          var bins = [];
-          for (let x = 0; x < d3bins.length; x++) {
-            bins.push({
-              minValue: d3bins[x]['x0'],
-              maxValue: d3bins[x]['x1'],
-              count: d3bins[x].length,
-            });
-          }
-          // put the bins in the params object
-          var values = {
-            'bins': bins,
-            'minValue': Math.min(...filtered.map(a => a.value)),
-            'maxValue': Math.max(...filtered.map(a => a.value)),
-          }
-          const featureCount = arr.length;
-          var source = 'layerQuery';
-          var coverage = 1;
-        } catch(e) {
-          // histogram generation failed with unique values, try using features in layer view
-          console.log('histogram generation failed with unique values, try using features in layer view:');
-          console.error(new Error(e));
-        }
-
         if (!!layer) {
 
           var query = layer.createQuery();
-          // query.outFields = [fieldName]
 
           var {features} = await layer.queryFeatures(query);
 
