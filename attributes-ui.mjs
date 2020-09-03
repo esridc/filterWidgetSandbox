@@ -79,6 +79,7 @@
       widgets: [],
       attributeList: [],
       bgColor: null,
+      legend: null,
     }
     // zoomToDataCheckbox,
 
@@ -770,19 +771,10 @@
         ui: { components: [] }
       });
       var layerView = await view.whenLayerView(layer).then((layerView) => {
-        // var legend = await new Legend({
-        //   view: view,
-        //   layerInfos: [{
-        //     layer: layer,
-        //     title: "Legend"
-        //   }]
-        // });
-        // view.ui.add(legend, "bottom-right");
-        // pass layerView back to complete variable assignment
         return layerView;
       });
 
-      view.ui.add('zoomToData', 'bottom-right');
+      view.ui.add('zoomToData', 'top-right');
       const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
       zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
         updateLayerViewEffect({ updateExtent: zoomToDataCheckbox.checked });
@@ -1159,7 +1151,8 @@
         if (!bgColor) {
           console.warn("bgColor not defined, attempting to detect")
           bgColor = await viewColorUtils.getBackgroundColorTheme(view);
-        } else if (layer.labelingInfo && !usePredefinedStyle) {
+        }
+        if (layer.labelingInfo && !usePredefinedStyle) {
           const labels = new LabelClass({
             labelExpressionInfo: { expression: "$feature.NAME" },
             symbol: {
@@ -1171,11 +1164,27 @@
           });
           layer.labelingInfo = [ labels ];
         }
+        if (fieldName) {
+          var {legend} = state;
+          if (!legend) {
+            legend = await new Legend({
+              view: view
+            })
+            view.ui.add(legend, "bottom-right");
+          }
+          legend.layerInfos = [{
+            layer: layer,
+            title: fieldName
+          }]
+        } else {
+          view.ui.remove(legend);
+          legend = null;
+        }
       } catch(e) {
         console.error("Labeling failed:", e);
       }
     // update state
-      state = {...state, layer, renderer, bgColor}
+      state = {...state, layer, renderer, bgColor, legend}
       return {layer, renderer};
     }
 
