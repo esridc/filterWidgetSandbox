@@ -590,6 +590,7 @@
         let fieldNames = otherWidgets.map(w => w.getAttribute('fieldname'));
         // convert to a set to remove any duplicates (nested widgets), then back to array
         fieldNames = [...new Set(fieldNames)];
+        if (fieldNames.length == 0) return;
 
         let whereClause = currentWidget.container.getAttribute('whereClause');
         const numberLike = currentWidget.container.getAttribute('numberLike') === "true";
