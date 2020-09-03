@@ -986,7 +986,8 @@
       //       // url
       //     });
       //   }
-      } else {
+      // } else {
+      }
 
         // Choose symbology based on various dataset and theme attributes
 
@@ -1122,8 +1123,7 @@
         if (fieldName) {
           renderer.visualVariables.push({
             type: "color", // indicates this is a color visual variable
-            // field: fieldName,
-            // normalizationField: "TOTPOP_CY", // total population
+            field: fieldName,
             stops: [{
               value: minValue,
               color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
@@ -1139,7 +1139,6 @@
             }]
           });
         }
-      }
 
       renderer = {...renderer, symbol: symbol};
       console.log('renderer', renderer)
