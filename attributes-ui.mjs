@@ -994,7 +994,7 @@
                     : (geometryType == 'esriGeometryPolyline') ? 'line'
                     : geometryType;
 
-        var opacity = .25;
+        var opacity = 1;
 
         // choose colors based on background theme – dark on light, light on dark
         var color = bgColor == "dark" ? "lightblue" : "steelblue";
@@ -1006,9 +1006,8 @@
             color: color,
             outline: {
               color: outlineColor,
-              width: 0.5,
+              width: 1, // no fractional outline widths :P
             },
-            // TODO: vary size with number of points and maybe clustering factor
             size: '5px',
             opacity: opacity,
           }
@@ -1020,16 +1019,16 @@
             stops: [
               {
                 size: 4,
-                value: 9244648
+                value: 36978595 // z3 map, z4 docs
               },
               {
                 size: 3,
-                value: 73957190
+                value: 73957190 // z2 map, z3
               },
               {
-                size: 1.5,
-                value: 591657527
-              }
+                size: 3,
+                value: 147914381 // z0 map, z1 docs
+              },
             ]
           });
 
@@ -1153,7 +1152,8 @@
       // bgcolor might not be set if the tab wasn't visible when loaded
       try {
         if (!bgColor) {
-          console.warn("Skipping labeling, bgColor not defined.")
+          console.warn("bgColor not defined, attempting to detect")
+          bgColor = await viewColorUtils.getBackgroundColorTheme(view);
         } else if (layer.labelingInfo && !usePredefinedStyle) {
           const labels = new LabelClass({
             labelExpressionInfo: { expression: "$feature.NAME" },
@@ -1389,7 +1389,7 @@
           where,
         },
         // excludedEffect: 'grayscale(100%) opacity(5%)'
-        excludedEffect: 'grayscale(100%) brightness(25%) opacity(25%)'
+        excludedEffect: 'grayscale(100%) contrast(25%) brightness(150%)'
       };
       layerView.queryFeatureCount({
         where: where || '1=1',
@@ -1472,7 +1472,7 @@
       state.layerView = await state.view.whenLayerView(state.layer);
       console.log('init state:', state)
     }
-    // addFilter({fieldName:"locationLatitude"});
+    addFilter({fieldName:"observationResult"});
     // addFilter({fieldName="locationLongitude});
     // addFilter({fieldName="parametersBottom});
     // addFilter({fieldName="resultQuality});
