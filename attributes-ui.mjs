@@ -978,7 +978,11 @@
 
         // Choose symbology based on various dataset and theme attributes
 
-        let symbol;
+        var symbol;
+        var renderer = {
+          type: "simple", // autocasts as new SimpleRenderer()
+          visualVariables: [],
+        };
 
         const geometryType = dataset.attributes.geometryType;
         var geotype = (geometryType == 'esriGeometryPoint') ? 'point'
@@ -1045,10 +1049,6 @@
         var rMin = rampColors[0];
         var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
         var rMax = rampColors[rampColors.length-1];
-        var renderer = {
-          type: "simple", // autocasts as new SimpleRenderer()
-          symbol: symbol,
-        };
         if (fieldName) {
           renderer.visualVariables = [{
             type: "color", // indicates this is a color visual variable
@@ -1067,10 +1067,11 @@
               color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
               label: maxValue
             }]
-          }];
+          });
         }
       }
 
+      renderer.symbol = symbol;
       layer.renderer = renderer;
 
       // set up custom labels – this should be done to override any labelingInfo sent from the server –
