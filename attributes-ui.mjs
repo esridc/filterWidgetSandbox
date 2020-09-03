@@ -76,6 +76,7 @@
       layerView: null,
       widgets: [],
       attributeList: [],
+      bgColor: null,
     }
     // zoomToDataCheckbox,
 
@@ -891,8 +892,7 @@
 
     // analyze a dataset and choose an initial best-guess symbology for it
     async function autoStyle({event = null, fieldName = null}) {
-      var {dataset, layer, view, usePredefinedStyle} = state;
-      var bgColor;
+      var {dataset, layer, view, usePredefinedStyle, bgColor} = state;
       // get basemap color theme: "light" or "dark"
       try {
         bgColor = await viewColorUtils.getBackgroundColorTheme(view);
@@ -1094,7 +1094,7 @@
         console.error("Labeling failed:", e);
       }
     // update state
-      state = {...state, layer, renderer}
+      state = {...state, layer, renderer, bgColor}
       return {layer, renderer};
     }
 
@@ -1301,7 +1301,7 @@
       where = undefined,
       updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
 
-      var {view, layer, layerView} = state;
+      var {view, layer, layerView, bgColor} = state;
       if (!layerView) {
         layerView = await view.whenLayerView(layer);
         // update state
