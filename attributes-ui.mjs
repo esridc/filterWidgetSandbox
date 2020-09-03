@@ -1012,24 +1012,33 @@
           };
         }
 
-        // choose ramp
-        // a more full exploration in auto-style.html
-        let tags = ["bright"]
-        let theme = "high-to-low";
-
-        let useRamp = false;
-        if (useRamp) {
-          let allRamps = colorRamps.byTag({includedTags: tags});
-          var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
-        } else {
-          let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-          var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
-        }
-
-        var rMin = rampColors[0];
-        var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-        var rMax = rampColors[rampColors.length-1];
         if (fieldName) {
+          const field = getDatasetField(fieldName);
+
+          // GET RAMP
+          // a more full exploration in auto-style.html
+          let tags = ["bright"]
+          let theme = "high-to-low";
+
+          let useRamp = false;
+          if (field.simpleType == "string") {
+            tags.push('categorical')
+          } else {
+            useRamp = true;
+            tags.push('heatmap')
+          }
+          if (useRamp) {
+            let allRamps = colorRamps.byTag({includedTags: tags});
+            var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
+          } else {
+            let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
+            var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
+          }
+
+          var rMin = rampColors[0];
+          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
+          var rMax = rampColors[rampColors.length-1];
+
           renderer.visualVariables.push({
             type: "color", // indicates this is a color visual variable
             field: fieldName,
