@@ -1020,7 +1020,7 @@
 
           // GET RAMP
           // a more full exploration in auto-style.html
-          let tags = ["bright"]
+          let tags = bgColor == "light" ? ["dark"] : ["bright"];
           let theme = "high-to-low";
 
           let useRamp = false;
@@ -1069,6 +1069,8 @@
       try {
         if (!bgColor) {
           console.warn("bgColor not defined, attempting to detect")
+          view = await drawMap(layer)
+          layerView = await view.whenLayerView(layer);
           bgColor = await viewColorUtils.getBackgroundColorTheme(view);
         }
         if (layer.labelingInfo && !usePredefinedStyle) {
