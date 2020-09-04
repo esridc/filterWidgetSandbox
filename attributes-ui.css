@@ -135,9 +135,18 @@ body,
   box-shadow: none;
 }
 
-#attributeList {
+#filterAttributeList {
   height: auto;
   max-height: 10.5em;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  margin: 0 0 10px 0;
+  padding-right: 10px;
+  border: 1px solid lightgray;
+}
+#styleAttributeList {
+  height: auto;
+  max-height: 7em;
   overflow-x: hidden;
   overflow-y: scroll;
   margin: 0 0 10px 0;

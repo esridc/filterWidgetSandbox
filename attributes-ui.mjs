@@ -788,18 +788,21 @@
       // clear widgets list
       state.widgets = [];
 
-      // update attributes list
-      state.attributeList = updateAttributeList('#attributeList', () => { addFilter({event}) });
-      // updateAttributeList('#displayListItems')
-      updateAttributeList('#styleListItems', async () => {
+      // update attributes lists
+      state.attributeList = updateAttributeList('#filterAttributeList', () => { addFilter({event}) });
+      updateAttributeList('#styleAttributeList', async () => {
         autoStyle({event});
       })
 
-      let attributeSearchElement = document.getElementById("attributeSearch")
-      attributeSearchElement.addEventListener("input", attributeSearchChange);
-      attributeSearchElement.addEventListener("keydown", attributeSearchKeydown);
-      let placeholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
-      attributeSearchElement.setAttribute('placeholder', placeholderText);
+      let filterAttributeSearchElement = document.getElementById("filterAttributeSearch")
+      filterAttributeSearchElement.addEventListener("input", filterAttributeSearchChange);
+      let filterPlaceholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
+      filterAttributeSearchElement.setAttribute('placeholder', filterPlaceholderText);
+
+      let styleAttributeSearchElement = document.getElementById("styleAttributeSearch")
+      styleAttributeSearchElement.addEventListener("input", styleAttributeSearchChange);
+      let stylePlaceholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
+      styleAttributeSearchElement.setAttribute('placeholder', stylePlaceholderText);
 
       const url = dataset.attributes.url;
 
@@ -1377,20 +1380,30 @@
       return fieldTypes[fieldType] || '';
     }
 
-    function attributeSearchChange(e) {
-      let filtered = Array.from(attributeList.children)
+    function filterAttributeSearchChange(e) {
+      console.log('e.srcElement.value', e.srcElement.value)
+      Array.from(document.getElementById('filterAttributeList').children)
         .map(x => {
           let field = x.getAttribute('data-field');
-          x.style.display = field.toLowerCase().indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
+          let fieldName = getDatasetField(field).alias.toLowerCase();
+          x.style.display = fieldName.indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
+          if (fieldName.indexOf(e.srcElement.value) != -1) {
+            console.log(fieldName)
+          }
         });
     }
 
-    function attributeSearchKeydown(e) {
-      let attributes = Array.from(document.getElementById('attributeList').getElementsByClassName('attribute'));
-      attributes = attributes.filter(a => window.getComputedStyle(a).getPropertyValue('display') == 'flex')
-      if (e.keyCode == 40) {
-        //
-      }
+    function styleAttributeSearchChange(e) {
+      console.log('e.srcElement.value', e.srcElement.value)
+      Array.from(document.getElementById('styleAttributeList').children)
+      .map(x => {
+        let field = x.getAttribute('data-field');
+        let fieldName = getDatasetField(field).alias.toLowerCase();
+        x.style.display = fieldName.indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
+        if (fieldName.indexOf(e.srcElement.value) != -1) {
+          console.log(fieldName)
+        }
+    });
     }
 
     // clear filters list and reset filters UI
