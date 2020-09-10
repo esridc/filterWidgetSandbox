@@ -1007,12 +1007,26 @@
         else if (geotype === 'polygon') {
           symbol = {
             type: 'simple-fill',
-            color: color,
             outline: {
               color: outlineColor,
               width: 0.5,
             },
           };
+          renderer.visualVariables.push({
+            type: "color",
+            // slightly randomize colors to differentiate between polygons
+            valueExpression: `random()`,
+            stops: [
+              {
+                color: '#4682b4',
+                value: '0'
+              },
+              {
+                color: '#325D81',
+                value: '1'
+              },
+            ]
+          });
         }
 
         if (fieldName) {
@@ -1042,6 +1056,7 @@
           var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
           var rMax = rampColors[rampColors.length-1];
 
+          // override default color visual variable
           renderer.visualVariables.push({
             type: "color", // indicates this is a color visual variable
             field: fieldName,
