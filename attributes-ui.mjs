@@ -1067,6 +1067,9 @@
           var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
           var rMax = rampColors[rampColors.length-1];
 
+          // clear other color variables
+          renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
+
           // override default color visual variable
           renderer.visualVariables.push({
             type: "color", // indicates this is a color visual variable
