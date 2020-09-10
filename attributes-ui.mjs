@@ -1018,21 +1018,23 @@
               width: 0.5,
             },
           };
-          renderer.visualVariables.push({
-            type: "color",
-            // slightly randomize colors to differentiate between polygons
-            valueExpression: `random()`,
-            stops: [
-              {
-                color: '#4682b4',
-                value: '0'
-              },
-              {
-                color: '#325D81',
-                value: '1'
-              },
-            ]
-          });
+          if (!fieldName) {
+            renderer.visualVariables.push({
+              type: "color",
+              // slightly randomize colors to differentiate between polygons
+              valueExpression: `random()`,
+              stops: [
+                {
+                  color: '#4682b4',
+                  value: '0'
+                },
+                {
+                  color: '#325D81',
+                  value: '1'
+                },
+              ]
+            });
+          }
         }
 
         if (fieldName) {
@@ -1041,19 +1043,22 @@
           // GET RAMP
           // a more full exploration in auto-style.html
           let tags = bgColor == "light" ? ["dark"] : ["bright"];
-          let theme = "high-to-low";
+          let badTags = bgColor == "light" ? ["bright"] : ["dark"];
+          badTags.push(["categorical", "extremes"]);
 
           let useRamp = false;
           if (field.simpleType == "string") {
             tags.push('categorical')
           } else {
             useRamp = true;
-            tags.push('heatmap')
+            tags.push('heatmap', 'sequential')
           }
           if (useRamp) {
-            let allRamps = colorRamps.byTag({includedTags: tags});
-            var rampColors = allRamps[Math.floor(Math.random()*allRamps.length)].colors;
+            let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
+            var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
+            var rampColors = ramp.colors;
           } else {
+            let theme = "high-to-low";
             let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
             var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
           }
