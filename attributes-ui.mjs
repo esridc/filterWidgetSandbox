@@ -840,15 +840,21 @@
       return arr;
     }
 
+    async function getBgColor() {
+      try {
+        var bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
+      } catch(e) {
+        console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
+        bgColor = "light";
+      }
+      return bgColor;
+    }
+
     // analyze a dataset and choose an initial best-guess symbology for it
     async function autoStyle({event = null, fieldName = null}) {
       var {dataset, layer, view, usePredefinedStyle, bgColor} = state;
       // get basemap color theme: "light" or "dark"
-      try {
-        bgColor = await viewColorUtils.getBackgroundColorTheme(view);
-      } catch(e) {
-        throw new Error("Couldn't detect basemap color theme (only works if tab is visible).", e)
-      }
+      bgColor = await getBgColor();
 
       var symbol;
       var renderer = {
@@ -1083,11 +1089,16 @@
       // bgcolor might not be set if the tab wasn't visible when loaded
       try {
         if (!bgColor) {
-          console.warn("bgColor not defined, attempting to detect")
-          view = await drawMap(layer)
-          layerView = await view.whenLayerView(layer);
-          bgColor = await viewColorUtils.getBackgroundColorTheme(view);
+          try {
+            console.warn("bgColor not defined, attempting to detect")
+            view = await drawMap(layer)
+            layerView = await view.whenLayerView(layer);
+            bgColor = await getBgColor();
+          } catch(e) {
+            throw new Error('Problem getting bgColor:', e)
+          }
         }
+
         if (layer.labelingInfo && !usePredefinedStyle) {
           const labels = new LabelClass({
             labelExpressionInfo: { expression: "$feature.NAME" },
