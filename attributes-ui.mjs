@@ -25,6 +25,7 @@
     jsonUtils,
     LabelClass,
     CIMSymbol,
+    UniqueValueRenderer,
   ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
@@ -41,6 +42,7 @@
     "esri/renderers/support/jsonUtils",
     "esri/layers/support/LabelClass",
     "esri/symbols/CIMSymbol",
+    "esri/renderers/UniqueValueRenderer",
   ]);
 
     // data urls
@@ -870,29 +872,27 @@
                   : (geometryType == 'esriGeometryPolyline') ? 'line'
                   : geometryType;
 
-      // if there's either a fieldName or event object:
+      // check for passed fieldName or pull it from the event object:
       var fieldName = fieldName ? fieldName : event?.currentTarget?.getAttribute('data-field');
+      // if there's a fieldName then style it by field
       if (fieldName) {
-        const field = getDatasetField(fieldName);
+        var field = getDatasetField(fieldName);
         var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
         var fieldStats = field.statistics;
         var minValue = fieldStats.values.min;
         var maxValue = fieldStats.values.max;
+        var categorical = await datasetFieldCategorical(fieldName);
 
+        // get the features
         if (!!layer) {
-
           var query = layer.createQuery();
-
           var {features} = await layer.queryFeatures(query);
-
-          var numValues = datasetStats.values.count;
-
+          var numValues = datasetStats.values.length;
           if (features) {
             var values = Object.values(features).map(v => v.attributes[fieldName])
           } else {
             console.log('no features returned for', fieldName)
           }
-
         }
 
       // } else if (usePredefinedStyle) {
@@ -907,13 +907,92 @@
       // } else {
       }
 
-        // Choose symbology based on various dataset and theme attributes
+      //
+      // Choose symbology based on various dataset and theme attributes
+      //
 
-        var opacity = 1;
+      var opacity = 1;
 
-        // choose colors based on background theme – dark on light, light on dark
-        var color = bgColor == "dark" ? "lightblue" : "steelblue";
-        var outlineColor = bgColor == "dark" ? "black" : "white";
+      // choose colors based on background theme – dark on light, light on dark
+      var color = bgColor == "dark" ? "lightblue" : "steelblue";
+      var outlineColor = bgColor == "dark" ? "black" : "white";
+
+      // if no fieldName was passed, style an overview of feature geometry
+      if (!fieldName) {
+        renderer.visualVariables.push({
+          type: "color",
+          // slightly randomize colors to differentiate between features
+          valueExpression: `random()`,
+          stops: [
+            {
+              color: '#4682b4',
+              value: '0'
+            },
+            {
+              color: '#325D81',
+              value: '1'
+            },
+          ]
+        });
+      } else {
+        if (fieldName) {
+          // GET RAMP
+          // a more full exploration in auto-style.html
+          // let tags = bgColor == "light" ? ["dark"] : ["bright"];
+          let tags = [];
+          let badTags = bgColor == "light" ? ["bright"] : ["dark"];
+          badTags.push("extremes");
+          let useRamp = false;
+          useRamp = true;
+          if (categorical) {
+          // if (field.simpleType == "string") {
+            tags.push('categorical')
+          } else {
+            tags.push('heatmap', 'sequential')
+            badTags.push(['categorical']);
+          }
+          if (useRamp) {
+            console.log('tags', tags)
+            let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
+            // debugger
+            var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
+            var rampColors = ramp.colors;
+            console.log('get ramp', ramp)
+          } else {
+            let theme = 'high-to-low';
+            let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
+            debugger
+            var ramp = allSchemes[Math.floor(Math.random()*allSchemes.length)];
+            var rampColors = ramp.colors;
+          }
+
+          var rMin = rampColors[0];
+          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
+          var rMax = rampColors[rampColors.length-1];
+
+          // clear other color variables
+          renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
+
+          // override default color visual variable
+          renderer.visualVariables.push({
+            type: "color", // indicates this is a color visual variable
+            field: fieldName,
+            stops: [{
+              value: minValue,
+              color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
+              label: minValue
+            },{
+              value: (maxValue+minValue)/2,
+              color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
+              label: (maxValue+minValue)/2,
+            },{
+              value: maxValue,
+              color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
+              label: maxValue
+            }]
+          });
+        }
+      }
 
         if (geotype === 'point') {
           symbol = {
@@ -1018,79 +1097,36 @@
               width: 0.5,
             },
           };
-          if (!fieldName) {
-            renderer.visualVariables.push({
-              type: "color",
-              // slightly randomize colors to differentiate between polygons
-              valueExpression: `random()`,
-              stops: [
-                {
-                  color: '#4682b4',
-                  value: '0'
-                },
-                {
-                  color: '#325D81',
-                  value: '1'
-                },
-              ]
-            });
-          }
         }
 
-        if (fieldName) {
-          const field = getDatasetField(fieldName);
 
-          // GET RAMP
-          // a more full exploration in auto-style.html
-          let tags = bgColor == "light" ? ["dark"] : ["bright"];
-          let badTags = bgColor == "light" ? ["bright"] : ["dark"];
-          badTags.push(["categorical", "extremes"]);
+      if (categorical) {
+        let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
+        // remove nulls
+        var filtered = uniqueValues.filter(a => a.value != null);
 
-          let useRamp = false;
-          if (field.simpleType == "string") {
-            tags.push('categorical')
-          } else {
-            useRamp = true;
-            tags.push('heatmap', 'sequential')
-          }
-          if (useRamp) {
-            let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
-            var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
-            var rampColors = ramp.colors;
-          } else {
-            let theme = "high-to-low";
-            let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-            var rampColors = allSchemes[Math.floor(Math.random()*allSchemes.length)].colors;
-          }
-
-          var rMin = rampColors[0];
-          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-          var rMax = rampColors[rampColors.length-1];
-
-          // clear other color variables
-          renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
-
-          // override default color visual variable
-          renderer.visualVariables.push({
-            type: "color", // indicates this is a color visual variable
-            field: fieldName,
-            stops: [{
-              value: minValue,
-              color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
-              label: minValue
-            },{
-              value: (maxValue+minValue)/2,
-              color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
-              label: (maxValue+minValue)/2,
-            },{
-              value: maxValue,
-              color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
-              label: maxValue
-            }]
-          });
+        // generate categorical colors for field
+        var uniqueValueInfos = [];
+        for (let x = 0; x < filtered.length; x++) {
+          // console.log(filtered[x].value, rampColors[x]);
+          uniqueValueInfos.push( {
+            value: filtered[x].value,
+            symbol: {
+              type: symbol.type,
+              color: rampColors[rampColors.length % x],
+            }
+          })
         }
+        renderer = {
+          type: "unique-value",
+          field: fieldName,
+          defaultSymbol: symbol,
+          uniqueValueInfos
+        };
+      } else {
+        renderer = {...renderer, symbol: symbol};
+      }
 
-      renderer = {...renderer, symbol: symbol};
       layer.renderer = renderer;
 
       // set up custom labels – this should be done to override any labelingInfo sent from the server –
