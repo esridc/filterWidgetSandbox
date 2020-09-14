@@ -29,16 +29,12 @@
     "esri/smartMapping/statistics/histogram",
     "esri/widgets/HistogramRangeSlider",
     "esri/widgets/Histogram",
-    "esri/smartMapping/statistics/uniqueValues",
     "esri/widgets/Legend",
-    "esri/renderers/Renderer",
     "esri/smartMapping/symbology/support/colorRamps",
     "esri/smartMapping/symbology/color",
     "esri/views/support/colorUtils",
-    "esri/renderers/support/jsonUtils",
     "esri/layers/support/LabelClass",
     "esri/symbols/CIMSymbol",
-    "esri/renderers/UniqueValueRenderer",
   ]);
 
     // data urls
