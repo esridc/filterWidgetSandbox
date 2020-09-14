@@ -945,18 +945,15 @@
           let useRamp = false;
           useRamp = true;
           if (categorical) {
-          // if (field.simpleType == "string") {
             tags.push('categorical')
           } else {
             tags.push('heatmap', 'sequential')
             badTags.push(['categorical']);
           }
           if (useRamp) {
-            console.log('tags', tags)
             let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
             var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
             var rampColors = ramp.colors;
-            console.log('get ramp', ramp)
           } else {
             let theme = 'high-to-low';
             let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
@@ -1107,7 +1104,6 @@
         // generate categorical colors for field
         var uniqueValueInfos = [];
         for (let x = 0; x < filtered.length; x++) {
-          // console.log(filtered[x].value, rampColors[x]);
           uniqueValueInfos.push( {
             value: filtered[x].value,
             symbol: {
@@ -1453,15 +1449,11 @@
     }
 
     function filterAttributeSearchChange(e) {
-      console.log('e.srcElement.value', e.srcElement.value)
       Array.from(document.getElementById('filterAttributeList').children)
         .map(x => {
           let field = x.getAttribute('data-field');
           let fieldName = getDatasetField(field).alias.toLowerCase();
           x.style.display = fieldName.indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
-          if (fieldName.indexOf(e.srcElement.value) != -1) {
-            console.log(fieldName)
-          }
         });
     }
 
@@ -1472,9 +1464,6 @@
         let field = x.getAttribute('data-field');
         let fieldName = getDatasetField(field).alias.toLowerCase();
         x.style.display = fieldName.indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
-        if (fieldName.indexOf(e.srcElement.value) != -1) {
-          console.log(fieldName)
-        }
     });
     }
 
@@ -1491,13 +1480,8 @@
 
 
     // TESTS
-    if (!state.layerView) {
-      if (!state.view) {
-        state.view = await drawMap(state.layer)
-      }
-      state.layerView = await state.view.whenLayerView(state.layer);
-      console.log('init state:', state)
-    }
+    // autoStyle({fieldName:"sensorPropertiesDevicePlatform"});
+    autoStyle({fieldName:"sensorName"});
     // addFilter({fieldName:"observationResult"});
     // addFilter({fieldName="locationLongitude});
     // addFilter({fieldName="parametersBottom});
