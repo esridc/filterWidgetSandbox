@@ -1153,16 +1153,16 @@
         }
         if (fieldName) {
           var {legend} = state;
-          if (!legend) {
-            legend = await new Legend({
-              view: view
-            })
-            view.ui.add(legend, "bottom-right");
-          }
+          // remove and replace legend entirely to avoid dojo issues
+          view.ui.remove(legend);
+          legend = await new Legend({
+            view: view
+          })
           legend.layerInfos = [{
             layer: layer,
-            title: fieldName
+            title: null
           }]
+          view.ui.add(legend, "bottom-right");
         } else {
           view.ui.remove(legend);
           legend = null;
@@ -1170,6 +1170,7 @@
       } catch(e) {
         console.error("Labeling failed:", e);
       }
+
     // update state
       state = {...state, layer, renderer, bgColor, legend}
       return {layer, renderer};
