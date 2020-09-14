@@ -954,7 +954,6 @@
           if (useRamp) {
             console.log('tags', tags)
             let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
-            // debugger
             var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
             var rampColors = ramp.colors;
             console.log('get ramp', ramp)
@@ -1112,15 +1111,16 @@
           uniqueValueInfos.push( {
             value: filtered[x].value,
             symbol: {
-              type: symbol.type,
-              color: rampColors[rampColors.length % x],
+              ...symbol,
+              // TODO: interpolate the appropriate number of colors from the ramp -
+              // loop around the ramp for now
+              color: rampColors[(x % rampColors.length)%rampColors.length],
             }
-          })
+          });
         }
         renderer = {
           type: "unique-value",
           field: fieldName,
-          defaultSymbol: symbol,
           uniqueValueInfos
         };
       } else {
