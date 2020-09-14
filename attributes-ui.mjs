@@ -1095,9 +1095,13 @@
           };
         }
 
-
       if (categorical) {
         let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
+        // optional: sort by values
+        // uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+        // TODO: sort before assigning color values, currently values are arranged by frequency,
+        // and colors are assigned before this step
+
         // remove nulls
         var filtered = uniqueValues.filter(a => a.value != null);
 
