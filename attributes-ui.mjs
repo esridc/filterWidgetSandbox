@@ -1482,7 +1482,7 @@
 
     // TESTS
     // autoStyle({fieldName:"sensorPropertiesDevicePlatform"});
-    autoStyle({fieldName:"sensorName"});
+    // autoStyle({fieldName:"sensorName"});
     // addFilter({fieldName:"observationResult"});
     // addFilter({fieldName="locationLongitude});
     // addFilter({fieldName="parametersBottom});
