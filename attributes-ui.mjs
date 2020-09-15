@@ -807,7 +807,9 @@
         // initialize a new layer
         layer = new FeatureLayer({
           renderer: {type: 'simple'},
-          url
+          url,
+          minScale: 0,
+          maxScale: 0,
         });
       } catch(e) {
         console.log('e:', e)
