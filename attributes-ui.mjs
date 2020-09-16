@@ -953,7 +953,6 @@
           } else {
             let theme = 'high-to-low';
             let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-            debugger
             var ramp = allSchemes[Math.floor(Math.random()*allSchemes.length)];
             var rampColors = ramp.colors;
           }
