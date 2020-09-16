@@ -132,7 +132,7 @@
       // (pseudo-)categorical - most records are covered by a limited # of unique values
       // or all other string values
 
-      if (pseudoCategorical || (field.simpleType === 'string' && !numberLike)) {
+      if ((field.simpleType === 'string' && !numberLike)) {
         // value list
         widget = await makeStringWidget({ fieldName, container, slider: true });
       }
