@@ -570,7 +570,7 @@
         // set whereClause attribute
         widget.container.setAttribute('whereClause', whereClause);
         const where = concatWheres({ server: false });
-        await updateLayerViewEffect({ where: where });
+        await updateLayerViewEffect({ where });
       },
       100,
       {trailing: false}
@@ -675,7 +675,7 @@
     }
 
     // concatenate all the where clauses from all the widgets
-    function concatWheres( { server }) {
+    function concatWheres( { server = false } = {}) {
       let whereClause = '';
       let widgets = listWidgetElements();
       // generate master here clause with simple string concatenation
@@ -883,7 +883,10 @@
                   : geometryType;
 
       // check for passed fieldName or pull it from the event object:
-      var fieldName = fieldName ? fieldName : event?.currentTarget?.getAttribute('data-field');
+      if (!fieldName) { fieldName = event?.currentTarget?.getAttribute('data-field'); }
+      // if still no fieldName, check for a displayField in the dataset and use that as the fieldName
+      if (!fieldName) {
+        fieldName = dataset?.attributes?.displayField; }
       // if there's a fieldName then style it by field
       if (fieldName) {
         var field = getDatasetField(fieldName);
@@ -891,7 +894,7 @@
         var fieldStats = field.statistics;
         var minValue = fieldStats.values.min;
         var maxValue = fieldStats.values.max;
-        var categorical = await datasetFieldCategorical(fieldName);
+        var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
 
         // get the features
         if (!!layer) {
@@ -1382,11 +1385,10 @@
 
     // update the map view with a new where clause
     async function updateLayerViewEffect({
-      // set where to be explicitly undefined if it isn't passed as an argument
-      where = undefined,
+      // calculate where if isn't passed as an argument
+      where = concatWheres(),
       updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
-
-      var {view, layer, layerView, bgColor} = state;
+      var {view, layer, layerView} = state;
       if (!layerView) {
         layerView = await view.whenLayerView(layer);
         // update state
@@ -1423,9 +1425,8 @@
           } else {
             return;
           }
-
           if (!view.extent.contains(featureExtent) ||
-          (featureExtent.width * featureExtent.height) / (view.extent.width * view.extent.height) < 0.20) {
+          (featureExtent.width * featureExtent.height) / (view.extent.width * view.extent.height) < 0.30) {
             view.goTo(featureExtent, { duration: 350 });
           }
         } catch(e) {
