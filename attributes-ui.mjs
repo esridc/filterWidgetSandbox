@@ -948,164 +948,162 @@
           ]
         });
       } else {
-        if (fieldName) {
-          // GET RAMP
-          // a more full exploration in auto-style.html
-          // let tags = bgColor == "light" ? ["dark"] : ["bright"];
-          let tags = [];
-          let badTags = bgColor == "light" ? ["bright"] : ["dark"];
-          badTags.push("extremes");
-          let useRamp = false;
-          useRamp = true;
-          if (categorical) {
-            tags.push('categorical')
-          } else {
-            tags.push('heatmap', 'sequential')
-            badTags.push(['categorical']);
-          }
-          if (useRamp) {
-            let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
-            var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
-            var rampColors = ramp.colors;
-          } else {
-            let theme = 'high-to-low';
-            let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-            var ramp = allSchemes[Math.floor(Math.random()*allSchemes.length)];
-            var rampColors = ramp.colors;
-          }
-
-          var rMin = rampColors[0];
-          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-          var rMax = rampColors[rampColors.length-1];
-
-          // clear other color variables
-          renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
-
-          // override default color visual variable
-          renderer.visualVariables.push({
-            type: "color", // indicates this is a color visual variable
-            field: fieldName,
-            stops: [{
-              value: minValue,
-              color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
-              label: minValue
-            },{
-              value: (maxValue+minValue)/2,
-              color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
-              label: (maxValue+minValue)/2,
-            },{
-              value: maxValue,
-              color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
-              label: maxValue
-            }]
-          });
+        // GET RAMP
+        // a more full exploration in auto-style.html
+        // let tags = bgColor == "light" ? ["dark"] : ["bright"];
+        let tags = [];
+        let badTags = bgColor == "light" ? ["bright"] : ["dark"];
+        badTags.push("extremes");
+        let useRamp = false;
+        useRamp = true;
+        if (categorical) {
+          tags.push('categorical')
+        } else {
+          tags.push('heatmap', 'sequential')
+          badTags.push(['categorical']);
         }
+        if (useRamp) {
+          let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
+          var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
+          var rampColors = ramp.colors;
+        } else {
+          let theme = 'high-to-low';
+          let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
+          var ramp = allSchemes[Math.floor(Math.random()*allSchemes.length)];
+          var rampColors = ramp.colors;
+        }
+
+        var rMin = rampColors[0];
+        var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
+        var rMax = rampColors[rampColors.length-1];
+
+        // clear other color variables
+        renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
+
+        // override default color visual variable
+        renderer.visualVariables.push({
+          type: "color", // indicates this is a color visual variable
+          field: fieldName,
+          stops: [{
+            value: minValue,
+            color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
+            label: minValue
+          },{
+            value: (maxValue+minValue)/2,
+            color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
+            label: (maxValue+minValue)/2,
+          },{
+            value: maxValue,
+            color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
+            label: maxValue
+          }]
+        });
       }
 
-        if (geotype === 'point') {
-          symbol = {
-            type: "simple-marker",
-            color: color,
-            outline: {
-              color: outlineColor,
-              width: 1, // no fractional outline widths :P
+      if (geotype === 'point') {
+        symbol = {
+          type: "simple-marker",
+          color: color,
+          outline: {
+            color: outlineColor,
+            width: 1, // no fractional outline widths :P
+          },
+          size: '5px',
+          opacity: opacity,
+        }
+        // scale values from:
+        // https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
+        renderer.visualVariables.push({
+          type: "size",
+          valueExpression: "$view.scale",
+          stops: [
+            {
+              size: 4,
+              value: 36978595 // z3 map, z4 docs
             },
-            size: '5px',
-            opacity: opacity,
-          }
-          // scale values from:
-          // https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
-          renderer.visualVariables.push({
-            type: "size",
-            valueExpression: "$view.scale",
-            stops: [
-              {
-                size: 4,
-                value: 36978595 // z3 map, z4 docs
-              },
-              {
-                size: 3,
-                value: 73957190 // z2 map, z3
-              },
-              {
-                size: 3,
-                value: 147914381 // z0 map, z1 docs
-              },
-            ]
-          });
+            {
+              size: 3,
+              value: 73957190 // z2 map, z3
+            },
+            {
+              size: 3,
+              value: 147914381 // z0 map, z1 docs
+            },
+          ]
+        });
 
-          // TODO: switch to CIMSymbols
-          let cimsymbol = new CIMSymbol({ // unused for now
-            data:  {
-              type: "CIMSymbolReference",
-              symbol: {
-                 type: "CIMPointSymbol",
-                 symbolLayers: [{
-                     type: "CIMVectorMarker",
-                     enable: true,
-                     size: 32,
-                     frame: {
-                       xmin: 0,
-                       ymin: 0,
-                       xmax: 16,
-                       ymax: 16
-                     },
-                     markerGraphics: [{
-                       type: "CIMMarkerGraphic",
-                       geometry: {
-                         rings: [[[8, 16],[0, 0],[16, 0],[8, 16]]]
-                       },
-                       symbol: {
-                         type: "CIMPolygonSymbol",
-                         symbolLayers: [{
-                           type: "CIMSolidStroke",
-                           width: .05,
-                           color: [240, 94, 35, 255]
-                         }]
-                       }
-                     }]
-                 }]
-              }
+        // TODO: switch to CIMSymbols
+        let cimsymbol = new CIMSymbol({ // unused for now
+          data:  {
+            type: "CIMSymbolReference",
+            symbol: {
+                type: "CIMPointSymbol",
+                symbolLayers: [{
+                    type: "CIMVectorMarker",
+                    enable: true,
+                    size: 32,
+                    frame: {
+                      xmin: 0,
+                      ymin: 0,
+                      xmax: 16,
+                      ymax: 16
+                    },
+                    markerGraphics: [{
+                      type: "CIMMarkerGraphic",
+                      geometry: {
+                        rings: [[[8, 16],[0, 0],[16, 0],[8, 16]]]
+                      },
+                      symbol: {
+                        type: "CIMPolygonSymbol",
+                        symbolLayers: [{
+                          type: "CIMSolidStroke",
+                          width: .05,
+                          color: [240, 94, 35, 255]
+                        }]
+                      }
+                    }]
+                }]
             }
-          });
-        }
+          }
+        });
+      }
 
-        else if (geotype === 'line') {
-          symbol = {
-            type: 'simple-line',
-            width: '2px',
-            color: color,
-            opacity: opacity,
-          };
-          renderer.visualVariables.push({
-            type: "size",
-            valueExpression: "$view.scale",
-            stops: [
-              {
-                size: .5,
-                value: 1155581.108577 // z8 on map, z9 in docs, etc
-              },
-              {
-                size: 1,
-                value: 577790.554289 // z9
-              },
-              {
-                size: 2,
-                value: 144447.638572 // z11
-              },
-            ]
-          });
-        }
-
-        else if (geotype === 'polygon') {
-          symbol = {
-            type: 'simple-fill',
-            outline: {
-              color: outlineColor,
-              width: 0.5,
+      else if (geotype === 'line') {
+        symbol = {
+          type: 'simple-line',
+          width: '2px',
+          color: color,
+          opacity: opacity,
+        };
+        renderer.visualVariables.push({
+          type: "size",
+          valueExpression: "$view.scale",
+          stops: [
+            {
+              size: .5,
+              value: 1155581.108577 // z8 on map, z9 in docs, etc
             },
-          };
-        }
+            {
+              size: 1,
+              value: 577790.554289 // z9
+            },
+            {
+              size: 2,
+              value: 144447.638572 // z11
+            },
+          ]
+        });
+      }
+
+      else if (geotype === 'polygon') {
+        symbol = {
+          type: 'simple-fill',
+          outline: {
+            color: outlineColor,
+            width: 0.5,
+          },
+        };
+      }
 
       if (categorical) {
         let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
@@ -1142,16 +1140,20 @@
       layer.renderer = renderer;
 
       // set up custom labels – this should be done to override any labelingInfo sent from the server –
-      // bgcolor might not be set if the tab wasn't visible when loaded
-      try {
+      // add labels to polygons only for now
+      if (geotype == "polygon") {
+        if (dataset.attributes.displayField && !fieldName) {
+          var expression = "$feature."+dataset.attributes.displayField;
+        } else {
+          // default to NAME
+          expression = "$feature.NAME";
+        }
         if (!bgColor) {
           // bgcolor might not be set if the tab wasn't visible when loaded
           bgColor = await getBgColor();
         }
-
-        if (layer.labelingInfo && !usePredefinedStyle) {
-          const labels = new LabelClass({
-            labelExpressionInfo: { expression: "$feature.NAME" },
+        const labels = new LabelClass({
+          labelExpressionInfo: { expression },
             symbol: {
               type: "text",  // autocasts as new TextSymbol()
               color: "white",
@@ -1160,29 +1162,34 @@
             }
           });
           layer.labelingInfo = [ labels ];
+        if (layer.labelingInfo && !usePredefinedStyle) {
+          // console.log('layer.labelingInfo:', layer.labelingInfo)
         }
-        if (fieldName) {
-          var {legend} = state;
-          // remove and replace legend entirely to avoid dojo issues
-          view.ui.remove(legend);
-          legend = await new Legend({
-            view: view
-          })
-          legend.layerInfos = [{
-            layer: layer,
-            title: null
-          }]
-          view.ui.add(legend, "bottom-right");
-        } else {
-          view.ui.remove(legend);
-          legend = null;
-        }
-      } catch(e) {
-        console.error("Labeling failed:", e);
       }
 
-    // update state
+      // add legend
+      var {legend} = state;
+        if (fieldName) {
+        // remove and replace legend entirely to avoid dojo issues
+        view.ui.remove(legend);
+        legend = await new Legend({
+          view: view
+        })
+        legend.layerInfos = [{
+          layer: layer,
+          title: null
+        }]
+        view.ui.add(legend, "bottom-right");
+      } else {
+        view.ui.remove(legend);
+        legend = null;
+      }
+
+      updateLayerViewEffect();
+
+      // update state
       state = {...state, layer, renderer, bgColor, legend}
+
       return {layer, renderer};
     }
 
