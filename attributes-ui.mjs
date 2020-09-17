@@ -842,6 +842,20 @@
       try {
         var bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
       } catch(e) {
+          try {
+            if (!view) {
+              view = await drawMap(layer)
+            }
+            if (!layerView) {
+              layerView = await view.whenLayerView(layer);
+            }
+            if (view && layerView) {
+              bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
+            }
+          } catch(e) {
+            throw new Error('Problem getting bgColor:', e)
+          }
+
         console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
         bgColor = "light";
       }
@@ -1128,14 +1142,8 @@
       // bgcolor might not be set if the tab wasn't visible when loaded
       try {
         if (!bgColor) {
-          try {
-            console.warn("bgColor not defined, attempting to detect")
-            view = await drawMap(layer)
-            layerView = await view.whenLayerView(layer);
-            bgColor = await getBgColor();
-          } catch(e) {
-            throw new Error('Problem getting bgColor:', e)
-          }
+          // bgcolor might not be set if the tab wasn't visible when loaded
+          bgColor = await getBgColor();
         }
 
         if (layer.labelingInfo && !usePredefinedStyle) {
