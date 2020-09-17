@@ -730,7 +730,7 @@
       view.ui.add('zoomToData', 'top-right');
       const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
       zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
-        updateLayerViewEffect({ updateExtent: zoomToDataCheckbox.checked });
+        updateLayerViewEffect();
       });
 
       // put vars on window for debugging
