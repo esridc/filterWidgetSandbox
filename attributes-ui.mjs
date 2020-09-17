@@ -1163,6 +1163,9 @@
               color: "white",
               haloSize: 2,
               haloColor: bgColor == "light" ? "steelblue" : "black",
+              font: {
+                size: '14px',
+              }
             }
           });
           layer.labelingInfo = [ labels ];
