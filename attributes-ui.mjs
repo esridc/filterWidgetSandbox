@@ -706,6 +706,7 @@
       let filtersList = filter.parentElement;
       filter.remove();
       document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
+      updateLayerViewEffect();
     }
 
     async function drawMap() {
