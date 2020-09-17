@@ -1269,9 +1269,10 @@
 
     // Determine if field is categorical or pseudo-categorical
     async function datasetFieldCategorical (fieldName) {
+      const field = await getDatasetField(fieldName);
       const stats = await getDatasetFieldUniqueValues(fieldName);
 
-      const categoricalMax = 20;
+      const categoricalMax = field.type == "string" ? 20 : 10;
       const categorical = stats.uniqueCount <= categoricalMax;
 
       const pseudoCategoricalMax = 80; // categorical max N values must cover at least this % of total records
