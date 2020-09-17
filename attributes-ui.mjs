@@ -1014,24 +1014,6 @@
         }
         // scale values from:
         // https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
-        renderer.visualVariables.push({
-          type: "size",
-          valueExpression: "$view.scale",
-          stops: [
-            {
-              size: 4,
-              value: 36978595 // z3 map, z4 docs
-            },
-            {
-              size: 3,
-              value: 73957190 // z2 map, z3
-            },
-            {
-              size: 3,
-              value: 147914381 // z0 map, z1 docs
-            },
-          ]
-        });
 
         // TODO: switch to CIMSymbols
         let cimsymbol = new CIMSymbol({ // unused for now
@@ -1136,6 +1118,27 @@
         };
       } else {
         renderer = {...renderer, symbol: symbol};
+      }
+
+      // set point scales for all point
+      if (geotype == "point") {
+        if (!renderer.visualVariables) {
+          renderer.visualVariables = [];
+        }
+        renderer.visualVariables.push({
+          type: "size",
+          valueExpression: "$view.scale",
+          stops: [
+            {
+              size: 6,
+              value: 18055.954822 // z15 map, z16 docs
+            },
+            {
+              size: 3,
+              value: 577790.554289 // z9 map, z10 docs
+            },
+          ]
+        });
       }
 
       layer.renderer = renderer;
