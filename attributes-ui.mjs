@@ -1015,37 +1015,45 @@
         // scale values from:
         // https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
 
-        // TODO: switch to CIMSymbols
-        let cimsymbol = new CIMSymbol({ // unused for now
+        var cimsymbol = new CIMSymbol({
           data:  {
             type: "CIMSymbolReference",
             symbol: {
-                type: "CIMPointSymbol",
-                symbolLayers: [{
-                    type: "CIMVectorMarker",
-                    enable: true,
-                    size: 32,
-                    frame: {
-                      xmin: 0,
-                      ymin: 0,
-                      xmax: 16,
-                      ymax: 16
-                    },
-                    markerGraphics: [{
-                      type: "CIMMarkerGraphic",
-                      geometry: {
-                        rings: [[[8, 16],[0, 0],[16, 0],[8, 16]]]
-                      },
-                      symbol: {
-                        type: "CIMPolygonSymbol",
-                        symbolLayers: [{
+              type: "CIMPointSymbol",
+              symbolLayers: [{
+                  type: "CIMVectorMarker",
+                  enable: true,
+                  size: 16,
+                  frame: {
+                    xmin: 0,
+                    ymin: 0,
+                    xmax: 16,
+                    ymax: 16
+                  },
+                  markerGraphics: [{
+                    type: "CIMMarkerGraphic",
+                    geometry: {
+                      rings: [
+                        [
+                          [8.5, 0.2],[7.06, 0.33],[5.66, 0.7],[4.35, 1.31],[3.16, 2.14],[2.14, 3.16],[1.31, 4.35],[0.7, 5.66],[0.33, 7.06],[0.2, 8.5],[0.33, 9.94],[0.7, 11.34],[1.31, 12.65],[2.14, 13.84],[3.16, 14.86],[4.35, 15.69],[5.66, 16.3],[7.06, 16.67],[8.5, 16.8],[9.94, 16.67],[11.34, 16.3],[12.65, 15.69],[13.84, 14.86],[14.86, 13.84],[15.69, 12.65],[16.3, 11.34],[16.67, 9.94],[16.8, 8.5],[16.67, 7.06],[16.3, 5.66],[15.69, 4.35],[14.86, 3.16],[13.84, 2.14],[12.65, 1.31],[11.34, 0.7],[9.94, 0.33],[8.5, 0.2]
+                        ]
+                      ]                    },
+                    symbol: {
+                      type: "CIMPolygonSymbol",
+                      symbolLayers: [
+                        {
                           type: "CIMSolidStroke",
-                          width: .05,
+                          width: .5,
                           color: [240, 94, 35, 255]
-                        }]
-                      }
-                    }]
-                }]
+                        },
+                        {
+                          type: "CIMSolidFill",
+                          color: [240, 94, 35, 255]
+                        },
+                      ]
+                    }
+                  }]
+              }]
             }
           }
         });
@@ -1101,14 +1109,27 @@
         // generate categorical colors for field
         var uniqueValueInfos = [];
         for (let x = 0; x < filtered.length; x++) {
+          var uniqueSymbol = cimsymbol.clone();
+          // set stroke color to half the value of current ramp color
+          let strokeColor = [
+            rampColors[(x % rampColors.length)%rampColors.length].r * .5,
+            rampColors[(x % rampColors.length)%rampColors.length].g * .5,
+            rampColors[(x % rampColors.length)%rampColors.length].b * .5,
+            255 //alpha is always opaque
+          ];
+          uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
+          // set fillColor
+          let fillColor = [
+            rampColors[(x % rampColors.length)%rampColors.length].r,
+            rampColors[(x % rampColors.length)%rampColors.length].g,
+            rampColors[(x % rampColors.length)%rampColors.length].b,
+            255 //alpha is always opaque
+          ];
+          uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[1].color = fillColor;
+
           uniqueValueInfos.push( {
             value: filtered[x].value,
-            symbol: {
-              ...symbol,
-              // TODO: interpolate the appropriate number of colors from the ramp -
-              // loop around the ramp for now
-              color: rampColors[(x % rampColors.length)%rampColors.length],
-            }
+            symbol: uniqueSymbol,
           });
         }
         renderer = {
