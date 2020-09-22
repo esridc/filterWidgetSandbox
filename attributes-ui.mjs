@@ -951,32 +951,22 @@
       } else {
         // GET RAMP
         // a more full exploration in auto-style.html
-        // let tags = bgColor == "light" ? ["dark"] : ["bright"];
-        let tags = [];
-        let badTags = bgColor == "light" ? ["bright"] : ["dark"];
-        badTags.push("extremes");
-        let useRamp = false;
-        useRamp = true;
-        if (categorical) {
-          tags.push('categorical')
-        } else {
-          tags.push('heatmap', 'sequential')
-          badTags.push(['categorical']);
-        }
-        if (useRamp) {
-          let allRamps = colorRamps.byTag({includedTags: tags, excludedTags: badTags});
-          var ramp = allRamps[Math.floor(Math.random()*allRamps.length)];
+        if (!categorical) {
+          var ramp = colorRamps.byName("Blue 3");
           var rampColors = ramp.colors;
-        } else {
-          let theme = 'high-to-low';
-          let allSchemes = Color.getSchemesByTag({geometryType: 'point', theme: theme, includedTags: tags});
-          var ramp = allSchemes[Math.floor(Math.random()*allSchemes.length)];
-          var rampColors = ramp.colors;
-        }
+          var rMax = rampColors[0];
+          var rMin = rampColors[rampColors.length-1];
+          // darken the brightest just a bit – white gets lost in the bright basemap
+          rMax = {r: (rMax.r + rMin.r) * .8, g: (rMax.g + rMin.g) * .8, b: (rMax.b + rMin.b) * .8}
+          var rMid = {r: (rMax.r + rMin.r) / 2, g: (rMax.g + rMin.g) / 2, b: (rMax.b + rMin.b) / 2};
 
-        var rMin = rampColors[0];
-        var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-        var rMax = rampColors[rampColors.length-1];
+        } else {
+          ramp = colorRamps.byName("Mushroom Soup");
+          rampColors = ramp.colors;
+          var rMin = rampColors[0];
+          var rMid = rampColors[Math.floor((rampColors.length-1/2))];
+          var rMax = rampColors[rampColors.length-1];
+        }
 
         // clear other color variables
         renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
