@@ -929,44 +929,30 @@
 
       var opacity = 1;
 
-      // choose colors based on background theme – dark on light, light on dark
-      var color = bgColor == "dark" ? "lightblue" : "steelblue";
-      var outlineColor = bgColor == "dark" ? "black" : "white";
+      // choose default colors based on background theme – dark on light, light on dark
+      // use rgb values so the CIMSymbols can read them
+      var color = bgColor == "dark" ? [173,216,230,255] : [70,130,180,255]; // lightblue and steelblue
+      var outlineColor = bgColor == "dark" ? [70,130,180,255] : [255,255,255,255]; // steelblue and white
 
-      // if no fieldName was passed, style an overview of feature geometry
-      if (!fieldName) {
-        renderer.visualVariables.push({
-          type: "color",
-          // slightly randomize colors to differentiate between features
-          valueExpression: `random()`,
-          stops: [
-            {
-              color: '#4682b4',
-              value: '0'
-            },
-            {
-              color: '#325D81',
-              value: '1'
-            },
-          ]
-        });
-      } else {
-        // GET RAMP
+      // if a fieldName was passed, GET RAMP
         // a more full exploration in auto-style.html
         if (!categorical) {
           var ramp = colorRamps.byName("Blue 3");
           var rampColors = ramp.colors;
           var rMax = rampColors[0];
           var rMin = rampColors[rampColors.length-1];
-          // darken the brightest just a bit – white gets lost in the bright basemap
-          rMax = {r: (rMax.r + rMin.r) * .8, g: (rMax.g + rMin.g) * .8, b: (rMax.b + rMin.b) * .8}
+          if (bgColor == "light") {
+            // darken the brightest just a bit – white gets lost in the light basemap
+            rMax = {r: (rMax.r + rMin.r) * .8, g: (rMax.g + rMin.g) * .8, b: (rMax.b + rMin.b) * .8}
+          }
           var rMid = {r: (rMax.r + rMin.r) / 2, g: (rMax.g + rMin.g) / 2, b: (rMax.b + rMin.b) / 2};
 
         } else {
+          // categorical
           ramp = colorRamps.byName("Mushroom Soup");
           rampColors = ramp.colors;
           var rMin = rampColors[0];
-          var rMid = rampColors[Math.floor((rampColors.length-1/2))];
+          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
           var rMax = rampColors[rampColors.length-1];
         }
 
