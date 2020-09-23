@@ -23,6 +23,7 @@
     viewColorUtils,
     LabelClass,
     CIMSymbol,
+    cimSymbolUtils,
   ] = await loadModules([
     "esri/Map",
     "esri/views/MapView",
@@ -37,6 +38,7 @@
     "esri/views/support/colorUtils",
     "esri/layers/support/LabelClass",
     "esri/symbols/CIMSymbol",
+    "esri/symbols/support/cimSymbolUtils",
   ]);
 
     // data urls
@@ -989,22 +991,8 @@
             label: maxValue
           }]
         });
-      }
 
       if (geotype === 'point') {
-        symbol = {
-          type: "simple-marker",
-          color: color,
-          outline: {
-            color: outlineColor,
-            width: 1, // no fractional outline widths :P
-          },
-          size: '5px',
-          opacity: opacity,
-        }
-        // scale values from:
-        // https://www.esri.com/arcgis-blog/products/product/mapping/web-map-zoom-levels-updated/
-
         var cimsymbol = new CIMSymbol({
           data:  {
             type: "CIMSymbolReference",
@@ -1034,11 +1022,13 @@
                         {
                           type: "CIMSolidStroke",
                           width: .5,
-                          color: [240, 94, 35, 255]
+                          color: outlineColor,
+                          opacity
                         },
                         {
                           type: "CIMSolidFill",
-                          color: [240, 94, 35, 255]
+                          color,
+                          opacity,
                         },
                       ]
                     }
@@ -1047,6 +1037,7 @@
             }
           }
         });
+        symbol = cimsymbol;
       }
 
       else if (geotype === 'line') {
