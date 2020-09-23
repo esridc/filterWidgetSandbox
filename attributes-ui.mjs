@@ -1039,7 +1039,7 @@
           stops: [
             {
               size: .5,
-              value: 1155581.108577 // z8 on map, z9 in docs, etc
+              value: 1155581.108577 // z8
             },
             {
               size: 1,
@@ -1116,14 +1116,19 @@
         renderer.visualVariables.push({
           type: "size",
           valueExpression: "$view.scale",
+          // zoom levels and scale values based on layerView.zoom and layerView.scale
           stops: [
             {
-              size: 6,
-              value: 18055.954822 // z15 map, z16 docs
+              size: 3.5,
+              value: 36978595.474472 // z3
             },
             {
-              size: 3,
-              value: 577790.554289 // z9 map, z10 docs
+              size: 4.5,
+              value: 577790.554289 // z9
+            },
+            {
+              size: 6,
+              value: 18055.954822 // z15
             },
           ]
         });
