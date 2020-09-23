@@ -1407,7 +1407,7 @@
         filter: {
           where,
         },
-        excludedEffect: 'grayscale(100%) contrast(50%) brightness(200%) opacity(50%)'
+        excludedEffect: 'grayscale(100%) contrast(50%) brightness(200%) opacity(5%)'
       };
       layerView.queryFeatureCount({
         where: where || '1=1',
