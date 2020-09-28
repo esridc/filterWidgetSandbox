@@ -1312,7 +1312,8 @@
       const field = await getDatasetField(fieldName);
       const stats = await getDatasetFieldUniqueValues(fieldName);
 
-      const categoricalMax = field.type == "string" ? 20 : 10;
+      // if datatype is a string, relax requirements
+      let categoricalMax = field.simpleType == "string" ? 50 : 7;
       const categorical = stats.uniqueCount <= categoricalMax;
 
       const pseudoCategoricalMax = 80; // categorical max N values must cover at least this % of total records
