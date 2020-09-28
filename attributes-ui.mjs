@@ -1196,11 +1196,14 @@
 
       // add labels by default to polygons only for now
       if (geotype == "polygon") {
-        if (dataset.attributes.displayField && !fieldName) {
-          var expression = "$feature."+dataset.attributes.displayField;
-        } else {
+        if (!fieldName) {
           // default to NAME
-          expression = "$feature.NAME";
+          if (dataset.attributes.fieldNames.includes("NAME")) {
+            fieldName = "NAME";
+          }
+        }
+        if (fieldName) {
+          var expression = "$feature."+fieldName;
         }
         if (!bgColor) {
           // bgcolor might not be set if the tab wasn't visible when loaded
@@ -1208,7 +1211,7 @@
         }
         // TODO: don't violate DRY (labels also set above)
         const labels = new LabelClass({
-          labelExpressionInfo: { expression },
+          labelExpressionInfo: expression ? { expression } : null,
           symbol: {
             type: "text",  // autocasts as new TextSymbol()
             color: bgColor == "light" ? "#1e4667" : "black",
