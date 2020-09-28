@@ -1070,9 +1070,9 @@
               } else {
                 uniqueSymbol.color = fillColor;
               }
-
               uniqueValueInfos.push( {
                 value: filtered[x].value,
+                label: field.simpleType == "date" ? formatDate(filtered[x].value) : filtered[x].value,
                 symbol: uniqueSymbol,
               });
             }
@@ -1090,14 +1090,9 @@
           // var rMin = rampColors[rampColors.length-1];
           var rMin = {r:21, g:39, b:128, a:255};
 
-          // if (bgColor == "light") {
-          //   // darken the brightest just a bit – white gets lost in the light basemap
-          //   rMax = {r: (rMax.r + rMin.r) * .8, g: (rMax.g + rMin.g) * .8, b: (rMax.b + rMin.b) * .8}
-          // }
-
           if (field.simpleType == "date") {
-            minLabel = new Date(minValue).toLocaleDateString();
-            maxLabel = new Date(maxValue).toLocaleDateString();
+            minLabel = formatDate(minValue);
+            maxLabel = formatDate(maxValue);
           }
 
           // SET RAMP
