@@ -1204,17 +1204,20 @@
         layer.labelingInfo = [ labels ];
       }
 
-      // add legend
+      renderer = {...renderer, symbol: symbol};
+
+      // ADD LEGEND
+
       var {legend} = state;
-        if (fieldName) {
-        // remove and replace legend entirely to avoid dojo issues
+      if (fieldName) {
+        // remove and replace legend entirely rather than updating, to avoid dojo issues
         view.ui.remove(legend);
         legend = await new Legend({
           view: view
         })
         legend.layerInfos = [{
           layer: layer,
-          title: null
+          title: (!pseudoCategorical && !numberLike) ? fieldName : null,
         }]
         view.ui.add(legend, "bottom-right");
       } else {
@@ -1222,11 +1225,11 @@
         legend = null;
       }
 
+      layer.renderer = renderer;
       updateLayerViewEffect();
 
       // update state
       state = {...state, layer, renderer, bgColor, legend}
-
       return {layer, renderer};
     }
 
