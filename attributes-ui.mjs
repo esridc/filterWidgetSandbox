@@ -1115,7 +1115,7 @@
             var midValue = (parseFloat(maxValue)+parseFloat(minValue))/2;
             // if min and max are integers, make mid integer too
             if (numberLike && (Number.isInteger(parseFloat(maxValue)) && Number.isInteger(parseFloat(maxValue)))) {
-              midValue = parseInt(midValue);
+              midValue = parseInt(midValue+.5);
             }
             if (midValue != minValue && midValue !== maxValue) {
               // ensure accurate placement of midValue along the ramp, in case of integer coersion
