@@ -1041,6 +1041,7 @@
             // generate categorical colors for field
             var uniqueValueInfos = [];
             for (let x = 0; x < filtered.length; x++) {
+              // set strokeColor/outline
               let strokeColor = [
                 rampColors[(x % rampColors.length)%rampColors.length].r * .5,
                 rampColors[(x % rampColors.length)%rampColors.length].g * .5,
