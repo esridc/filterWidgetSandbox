@@ -1112,12 +1112,22 @@
 
           if (field.simpleType !== "date") {
             // add one more midValue
-            var rMid = {r: (rMax.r + rMin.r) / 2, g: (rMax.g + rMin.g) / 2, b: (rMax.b + rMin.b) / 2};
-            renderer.visualVariables[renderer.visualVariables.length-1].stops.push({
-                value: (parseFloat(maxValue)+parseFloat(minValue))/2,
-                color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
-                label: (parseFloat(maxValue)+parseFloat(minValue))/2,
-            });
+            var midValue = (parseFloat(maxValue)+parseFloat(minValue))/2;
+            // if min and max are integers, make mid integer too
+            if (numberLike && (Number.isInteger(parseFloat(maxValue)) && Number.isInteger(parseFloat(maxValue)))) {
+              midValue = parseInt(midValue);
+            }
+            if (midValue != minValue && midValue !== maxValue) {
+              // ensure accurate placement of midValue along the ramp, in case of integer coersion
+              let divisor = (midValue-minValue)/(maxValue - minValue);
+              // color
+              var rMid = {r: (rMax.r + rMin.r) * divisor, g: (rMax.g + rMin.g) * divisor, b: (rMax.b + rMin.b) * divisor};
+              renderer.visualVariables[renderer.visualVariables.length-1].stops.push({
+                  value: midValue,
+                  color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
+                  label: midValue,
+              });
+            }
           }
 
         // if it's neither categorical nor number-like, use default styling but add labels
