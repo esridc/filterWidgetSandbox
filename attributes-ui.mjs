@@ -1381,12 +1381,15 @@
 
       attributes
       .map(([fieldName, { statistics: fieldStats }]) => [fieldName, fieldStats]) // grab stats
-      .filter(([fieldName, fieldStats]) => { // exclude fields with one value
-        return !fieldStats ||
-        !fieldStats.values ||
-        fieldStats.uniqueCount > 1 || // unique count reported as 0 for sampled data
-        fieldStats.values.min !== fieldStats.values.max
-      })
+
+      // TODO: decide how to handle datasets with only one record
+      // .filter(([fieldName, fieldStats]) => { // exclude fields with one value
+      //   return !fieldStats ||
+      //   !fieldStats.values ||
+      //   fieldStats.uniqueCount > 1 || // unique count reported as 0 for sampled data
+      //   fieldStats.values.min !== fieldStats.values.max
+      // })
+
       .forEach(([fieldName, fieldStats]) => {
         // dataset.attributes.fieldNames
         //   .map(fieldName => [fieldName, getDatasetField(fieldName)])
