@@ -1041,15 +1041,21 @@
             // generate categorical colors for field
             var uniqueValueInfos = [];
             for (let x = 0; x < filtered.length; x++) {
-              var uniqueSymbol = cimsymbol.clone();
-              // set stroke color to half the value of current ramp color
               let strokeColor = [
                 rampColors[(x % rampColors.length)%rampColors.length].r * .5,
                 rampColors[(x % rampColors.length)%rampColors.length].g * .5,
                 rampColors[(x % rampColors.length)%rampColors.length].b * .5,
                 255 //alpha is always opaque
               ];
-              uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
+              if (symbol.type == 'cim') {
+                // clone symbol
+                var uniqueSymbol = symbol.clone();
+                // set stroke color to half the value of current ramp color
+                uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
+              } else {
+                uniqueSymbol = Object.assign({}, symbol);
+                uniqueSymbol.outline.color = strokeColor;
+              }
               // set fillColor
               let fillColor = [
                 rampColors[(x % rampColors.length)%rampColors.length].r,
@@ -1057,7 +1063,11 @@
                 rampColors[(x % rampColors.length)%rampColors.length].b,
                 255 //alpha is always opaque
               ];
-              uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[1].color = fillColor;
+              if (symbol.type == 'cim') {
+                uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[1].color = fillColor;
+              } else {
+                uniqueSymbol.color = fillColor;
+              }
 
               uniqueValueInfos.push( {
                 value: filtered[x].value,
