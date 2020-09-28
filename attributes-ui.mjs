@@ -977,12 +977,12 @@
         var fieldStats = field.statistics;
         var minValue =
           typeof fieldStats.values.min !== "undefined" ? fieldStats.values.min :
-          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0] :
+          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0].value :
           null;
         var minLabel = minValue;
         var maxValue =
           typeof fieldStats.values.max !== "undefined" ? fieldStats.values.max :
-          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[fieldStats.values.length -1] :
+          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[fieldStats.values.length -1].value :
           null;
         var maxLabel = maxValue;
         var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
