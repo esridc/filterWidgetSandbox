@@ -1055,9 +1055,9 @@
                 uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
               } else {
                 uniqueSymbol = Object.assign({}, symbol);
-              }
-              if (geotype !== "line") {
-                uniqueSymbol.outline.color = strokeColor;
+                if (geotype !== "line") {
+                  uniqueSymbol.outline.color = strokeColor;
+                }
               }
               // set fillColor
               let fillColor = [
