@@ -976,7 +976,6 @@
       fieldStyle: // label this block so we can break out of it if necessary
       if (fieldName) {
         var field = getDatasetField(fieldName);
-        var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
         var fieldStats = field.statistics;
         if (fieldStats.values.length == 0) { // it happens
           console.warn("Couldn't get statistics values for field '"+fieldName+"'.");
@@ -998,18 +997,6 @@
         } catch(e) {
           console.warn("Couldn't get statistics for styling field '"+fieldName+"':", e);
           break fieldStyle;
-        }
-
-        // get the features
-        if (!!layer) {
-          var query = layer.createQuery();
-          var {features} = await layer.queryFeatures(query);
-          var numValues = datasetStats.values.length;
-          if (features) {
-            var values = Object.values(features).map(v => v.attributes[fieldName])
-          } else {
-            console.log('no features returned for', fieldName)
-          }
         }
 
         // don't use predefined styles for now
