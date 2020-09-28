@@ -1079,7 +1079,8 @@
             renderer = {
               type: "unique-value",
               field: fieldName,
-              uniqueValueInfos
+              uniqueValueInfos,
+              visualVariables: []
             };
         } else if (numberLike) { // number-like, either categorical or non
           var ramp = colorRamps.byName("Blue 3");
@@ -1145,9 +1146,6 @@
       // SET SCALE
 
       if (geotype == "point") {
-        if (!renderer.visualVariables) {
-          renderer.visualVariables = [];
-        }
         renderer.visualVariables.push({
           type: "size",
           valueExpression: "$view.scale",
