@@ -1199,11 +1199,9 @@
             font: {
               size: '14px',
             }
-          });
-          layer.labelingInfo = [ labels ];
-        if (layer.labelingInfo && !usePredefinedStyle) {
-          // console.log('layer.labelingInfo:', layer.labelingInfo)
-        }
+          }
+        });
+        layer.labelingInfo = [ labels ];
       }
 
       // add legend
@@ -1513,7 +1511,6 @@
     }
 
     function styleAttributeSearchChange(e) {
-      console.log('e.srcElement.value', e.srcElement.value)
       Array.from(document.getElementById('styleAttributeList').children)
       .map(x => {
         let field = x.getAttribute('data-field');
