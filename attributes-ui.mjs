@@ -1065,7 +1065,7 @@
                 255 //alpha is always opaque
               ];
               if (symbol.type == 'cim') {
-                uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[1].color = fillColor;
+                cimSymbolUtils.applyCIMSymbolColor(uniqueSymbol, fillColor);
               } else {
                 uniqueSymbol.color = fillColor;
               }
