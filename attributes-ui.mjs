@@ -1315,11 +1315,10 @@
       // if datatype is a string, relax requirements
       let categoricalMax = field.simpleType == "string" ? 50 : 7;
       const categorical = stats.uniqueCount <= categoricalMax;
-
-      const pseudoCategoricalMax = 80; // categorical max N values must cover at least this % of total records
-      const coverage = stats.values.slice(0, categoricalMax).reduce((sum, val) => sum + val.pct);
-      const pseudoCategorical = categorical || coverage <= pseudoCategoricalMax;
-
+      const pseudoCategoricalMin = 80; // categorical max N values must cover at least this % of total records
+      // add up the coverage percentages of the top values
+      const coverage = Object.values(stats.values.slice(0, categoricalMax)).reduce((sum, {pct}) => sum + pct, 0)
+      const pseudoCategorical = categorical || (coverage * 100) >= pseudoCategoricalMin;
       return { categorical, pseudoCategorical };
     }
 
