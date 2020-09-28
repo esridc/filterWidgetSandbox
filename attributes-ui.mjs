@@ -957,6 +957,7 @@
       } else if (geotype === 'polygon') {
         symbol = {
           type: 'simple-fill',
+          color: color,
           outline: {
             color: outlineColor,
             width: 0.5,
@@ -1193,11 +1194,11 @@
           labelExpressionInfo: { expression },
           symbol: {
             type: "text",  // autocasts as new TextSymbol()
-            color: "white",
+            color: bgColor == "light" ? "steelblue" : "black",
             haloSize: 2,
-            haloColor: bgColor == "light" ? "steelblue" : "black",
+            haloColor: bgColor == "light" ? "white" : "black",
             font: {
-              size: '14px',
+              size: '12px',
             }
           }
         });
