@@ -868,8 +868,20 @@
     // analyze a dataset and choose an initial best-guess symbology for it
     async function autoStyle({event = null, fieldName = null}) {
       var {dataset, layer, view, usePredefinedStyle, bgColor} = state;
+
+      //
+      // Choose symbology based on various dataset and theme attributes
+      //
+
       // get basemap color theme: "light" or "dark"
       bgColor = await getBgColor();
+
+      var opacity = 1;
+
+      // choose default colors based on background theme – dark on light, light on dark
+      // use rgb values so the CIMSymbols can read them
+      var color = bgColor == "dark" ? [173,216,230,255] : [70,130,180,255]; // lightblue and steelblue
+      var outlineColor = bgColor == "dark" ? [70,130,180,255] : [255,255,255,255]; // steelblue and white
 
       var symbol;
       var renderer = {
@@ -885,98 +897,7 @@
                   : (geometryType == 'esriGeometryPolyline') ? 'line'
                   : geometryType;
 
-      // check for passed fieldName or pull it from the event object:
-      if (!fieldName) { fieldName = event?.currentTarget?.getAttribute('data-field'); }
-      // if still no fieldName, check for a displayField in the dataset and use that as the fieldName
-      if (!fieldName) {
-        fieldName = dataset?.attributes?.displayField; }
-      // if there's a fieldName then style it by field
-      if (fieldName) {
-        var field = getDatasetField(fieldName);
-        var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
-        var fieldStats = field.statistics;
-        var minValue = fieldStats.values.min;
-        var maxValue = fieldStats.values.max;
-        var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
-
-        // get the features
-        if (!!layer) {
-          var query = layer.createQuery();
-          var {features} = await layer.queryFeatures(query);
-          var numValues = datasetStats.values.length;
-          if (features) {
-            var values = Object.values(features).map(v => v.attributes[fieldName])
-          } else {
-            console.log('no features returned for', fieldName)
-          }
-        }
-
-      // } else if (usePredefinedStyle) {
-      //   // check for built-in style passed in with the dataset
-      //   let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
-      //   if (predefinedStyle && usePredefinedStyle) {
-      //     layer = await new FeatureLayer({
-      //       // renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
-      //       // url
-      //     });
-      //   }
-      // } else {
-      }
-
-      //
-      // Choose symbology based on various dataset and theme attributes
-      //
-
-      var opacity = 1;
-
-      // choose default colors based on background theme – dark on light, light on dark
-      // use rgb values so the CIMSymbols can read them
-      var color = bgColor == "dark" ? [173,216,230,255] : [70,130,180,255]; // lightblue and steelblue
-      var outlineColor = bgColor == "dark" ? [70,130,180,255] : [255,255,255,255]; // steelblue and white
-
-      // if a fieldName was passed, GET RAMP
-        // a more full exploration in auto-style.html
-        if (!categorical) {
-          var ramp = colorRamps.byName("Blue 3");
-          var rampColors = ramp.colors;
-          var rMax = rampColors[0];
-          var rMin = rampColors[rampColors.length-1];
-          if (bgColor == "light") {
-            // darken the brightest just a bit – white gets lost in the light basemap
-            rMax = {r: (rMax.r + rMin.r) * .8, g: (rMax.g + rMin.g) * .8, b: (rMax.b + rMin.b) * .8}
-          }
-          var rMid = {r: (rMax.r + rMin.r) / 2, g: (rMax.g + rMin.g) / 2, b: (rMax.b + rMin.b) / 2};
-
-        } else {
-          // categorical
-          ramp = colorRamps.byName("Mushroom Soup");
-          rampColors = ramp.colors;
-          var rMin = rampColors[0];
-          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-          var rMax = rampColors[rampColors.length-1];
-        }
-
-        // clear other color variables
-        renderer.visualVariables = renderer.visualVariables.filter(i => i.type != "color");
-
-        // override default color visual variable
-        renderer.visualVariables.push({
-          type: "color", // indicates this is a color visual variable
-          field: fieldName,
-          stops: [{
-            value: minValue,
-            color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
-            label: minValue
-          },{
-            value: (maxValue+minValue)/2,
-            color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
-            label: (maxValue+minValue)/2,
-          },{
-            value: maxValue,
-            color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
-            label: maxValue
-          }]
-        });
+      // SET GEOMETRY
 
       if (geotype === 'point') {
         var cimsymbol = new CIMSymbol({
@@ -1024,36 +945,16 @@
           }
         });
         symbol = cimsymbol;
-      }
 
-      else if (geotype === 'line') {
+      } else if (geotype === 'line') {
         symbol = {
           type: 'simple-line',
           width: '2px',
           color: color,
           opacity: opacity,
         };
-        renderer.visualVariables.push({
-          type: "size",
-          valueExpression: "$view.scale",
-          stops: [
-            {
-              size: .5,
-              value: 1155581.108577 // z8
-            },
-            {
-              size: 1,
-              value: 577790.554289 // z9
-            },
-            {
-              size: 2,
-              value: 144447.638572 // z11
-            },
-          ]
-        });
-      }
 
-      else if (geotype === 'polygon') {
+      } else if (geotype === 'polygon') {
         symbol = {
           type: 'simple-fill',
           outline: {
@@ -1063,52 +964,173 @@
         };
       }
 
-      if (categorical) {
-        let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
-        // optional: sort by values
-        // uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
-        // TODO: sort before assigning color values, currently values are arranged by frequency,
-        // and colors are assigned before this step
+      // check for passed fieldName or pull it from the event object:
+      if (!fieldName) { fieldName = event?.currentTarget?.getAttribute('data-field'); }
+      // if still no fieldName, check for a displayField in the dataset and use that as the fieldName
+      if (!fieldName) { fieldName = dataset?.attributes?.displayField; }
 
-        // remove nulls
-        var filtered = uniqueValues.filter(a => a.value != null);
+        // if there's a fieldName then style it by field
+      if (fieldName) {
+        var field = getDatasetField(fieldName);
+        var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
+        var fieldStats = field.statistics;
+        var minValue =
+          typeof fieldStats.values.min !== "undefined" ? fieldStats.values.min :
+          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0] :
+          null;
+        var minLabel = minValue;
+        var maxValue =
+          typeof fieldStats.values.max !== "undefined" ? fieldStats.values.max :
+          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[fieldStats.values.length -1] :
+          null;
+        var maxLabel = maxValue;
+        var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
+        var numberLike = await datasetFieldIsNumberLike(fieldName);
 
-        // generate categorical colors for field
-        var uniqueValueInfos = [];
-        for (let x = 0; x < filtered.length; x++) {
-          var uniqueSymbol = cimsymbol.clone();
-          // set stroke color to half the value of current ramp color
-          let strokeColor = [
-            rampColors[(x % rampColors.length)%rampColors.length].r * .5,
-            rampColors[(x % rampColors.length)%rampColors.length].g * .5,
-            rampColors[(x % rampColors.length)%rampColors.length].b * .5,
-            255 //alpha is always opaque
-          ];
-          uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
-          // set fillColor
-          let fillColor = [
-            rampColors[(x % rampColors.length)%rampColors.length].r,
-            rampColors[(x % rampColors.length)%rampColors.length].g,
-            rampColors[(x % rampColors.length)%rampColors.length].b,
-            255 //alpha is always opaque
-          ];
-          uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[1].color = fillColor;
-
-          uniqueValueInfos.push( {
-            value: filtered[x].value,
-            symbol: uniqueSymbol,
-          });
+        // get the features
+        if (!!layer) {
+          var query = layer.createQuery();
+          var {features} = await layer.queryFeatures(query);
+          var numValues = datasetStats.values.length;
+          if (features) {
+            var values = Object.values(features).map(v => v.attributes[fieldName])
+          } else {
+            console.log('no features returned for', fieldName)
+          }
         }
-        renderer = {
-          type: "unique-value",
-          field: fieldName,
-          uniqueValueInfos
-        };
-      } else {
-        renderer = {...renderer, symbol: symbol};
-      }
 
-      // set point scales for all point
+        // don't use predefined styles for now
+        // } else if (usePredefinedStyle) {
+        //   // check for built-in style passed in with the dataset
+        //   let predefinedStyle = dataset.attributes?.layer?.drawingInfo;
+        //   if (predefinedStyle && usePredefinedStyle) {
+        //     layer = await new FeatureLayer({
+        //       // renderer: jsonUtils.fromJSON(predefinedStyle.renderer),
+        //       // url
+        //     });
+        //   }
+        // }
+
+        // don't use predefined labelingInfo for now
+        // if (layer.labelingInfo && !usePredefinedStyle) {
+
+        // clear any existing labelingInfo sent from the server
+        layer.labelingInfo = [ ];
+
+
+        // GET RAMP
+        // a more exhaustive exploration in auto-style.html
+        if (categorical) {
+          // your basic categorical field
+            ramp = colorRamps.byName("Mushroom Soup");
+            rampColors = ramp.colors;
+            var rMin = rampColors[0];
+            var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
+            var rMax = rampColors[rampColors.length-1];
+
+            let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
+            // optional: sort by values
+            // uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+            // TODO: sort before assigning color values, currently values are arranged by frequency,
+            // and colors are assigned before this step
+
+            // remove nulls
+            var filtered = uniqueValues.filter(a => a.value != null);
+
+            // generate categorical colors for field
+            var uniqueValueInfos = [];
+            for (let x = 0; x < filtered.length; x++) {
+              var uniqueSymbol = cimsymbol.clone();
+              // set stroke color to half the value of current ramp color
+              let strokeColor = [
+                rampColors[(x % rampColors.length)%rampColors.length].r * .5,
+                rampColors[(x % rampColors.length)%rampColors.length].g * .5,
+                rampColors[(x % rampColors.length)%rampColors.length].b * .5,
+                255 //alpha is always opaque
+              ];
+              uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
+              // set fillColor
+              let fillColor = [
+                rampColors[(x % rampColors.length)%rampColors.length].r,
+                rampColors[(x % rampColors.length)%rampColors.length].g,
+                rampColors[(x % rampColors.length)%rampColors.length].b,
+                255 //alpha is always opaque
+              ];
+              uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[1].color = fillColor;
+
+              uniqueValueInfos.push( {
+                value: filtered[x].value,
+                symbol: uniqueSymbol,
+              });
+            }
+            renderer = {
+              type: "unique-value",
+              field: fieldName,
+              uniqueValueInfos
+            };
+        } else if (numberLike) { // number-like, either categorical or non
+          var ramp = colorRamps.byName("Blue 3");
+          var rampColors = ramp.colors;
+          // var rMax = [rampColors[0]];
+          var rMax = {r:255, g:116, b:171, a:255};
+          // var rMin = rampColors[rampColors.length-1];
+          var rMin = {r:21, g:39, b:128, a:255};
+
+          // if (bgColor == "light") {
+          //   // darken the brightest just a bit – white gets lost in the light basemap
+          //   rMax = {r: (rMax.r + rMin.r) * .8, g: (rMax.g + rMin.g) * .8, b: (rMax.b + rMin.b) * .8}
+          // }
+
+          if (field.simpleType == "date") {
+            minLabel = new Date(minValue).toLocaleDateString();
+            maxLabel = new Date(maxValue).toLocaleDateString();
+          }
+
+          // SET RAMP
+          renderer.visualVariables.push({
+            type: "color", // indicates this is a color visual variable
+            field: fieldName,
+            stops: [{
+              value: minValue,
+              color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
+              label: minLabel
+            },{
+              value: maxValue,
+              color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
+              label: maxLabel
+            }]
+          });
+
+          if (field.simpleType !== "date") {
+            // add one more midValue
+            var rMid = {r: (rMax.r + rMin.r) / 2, g: (rMax.g + rMin.g) / 2, b: (rMax.b + rMin.b) / 2};
+            renderer.visualVariables[renderer.visualVariables.length-1].stops.push({
+                value: (parseFloat(maxValue)+parseFloat(minValue))/2,
+                color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
+                label: (parseFloat(maxValue)+parseFloat(minValue))/2,
+            });
+          }
+
+        // if it's neither categorical nor number-like, use default styling but add labels
+        } else {
+          const labels = new LabelClass({
+            labelExpressionInfo: { expression: "$feature."+fieldName },
+            symbol: {
+              type: "text",  // autocasts as new TextSymbol()
+              color: bgColor == "light" ? "steelblue" : "black",
+              haloSize: 2,
+              haloColor: bgColor == "light" ? "white" : "black",
+              font: {
+                size: '12px',
+              }
+            }
+          });
+          layer.labelingInfo = [ labels ];
+        }
+      } // end if (fieldName)
+
+      // SET SCALE
+
       if (geotype == "point") {
         if (!renderer.visualVariables) {
           renderer.visualVariables = [];
@@ -1132,12 +1154,30 @@
             },
           ]
         });
+      } else if (geotype = "line") {
+        renderer.visualVariables.push({
+          type: "size",
+          valueExpression: "$view.scale",
+          stops: [
+            {
+              size: .5,
+              value: 1155581.108577 // z8
+            },
+            {
+              size: 1,
+              value: 577790.554289 // z9
+            },
+            {
+              size: 2,
+              value: 144447.638572 // z11
+            },
+          ]
+        });
       }
 
-      layer.renderer = renderer;
+      // ADD LABELS
 
-      // set up custom labels – this should be done to override any labelingInfo sent from the server –
-      // add labels to polygons only for now
+      // add labels by default to polygons only for now
       if (geotype == "polygon") {
         if (dataset.attributes.displayField && !fieldName) {
           var expression = "$feature."+dataset.attributes.displayField;
@@ -1151,14 +1191,13 @@
         }
         const labels = new LabelClass({
           labelExpressionInfo: { expression },
-            symbol: {
-              type: "text",  // autocasts as new TextSymbol()
-              color: "white",
-              haloSize: 2,
-              haloColor: bgColor == "light" ? "steelblue" : "black",
-              font: {
-                size: '14px',
-              }
+          symbol: {
+            type: "text",  // autocasts as new TextSymbol()
+            color: "white",
+            haloSize: 2,
+            haloColor: bgColor == "light" ? "steelblue" : "black",
+            font: {
+              size: '14px',
             }
           });
           layer.labelingInfo = [ labels ];
