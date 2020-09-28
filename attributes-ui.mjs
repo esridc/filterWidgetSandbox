@@ -972,23 +972,33 @@
       // if still no fieldName, default to "NAME"
       if (!fieldName && dataset.attributes.fieldNames.includes("NAME")) { fieldName = "NAME"; }
 
-        // if there's a fieldName then style it by field
+      // if there's a fieldName then style it by field
+      fieldStyle: // label this block so we can break out of it if necessary
       if (fieldName) {
         var field = getDatasetField(fieldName);
         var datasetStats = dataset.attributes.statistics[field.simpleType][fieldName.toLowerCase()].statistics;
         var fieldStats = field.statistics;
-        var minValue =
-          typeof fieldStats.values.min !== "undefined" ? fieldStats.values.min :
-          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0].value :
-          null;
-        var minLabel = minValue;
-        var maxValue =
-          typeof fieldStats.values.max !== "undefined" ? fieldStats.values.max :
-          typeof fieldStats.values.length !== "undefined" ? fieldStats.values[fieldStats.values.length -1].value :
-          null;
-        var maxLabel = maxValue;
-        var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
-        var numberLike = await datasetFieldIsNumberLike(fieldName);
+        if (fieldStats.values.length == 0) { // it happens
+          console.warn("Couldn't get statistics values for field '"+fieldName+"'.");
+          break fieldStyle;
+        }
+        try {
+          var minValue =
+            typeof fieldStats.values.min !== "undefined" ? fieldStats.values.min :
+            typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0].value :
+            null;
+          var minLabel = minValue;
+          var maxValue =
+            typeof fieldStats.values.max !== "undefined" ? fieldStats.values.max :
+            typeof fieldStats.values.length !== "undefined" ? fieldStats.values[fieldStats.values.length -1].value :
+            null;
+          var maxLabel = maxValue;
+          var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
+          var numberLike = await datasetFieldIsNumberLike(fieldName);
+        } catch(e) {
+          console.warn("Couldn't get statistics for styling field '"+fieldName+"':", e);
+          break fieldStyle;
+        }
 
         // get the features
         if (!!layer) {
