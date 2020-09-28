@@ -856,7 +856,7 @@
               bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
             }
           } catch(e) {
-            throw new Error('Problem getting bgColor:', e)
+            console.warn('Problem getting bgColor:', e)
           }
 
         console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
