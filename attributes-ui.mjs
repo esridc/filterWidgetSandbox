@@ -1019,7 +1019,7 @@
 
         // clear any existing labelingInfo sent from the server
         layer.labelingInfo = [ ];
-
+        var uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
 
         // GET RAMP
         // a more exhaustive exploration in auto-style.html
@@ -1031,7 +1031,6 @@
             var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
             var rMax = rampColors[rampColors.length-1];
 
-            let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
             // optional: sort by values
             // uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
             // TODO: sort before assigning color values, currently values are arranged by frequency,
@@ -1202,20 +1201,26 @@
           // bgcolor might not be set if the tab wasn't visible when loaded
           bgColor = await getBgColor();
         }
-        // TODO: don't violate DRY (labels also set above)
-        const labels = new LabelClass({
-          labelExpressionInfo: expression ? { expression } : null,
-          symbol: {
-            type: "text",  // autocasts as new TextSymbol()
-            color: bgColor == "light" ? "#1e4667" : "black",
-            haloSize: 1.5,
-            haloColor: bgColor == "light" ? "white" : "black",
-            font: {
-              size: '14px',
-            }
+        if (fieldName) {
+          var expression = "$feature."+fieldName;
+          // don't label if numbers or if only one value
+          if (!numberLike && uniqueValues.length > 1) {
+            // TODO: don't violate DRY (labels also set above)
+            const labels = new LabelClass({
+              labelExpressionInfo: expression ? { expression } : null,
+              symbol: {
+                type: "text",  // autocasts as new TextSymbol()
+                color: bgColor == "light" ? "#1e4667" : "black",
+                haloSize: 1.5,
+                haloColor: bgColor == "light" ? "white" : "black",
+                font: {
+                  size: '14px',
+                }
+              }
+            });
+            layer.labelingInfo = [ labels ];
           }
-        });
-        layer.labelingInfo = [ labels ];
+        }
       }
 
       renderer = {...renderer, symbol: symbol};
