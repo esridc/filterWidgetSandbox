@@ -1155,7 +1155,7 @@
             },
           ]
         });
-      } else if (geotype = "line") {
+      } else if (geotype == "line") {
         renderer.visualVariables.push({
           type: "size",
           valueExpression: "$view.scale",
