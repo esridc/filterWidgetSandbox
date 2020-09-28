@@ -1054,6 +1054,8 @@
                 uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
               } else {
                 uniqueSymbol = Object.assign({}, symbol);
+              }
+              if (geotype !== "line") {
                 uniqueSymbol.outline.color = strokeColor;
               }
               // set fillColor
@@ -1124,15 +1126,15 @@
 
         // if it's neither categorical nor number-like, use default styling but add labels
         } else {
-          const labels = new LabelClass({
+          var labels = new LabelClass({
             labelExpressionInfo: { expression: "$feature."+fieldName },
             symbol: {
               type: "text",  // autocasts as new TextSymbol()
-              color: bgColor == "light" ? "steelblue" : "black",
-              haloSize: 2,
+              color: bgColor == "light" ? "#1e4667" : "black",
+              haloSize: 1.5,
               haloColor: bgColor == "light" ? "white" : "black",
               font: {
-                size: '12px',
+                size: '14px',
               }
             }
           });
@@ -1200,15 +1202,16 @@
           // bgcolor might not be set if the tab wasn't visible when loaded
           bgColor = await getBgColor();
         }
+        // TODO: don't violate DRY (labels also set above)
         const labels = new LabelClass({
           labelExpressionInfo: { expression },
           symbol: {
             type: "text",  // autocasts as new TextSymbol()
-            color: bgColor == "light" ? "steelblue" : "black",
-            haloSize: 2,
+            color: bgColor == "light" ? "#1e4667" : "black",
+            haloSize: 1.5,
             haloColor: bgColor == "light" ? "white" : "black",
             font: {
-              size: '12px',
+              size: '14px',
             }
           }
         });
