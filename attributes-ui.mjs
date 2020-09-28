@@ -969,6 +969,8 @@
       if (!fieldName) { fieldName = event?.currentTarget?.getAttribute('data-field'); }
       // if still no fieldName, check for a displayField in the dataset and use that as the fieldName
       if (!fieldName) { fieldName = dataset?.attributes?.displayField; }
+      // if still no fieldName, default to "NAME"
+      if (!fieldName && dataset.attributes.fieldNames.includes("NAME")) { fieldName = "NAME"; }
 
         // if there's a fieldName then style it by field
       if (fieldName) {
@@ -1196,15 +1198,6 @@
 
       // add labels by default to polygons only for now
       if (geotype == "polygon") {
-        if (!fieldName) {
-          // default to NAME
-          if (dataset.attributes.fieldNames.includes("NAME")) {
-            fieldName = "NAME";
-          }
-        }
-        if (fieldName) {
-          var expression = "$feature."+fieldName;
-        }
         if (!bgColor) {
           // bgcolor might not be set if the tab wasn't visible when loaded
           bgColor = await getBgColor();
