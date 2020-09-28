@@ -97,7 +97,7 @@
     async function addFilter({event = null, fieldName = null, fieldStats = null}) {
       let {view, layer, layerView} = state;
       // if no fieldName is passed directly, get it from the attribute selection event
-      fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
+      if (fieldName == null) fieldName = event.currentTarget.dataset.field;
       const field = await getDatasetField(fieldName);
 
       let filter = document.createElement('div');
