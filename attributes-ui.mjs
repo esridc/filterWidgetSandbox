@@ -900,6 +900,7 @@
       // SET GEOMETRY
 
       if (geotype === 'point') {
+        // use CIMSymbol so we can have sub-pixel outline widths
         var cimsymbol = new CIMSymbol({
           data:  {
             type: "CIMSymbolReference",
@@ -918,11 +919,12 @@
                   markerGraphics: [{
                     type: "CIMMarkerGraphic",
                     geometry: {
+                      // circle geo taken from https://developers.arcgis.com/javascript/latest/sample-code/sandbox/index.html?sample=cim-primitive-overrides
                       rings: [
                         [
                           [8.5, 0.2],[7.06, 0.33],[5.66, 0.7],[4.35, 1.31],[3.16, 2.14],[2.14, 3.16],[1.31, 4.35],[0.7, 5.66],[0.33, 7.06],[0.2, 8.5],[0.33, 9.94],[0.7, 11.34],[1.31, 12.65],[2.14, 13.84],[3.16, 14.86],[4.35, 15.69],[5.66, 16.3],[7.06, 16.67],[8.5, 16.8],[9.94, 16.67],[11.34, 16.3],[12.65, 15.69],[13.84, 14.86],[14.86, 13.84],[15.69, 12.65],[16.3, 11.34],[16.67, 9.94],[16.8, 8.5],[16.67, 7.06],[16.3, 5.66],[15.69, 4.35],[14.86, 3.16],[13.84, 2.14],[12.65, 1.31],[11.34, 0.7],[9.94, 0.33],[8.5, 0.2]
                         ]
-                      ]                    },
+                      ]},
                     symbol: {
                       type: "CIMPolygonSymbol",
                       symbolLayers: [
@@ -965,11 +967,11 @@
         };
       }
 
-      // check for passed fieldName or pull it from the event object:
+      // check for fieldName in args, the event object,
       if (!fieldName) { fieldName = event?.currentTarget?.getAttribute('data-field'); }
-      // if still no fieldName, check for a displayField in the dataset and use that as the fieldName
+      // a displayField specified in the dataset,
       if (!fieldName) { fieldName = dataset?.attributes?.displayField; }
-      // if still no fieldName, default to "NAME"
+      // or just default to "NAME"
       if (!fieldName && dataset.attributes.fieldNames.includes("NAME")) { fieldName = "NAME"; }
 
       // if there's a fieldName then style it by field
@@ -982,6 +984,7 @@
           break fieldStyle;
         }
         try {
+          // sometimes stats have .min and .max, sometimes they have .value and .count
           var minValue =
             typeof fieldStats.values.min !== "undefined" ? fieldStats.values.min :
             typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0].value :
@@ -1012,7 +1015,7 @@
         // }
 
         // don't use predefined labelingInfo for now
-        // if (layer.labelingInfo && !usePredefinedStyle) {
+        // if (layer.labelingInfo && !usePredefinedStyle) {}
 
         // clear any existing labelingInfo sent from the server
         layer.labelingInfo = [ ];
@@ -1022,16 +1025,15 @@
         // a more exhaustive exploration in auto-style.html
         if (categorical) {
           // your basic categorical field
-            ramp = colorRamps.byName("Mushroom Soup");
-            rampColors = ramp.colors;
+            let ramp = colorRamps.byName("Mushroom Soup");
+            let rampColors = ramp.colors;
             var rMin = rampColors[0];
             var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
             var rMax = rampColors[rampColors.length-1];
 
             // optional: sort by values
             // uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
-            // TODO: sort before assigning color values, currently values are arranged by frequency,
-            // and colors are assigned before this step
+            // TODO: sort before assigning color values? currently values are arranged by frequency
 
             // remove nulls
             var filtered = uniqueValues.filter(a => a.value != null);
@@ -1085,11 +1087,10 @@
           // SET RAMP
           // custom ramp - pink to blue
           var rMax = {r:255, g:116, b:171, a:255};
-          // var rMin = rampColors[rampColors.length-1];
           var rMin = {r:21, g:39, b:128, a:255};
 
           renderer.visualVariables.push({
-            type: "color", // indicates this is a color visual variable
+            type: "color",
             field: fieldName,
             stops: [{
               value: minValue,
@@ -1188,12 +1189,12 @@
       // add labels by default to polygons only for now
       if (geotype == "polygon") {
         if (!bgColor) {
-          // bgcolor might not be set if the tab wasn't visible when loaded
+          // bgcolor might not be set if the tab wasn't visible when loaded, give it another chance
           bgColor = await getBgColor();
         }
         if (fieldName) {
           var expression = "$feature."+fieldName;
-          // don't label if numbers or if only one value
+          // don't label if field is numeric or if there's only one value
           if (!numberLike && uniqueValues.length > 1) {
             // TODO: don't violate DRY (labels also set above)
             const labels = new LabelClass({
