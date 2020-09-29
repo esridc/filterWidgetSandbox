@@ -1081,10 +1081,9 @@
               uniqueValueInfos,
               visualVariables: []
             };
-        } else if (numberLike) { // number-like, either categorical or non
-          var ramp = colorRamps.byName("Blue 3");
-          var rampColors = ramp.colors;
-          // var rMax = [rampColors[0]];
+        } else if (numberLike) { // number-like and non-categorical
+          // SET RAMP
+          // custom ramp - pink to blue
           var rMax = {r:255, g:116, b:171, a:255};
           // var rMin = rampColors[rampColors.length-1];
           var rMin = {r:21, g:39, b:128, a:255};
