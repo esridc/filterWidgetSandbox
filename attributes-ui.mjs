@@ -1088,23 +1088,17 @@
           // var rMin = rampColors[rampColors.length-1];
           var rMin = {r:21, g:39, b:128, a:255};
 
-          if (field.simpleType == "date") {
-            minLabel = formatDate(minValue);
-            maxLabel = formatDate(maxValue);
-          }
-
-          // SET RAMP
           renderer.visualVariables.push({
             type: "color", // indicates this is a color visual variable
             field: fieldName,
             stops: [{
               value: minValue,
               color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
-              label: minLabel
+              label: (field.simpleType == "date") ? formatDate(minValue) : minLabel
             },{
               value: maxValue,
               color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
-              label: maxLabel
+              label: (field.simpleType == "date") ? formatDate(maxValue) : maxLabel
             }]
           });
 
