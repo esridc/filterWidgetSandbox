@@ -130,7 +130,6 @@
         layerView = await view.whenLayerView(layer);
       }
 
-      const { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
       const numberLike = await datasetFieldIsNumberLike(fieldName);
 
       // (pseudo-)categorical - most records are covered by a limited # of unique values
@@ -1025,7 +1024,7 @@
 
         // GET RAMP
         // a more exhaustive exploration in auto-style.html
-        if (categorical) {
+        if (categorical || pseudoCategorical) {
           // your basic categorical field
             let ramp = colorRamps.byName("Mushroom Soup");
             let rampColors = ramp.colors;
@@ -1033,9 +1032,12 @@
             var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
             var rMax = rampColors[rampColors.length-1];
 
-            // optional: sort by values
-            uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+            // sort by values - if only pseudocategorical leave it sorted by the default: prevalence
+            if (categorical) {
+              uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+            }
             // TODO: sort before assigning color values? currently values are assigned color by frequency
+
             // remove bad values
             var filtered = uniqueValues.filter(a =>
               a.value != null && // not null
@@ -1232,7 +1234,8 @@
         })
         legend.layerInfos = [{
           layer: layer,
-          title: (!pseudoCategorical && !numberLike) ? fieldName : null,
+          // avoid duplicating fieldName
+          // title: (!pseudoCategorical && !numberLike) ? fieldName : null,
         }]
         view.ui.add(legend, "bottom-right");
       } else {
@@ -1331,7 +1334,7 @@
       const pseudoCategoricalMin = 80; // categorical max N values must cover at least this % of total records
       // add up the coverage percentages of the top values
       const coverage = Object.values(stats.values.slice(0, categoricalMax)).reduce((sum, {pct}) => sum + pct, 0)
-      const pseudoCategorical = categorical || (coverage * 100) >= pseudoCategoricalMin;
+      const pseudoCategorical = coverage * 100 >= pseudoCategoricalMin;
       return { categorical, pseudoCategorical };
     }
 
