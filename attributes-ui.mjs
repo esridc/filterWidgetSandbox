@@ -304,7 +304,7 @@
       container = container ? container : document.getElementById('filters');
       container.appendChild(wrapper);
 
-      // filter by existing widgets on creation?
+      // filter by existing widgets on creation
       let features;
       if (widgets.length > 0) {
         const where = concatWheres({ server: true });
@@ -1422,9 +1422,16 @@
 
     function generateLabel(field, fieldStats) {
       var label = `${field.alias || field.name}`;
-      var min = fieldStats.values.min;
-      var max = fieldStats.values.max;
-      if (fieldStats && fieldStats.values && fieldStats.values.min != null && fieldStats.values.max != null) {
+      if (!fieldStats) {
+        return label;
+      } else {
+        var min = fieldStats.values.min;
+        var max = fieldStats.values.max;
+        label += ' <span class="attributeRange">';
+      }
+      if (fieldStats.values
+        && (min && max) != null
+        && typeof (min && max) != 'undefined') {
         if (field.simpleType === 'numeric') {
           // vary precision based on value range – round to integers if range is > 100, otherwise
           // find the decimal exponent of the most sigfig of the value range, and truncate two decimal places past that -
@@ -1434,14 +1441,16 @@
           let precision = digits[1] == 1 ? 0 : digits[0] > 3 ? 0 : digits[1];
           min = min.toFixed(precision);
           max = max.toFixed(precision);
-          label += `<span class="attributeRange">(${min} to ${max})</span>`;
+          label += `(${min} to ${max})`;
         } else if (field.simpleType === 'date') {
-          label += ` (${formatDate(fieldStats.values.min)} to ${formatDate(fieldStats.values.max)})`;
+          label += `(${formatDate(min)} to ${formatDate(max)})`;
         }
-      } else if (fieldStats && fieldStats.uniqueCount && field.simpleType === 'string') {
-        label += ` (${fieldStats.uniqueCount} values)`;
+      } else if (fieldStats.uniqueCount && field.simpleType === 'string') {
+        label += `(${fieldStats.uniqueCount} values)`;
+      } else {
+        label += `<i>(No values)</i>`;
       }
-      return label
+      return ''+label+'</span>';
     }
 
     // update the map view with a new where clause
