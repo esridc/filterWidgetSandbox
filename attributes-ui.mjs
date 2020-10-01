@@ -1034,11 +1034,14 @@
             var rMax = rampColors[rampColors.length-1];
 
             // optional: sort by values
-            // uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
-            // TODO: sort before assigning color values? currently values are arranged by frequency
-
-            // remove nulls
-            var filtered = uniqueValues.filter(a => a.value != null);
+            uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+            // TODO: sort before assigning color values? currently values are assigned color by frequency
+            // remove bad values
+            var filtered = uniqueValues.filter(a =>
+              a.value != null && // not null
+              a.value != "" &&   // not the empty string
+              !(/^\s+$/.test(a.value))   // not all whitespace
+            );
 
             // generate categorical colors for field
             var uniqueValueInfos = [];
