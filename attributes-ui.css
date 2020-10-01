@@ -317,3 +317,8 @@ body,
   margin-bottom: 2px;
   display: inline-block;
 }
+
+.inactive {
+  color: #666;
+  background-color: #ddd;
+}

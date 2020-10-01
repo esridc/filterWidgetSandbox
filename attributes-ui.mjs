@@ -1403,6 +1403,20 @@
         }
 
         item.setAttribute('data-field', fieldName);
+
+        // add click handler
+        if (field.statistics &&
+            (
+              !(field.statistics.values.min == null || field.statistics.values.max == null) ||
+              (fieldStats.uniqueCount && field.simpleType === 'string')
+            )
+          )
+        {
+          item.addEventListener('click', () => callback({fieldName}));
+        } else {
+          // ...or don't, and grey out the list item
+          item.classList.add('inactive');
+        }
         item.addEventListener('click', () => callback({fieldName}));
         attributeList.appendChild(item);
       });
