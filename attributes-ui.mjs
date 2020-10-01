@@ -81,6 +81,8 @@
     }
     // zoomToDataCheckbox,
 
+    const DATASET_FIELD_UNIQUE_VALUES = {}; // cache by field name
+
     // URL params
     const params = new URLSearchParams(window.location.search);
     var env = 'prod';
@@ -103,7 +105,7 @@
       let filter = document.createElement('div');
       filter.classList.add('filterDiv');
       fieldStats = fieldStats ? fieldStats : field.statistics;
-      filter.innerHTML = generateLabel(field, fieldStats);
+      filter.innerHTML = await generateLabel(field, fieldStats);
 
       // actions
       let icons = document.createElement('span');
@@ -1270,8 +1272,6 @@
       }
     }
 
-    const DATASET_FIELD_UNIQUE_VALUES = {}; // cache by field name
-
     async function getDatasetFieldUniqueValues (fieldName) {
       if (!DATASET_FIELD_UNIQUE_VALUES[fieldName]) {
         const field = getDatasetField(fieldName);
@@ -1379,19 +1379,18 @@
       //   fieldStats.values.min !== fieldStats.values.max
       // })
 
-      .forEach(([fieldName, fieldStats]) => {
+      .forEach(async ([fieldName, fieldStats]) => {
         // dataset.attributes.fieldNames
         //   .map(fieldName => [fieldName, getDatasetField(fieldName)])
         //   .filter(([fieldName, field]) => !field.statistics || field.statistics.values.min !== field.statistics.values.max)
         //   .forEach(([fieldName, field]) => {
         const field = getDatasetField(fieldName);
         fieldName = field.name;
-        // const fieldStats = field.statistics.values;
 
         // make list entry for attribute
         const item = document.createElement('calcite-dropdown-item');
         item.setAttribute('class', 'attribute');
-        item.innerHTML = generateLabel(field, fieldStats);
+        item.innerHTML = await generateLabel(field, fieldStats);
 
         // add icon for field type
         if (field.simpleType === 'numeric') {
@@ -1434,7 +1433,7 @@
       return [s[0].length, Math.min(s[1].length, 4)];
     }
 
-    function generateLabel(field, fieldStats) {
+    async function generateLabel(field, fieldStats) {
       var label = `${field.alias || field.name}`;
       if (!fieldStats) {
         return label;
@@ -1460,7 +1459,14 @@
           label += `(${formatDate(min)} to ${formatDate(max)})`;
         }
       } else if (fieldStats.uniqueCount && field.simpleType === 'string') {
-        label += `(${fieldStats.uniqueCount} values)`;
+        // remove bad values
+        var uniqueValues = (await getDatasetFieldUniqueValues(field.name)).values;
+        var filtered = uniqueValues.filter(a =>
+          a.value != null &&        // not null
+          a.value != "" &&          // not the empty string
+          !(/^\s+$/.test(a.value))  // not all whitespace
+        );
+        label += `(${filtered.length} values)`;
       } else {
         label += `<i>(No values)</i>`;
       }
