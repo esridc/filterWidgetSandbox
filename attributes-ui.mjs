@@ -985,6 +985,13 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       }
       try {
         // sometimes stats have .min and .max, sometimes they have .value and .count
+        var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
+        var numberLike = await datasetFieldIsNumberLike(fieldName);
+        if (field.simpleType == "string" && numberLike) {
+          // recast values as numbers and resort
+          fieldStats.values = fieldStats.values.map(e => Object.assign({...e, value: parseFloat(e.value)}))
+            .sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+        }
         var minValue =
           typeof fieldStats.values.min !== "undefined" ? fieldStats.values.min :
           typeof fieldStats.values.length !== "undefined" ? fieldStats.values[0].value :
@@ -995,8 +1002,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           typeof fieldStats.values.length !== "undefined" ? fieldStats.values[fieldStats.values.length -1].value :
           null;
         var maxLabel = maxValue;
-        var { categorical, pseudoCategorical } = await datasetFieldCategorical(fieldName);
-        var numberLike = await datasetFieldIsNumberLike(fieldName);
       } catch(e) {
         console.warn("Couldn't get statistics for styling field '"+fieldName+"':", e);
         break fieldStyle;
