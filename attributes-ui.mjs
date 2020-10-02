@@ -1415,17 +1415,17 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
       item.setAttribute('data-field', fieldName);
 
-      // add click handler
-      if (field.statistics &&
+      // add click handler if the field has valid values
+      if (fieldStats &&
           (
-            !(field.statistics.values.min == null || field.statistics.values.max == null) ||
-            (fieldStats.uniqueCount && field.simpleType === 'string')
+            !(fieldStats.values.min == null || fieldStats.values.max == null) || // min and max are not null
+            (fieldStats.uniqueCount && field.simpleType === 'string') // or the field is type string and there's a uniqueCount
           )
         )
       {
         item.addEventListener('click', () => callback({fieldName}));
       } else {
-        // ...or don't, and grey out the list item
+        // if not, grey out the list item
         item.classList.add('inactive');
       }
       attributeList.appendChild(item);
