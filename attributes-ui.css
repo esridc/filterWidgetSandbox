@@ -49,8 +49,8 @@ body,
 }
 
 #sidebar {
-  min-width: 325px;
-  max-width: 375px;
+  min-width: 340px;
+  max-width: 400px;
   height: 100%;
   padding: 20px;
   /* margin: 0px 12px; */
@@ -146,7 +146,7 @@ body,
 }
 #styleAttributeList {
   height: auto;
-  max-height: 7em;
+  max-height: 10.5em;
   overflow-x: hidden;
   overflow-y: scroll;
   margin: 0 0 10px 0;
