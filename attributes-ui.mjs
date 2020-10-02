@@ -211,8 +211,6 @@
               let uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
               let domain = [Math.min(...uniqueValues.map(a => a.value)),
                             Math.max(...uniqueValues.map(a => a.value))]
-              // remove nulls
-              var filtered = uniqueValues.filter(a => a.value != null);
               // manually reconstruct a feature values array from the unique values and their counts -
               // normalize array length to 1000, as precision isn't as important as speed here
               const divisor = state.dataset.attributes.recordCount / 1000;
@@ -1040,13 +1038,6 @@
             }
             // TODO: sort before assigning color values? currently values are assigned color by frequency
 
-            // remove bad values
-            var filtered = uniqueValues.filter(a =>
-              a.value != null && // not null
-              a.value != "" &&   // not the empty string
-              !(/^\s+$/.test(a.value))   // not all whitespace
-            );
-
             // generate categorical colors for field
             var uniqueValueInfos = [];
             const rampMaxColors = Math.min(uniqueValues.length, categoricalMax);
@@ -1086,8 +1077,8 @@
                 uniqueSymbol.color = fillColor;
               }
               uniqueValueInfos.push( {
-                value: filtered[x].value,
-                label: field.simpleType == "date" ? formatDate(filtered[x].value) : filtered[x].value,
+                value: uniqueValues[x].value,
+                label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) : uniqueValues[x].value,
                 symbol: uniqueSymbol,
               });
             }
@@ -1302,12 +1293,16 @@
             values: uniqueValueInfos
           }
         }
-
+        // filter bad stats values & update count
+        stats.values = stats.values.filter(a =>
+          a.value != null &&          // not null
+          a.value != "" &&            // not the empty string
+          !(/^\s+$/.test(a.value)));  // not all whitespace
+        stats.uniqueCount = stats.values.length;
         // add percent of records
         stats.values = stats.values
         // .filter(v => v.value != null && (typeof v.value !== 'string' || v.value.trim() !== ''))
         .map(v => ({ ...v, pct: v.count / stats.count }));
-
         // get top values
         const maxTopValCount = 12;
         // stats.topValues = stats.values.slice(0, maxTopValCount);
@@ -1473,12 +1468,7 @@
       } else if (fieldStats.uniqueCount && field.simpleType === 'string') {
         // remove bad values
         var uniqueValues = (await getDatasetFieldUniqueValues(field.name)).values;
-        var filtered = uniqueValues.filter(a =>
-          a.value != null &&        // not null
-          a.value != "" &&          // not the empty string
-          !(/^\s+$/.test(a.value))  // not all whitespace
-        );
-        label += `(${filtered.length} values)`;
+        label += `(${uniqueValues.length} value${uniqueValues.length > 1 ? 's)' : ')'}`;
       } else {
         label += `<i>(No values)</i>`;
       }
