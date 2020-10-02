@@ -78,6 +78,7 @@
       attributeList: [],
       bgColor: null,
       legend: null,
+      categoricalMax: 13,
     }
     // zoomToDataCheckbox,
 
@@ -1024,6 +1025,7 @@
 
         // GET RAMP
         // a more exhaustive exploration in auto-style.html
+        let {categoricalMax} = state;
         if (categorical || pseudoCategorical) {
           // your basic categorical field
             let ramp = colorRamps.byName("Mushroom Soup");
@@ -1047,14 +1049,19 @@
 
             // generate categorical colors for field
             var uniqueValueInfos = [];
-            for (let x = 0; x < filtered.length; x++) {
-              // set strokeColor/outline
-              let strokeColor = [
-                rampColors[(x % rampColors.length)%rampColors.length].r * .5,
-                rampColors[(x % rampColors.length)%rampColors.length].g * .5,
-                rampColors[(x % rampColors.length)%rampColors.length].b * .5,
-                255 //alpha is always opaque
-              ];
+            const rampMaxColors = Math.min(uniqueValues.length, categoricalMax);
+            for (let x = 0; x < uniqueValues.length; x++) {
+              if (x < rampMaxColors) {
+                // set strokeColor/outline
+                var strokeColor = [
+                  // rollover calculation
+                  // TODO: switch to proportional interpolation
+                  rampColors[(x % rampColors.length)%rampColors.length].r * .5,
+                  rampColors[(x % rampColors.length)%rampColors.length].g * .5,
+                  rampColors[(x % rampColors.length)%rampColors.length].b * .5,
+                  255 //alpha is always opaque
+                ];
+              } // else use the default color for the long tail of categories
               if (symbol.type == 'cim') {
                 // clone symbol
                 var uniqueSymbol = symbol.clone();
@@ -1325,15 +1332,14 @@
 
     // Determine if field is categorical or pseudo-categorical
     async function datasetFieldCategorical (fieldName) {
+      var {categoricalMax} = state;
       const field = await getDatasetField(fieldName);
       const stats = await getDatasetFieldUniqueValues(fieldName);
 
-      // if datatype is a string, relax requirements
-      let categoricalMax = field.simpleType == "string" ? 80 : 7;
       const categorical = stats.uniqueCount <= categoricalMax;
-      const pseudoCategoricalMin = 80; // categorical max N values must cover at least this % of total records
+      const pseudoCategoricalMin = 50; // categoricalMax N values must cover at least this % of total records
       // add up the coverage percentages of the top values
-      const coverage = Object.values(stats.values.slice(0, categoricalMax)).reduce((sum, {pct}) => sum + pct, 0)
+      const coverage = Object.values(stats.values.slice(0, categoricalMax)).reduce((sum, {pct}) => sum + pct, 0);
       const pseudoCategorical = coverage * 100 >= pseudoCategoricalMin;
       return { categorical, pseudoCategorical };
     }
