@@ -1423,7 +1423,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         // ...or don't, and grey out the list item
         item.classList.add('inactive');
       }
-      item.addEventListener('click', () => callback({fieldName}));
       attributeList.appendChild(item);
     });
     return attributeList;
