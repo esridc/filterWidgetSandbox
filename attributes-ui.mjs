@@ -1029,7 +1029,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       // GET RAMP
       // a more exhaustive exploration in auto-style.html
       let {categoricalMax} = state;
-      if (categorical || pseudoCategorical) {
+      if (categorical || (pseudoCategorical && !numberLike)) {
         // your basic categorical field
           let ramp = colorRamps.byName("Mushroom Soup");
           let rampColors = ramp.colors;
