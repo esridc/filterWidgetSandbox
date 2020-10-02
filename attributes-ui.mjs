@@ -1091,8 +1091,8 @@
         } else if (numberLike) { // number-like and non-categorical
           // SET RAMP
           // custom ramp - pink to blue
-          var rMax = {r:255, g:116, b:171, a:255};
-          var rMin = {r:21, g:39, b:128, a:255};
+          var rMin = {r:255, g:200, b:221, a:255};
+          var rMax = {r:21, g:39, b:128, a:255};
 
           renderer.visualVariables.push({
             type: "color",
