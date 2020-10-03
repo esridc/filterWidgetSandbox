@@ -758,6 +758,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   async function loadDataset (args) {
     var {dataset, layer} = state;
+    // clear any existing dataset info
+    dataset = null;
     if (args.url) { // dataset url provided directly
       const datasetURL = args.url;
       try {
@@ -778,8 +780,16 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         dataset = (await fetch(datasetURL).then(r => r.json())).data[0];
       } catch(e) { console.log('failed to load dataset from slug', args.datasetSlug, e); }
     }
-    // update state so dataset is available for attribute list update
-    state.dataset = dataset;
+    // initialize a new layer
+    const url = dataset.attributes.url;
+    layer = new FeatureLayer({
+      renderer: {type: 'simple'},
+      url,
+      minScale: 0,
+      maxScale: 0,
+    });
+    // update state
+    state = {...state, layer, dataset};
 
     // clear filters list
     clearFilters();
@@ -803,22 +813,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     let stylePlaceholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
     styleAttributeSearchElement.setAttribute('placeholder', stylePlaceholderText);
 
-    const url = dataset.attributes.url;
-
     state.usePredefinedStyle = false; // disable for now
-    try {
-      // initialize a new layer
-      layer = new FeatureLayer({
-        renderer: {type: 'simple'},
-        url,
-        minScale: 0,
-        maxScale: 0,
-      });
-    } catch(e) {
-      console.log('e:', e)
-    }
-    // update state
-    state = {...state, layer};
     // draw map once before autoStyling because theme detection requires an initialized layerView object
     state.view = await drawMap(layer);
     // guess at a style for this field
