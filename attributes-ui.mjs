@@ -713,12 +713,17 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   async function drawMap() {
     var {dataset, layer} = state;
+    const darkModeCheckbox = document.querySelector('#darkMode calcite-checkbox');
     const map = new Map({
-      // choose a light or dark background theme
-      basemap: "gray-vector",
-      // basemap: "dark-gray-vector",
+      // choose a light or dark background theme as default
+      basemap: darkModeCheckbox?.checked ? "dark-gray-vector" : "gray-vector",
       layers: layer,
     });
+    if (state.view) {
+      // update existing view, then exit
+      state.view.map = map;
+      return;
+    }
     var view = new MapView({
       container: "viewDiv",
       map: map,
@@ -729,10 +734,17 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       return layerView;
     });
 
+    // add toggle checkboxes
+
     view.ui.add('zoomToData', 'top-right');
     const zoomToDataCheckbox = document.querySelector('#zoomToData calcite-checkbox');
     zoomToDataCheckbox.addEventListener('calciteCheckboxChange', () => {
       updateLayerViewEffect();
+    });
+
+    view.ui.add('darkMode', 'top-right');
+    darkModeCheckbox.addEventListener('calciteCheckboxChange', e => {
+      drawMap();
     });
 
     // put vars on window for debugging
