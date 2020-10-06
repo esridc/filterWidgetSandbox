@@ -873,6 +873,20 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return arr;
   }
 
+  // https://stackoverflow.com/questions/6122571/simple-non-secure-hash-function-for-javascript
+  function getHash(s) {
+    var hash = 0;
+    if (s.length == 0) {
+        return hash;
+    }
+    for (var i = 0; i < s.length; i++) {
+        var char = s.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  }
+
   //
   // STYLING
   //
@@ -1072,9 +1086,17 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         // your basic categorical field
           let ramp = colorRamps.byName("Mushroom Soup");
           let rampColors = ramp.colors;
-          var rMin = rampColors[0];
-          var rMid = rampColors[Math.floor((rampColors.length-1)/2)];
-          var rMax = rampColors[rampColors.length-1];
+          const numColors = rampColors.length;
+
+          // if only a single value, pick a single color, hashing by fieldName –
+          // this will be more likely to show a visual change when switching between
+          // two fields which both have a single value
+          if (fieldStats.values.length == 1 ||
+              fieldStats.values.min == fieldStats.values.max) {
+            var indexOffset = getHash(fieldName) % numColors; // pick an offset
+            // replace the entire ramp with a single color
+            rampColors = [rampColors[indexOffset]];
+          }
 
           // sort by values - if only pseudocategorical leave it sorted by the default: prevalence
           if (categorical) {
@@ -1091,9 +1113,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
               var strokeColor = [
                 // rollover calculation
                 // TODO: switch to proportional interpolation
-                rampColors[(x % rampColors.length)%rampColors.length].r * .5,
-                rampColors[(x % rampColors.length)%rampColors.length].g * .5,
-                rampColors[(x % rampColors.length)%rampColors.length].b * .5,
+                rampColors[(x % numColors)%numColors].r * .5, // same as fillColor but half as bright
+                rampColors[(x % numColors)%numColors].g * .5,
+                rampColors[(x % numColors)%numColors].b * .5,
                 255 //alpha is always opaque
               ];
             } // else use the default color for the long tail of categories
@@ -1110,9 +1132,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
             }
             // set fillColor
             let fillColor = [
-              rampColors[(x % rampColors.length)%rampColors.length].r,
-              rampColors[(x % rampColors.length)%rampColors.length].g,
-              rampColors[(x % rampColors.length)%rampColors.length].b,
+              rampColors[(x % numColors)%numColors].r,
+              rampColors[(x % numColors)%numColors].g,
+              rampColors[(x % numColors)%numColors].b,
               255 //alpha is always opaque
             ];
             if (symbol.type == 'cim') {
