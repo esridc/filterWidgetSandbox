@@ -223,18 +223,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
             let domain = [Math.min(...uniqueValues.map(a => a.value)),
                           Math.max(...uniqueValues.map(a => a.value))]
             // manually reconstruct a feature values array from the unique values and their counts -
-            // normalize array length to 1000, as precision isn't as important as speed here
-            const divisor = state.dataset.attributes.recordCount / 1000;
-            let arr = [];
-            for (let x = 0; x < filtered.length; x++) {
-              for (let y = 0; y < Math.ceil(filtered[x].count/divisor); y++) {
-                arr.push(filtered[x].value);
-              };
-            }
+            let arr = reconstructDataset(uniqueValues);
             // use d3 to bin histograms
             let d3bins = d3.histogram()  // create layout object
-            .domain([Math.min(...filtered.map(a => a.value)),
-            Math.max(...filtered.map(a => a.value))])  // to cover range
+            .domain([Math.min(...uniqueValues.map(a => a.value)),
+            Math.max(...uniqueValues.map(a => a.value))])  // to cover range
             .thresholds(29) // separated into 30 bins
             (arr);          // pass the array
             // convert the d3 bins array to a bins object
@@ -249,8 +242,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
             // put the bins in the params object
             values = {
               'bins': bins,
-              'minValue': Math.min(...filtered.map(a => a.value)),
-              'maxValue': Math.max(...filtered.map(a => a.value)),
+              'minValue': Math.min(...uniqueValues.map(a => a.value)),
+              'maxValue': Math.max(...uniqueValues.map(a => a.value)),
             }
             const featureCount = arr.length;
             source = 'layerQuery';
@@ -862,10 +855,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   // manually reconstruct a feature values array from unique values and their counts
   function reconstructDataset(values) {
     // normalize array length to 1000, as precision isn't as important as speed here
-    // const divisor = dataset.attributes.recordCount / 1000;
-
-    // use the whole set
-    const divisor = 1;
+    const divisor = state.dataset.attributes.recordCount / 1000;
+    // const divisor = 1; // alternately, use the whole set
     let arr = [];
     for (let x = 0; x < values.length; x++) {
       for (let y = 0; y < Math.ceil(values[x].count/divisor); y++) {
