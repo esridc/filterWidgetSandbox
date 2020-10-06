@@ -916,16 +916,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return bgColor;
   }
 
-  // analyze a dataset and choose an initial best-guess symbology for it
+  // Choose symbology based on various dataset and theme attributes
   async function autoStyle({event = null, fieldName = null}) {
     var {dataset, layer, view, usePredefinedStyle, bgColor} = state;
 
-    //
-    // Choose symbology based on various dataset and theme attributes
-    //
-
-    // get basemap color theme: "light" or "dark"
-    bgColor = await getBgColor();
+    bgColor = await getBgColor(); // get basemap color theme: "light" or "dark"
 
     var opacity = 1;
 
@@ -1003,14 +998,14 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       symbol = {
         type: 'simple-line',
         width: '2px',
-        color: color,
-        opacity: opacity,
+        color,
+        opacity,
       };
 
     } else if (geotype === 'polygon') {
       symbol = {
         type: 'simple-fill',
-        color: color,
+        color,
         outline: {
           color: outlineColor,
           width: 0.5,
@@ -1314,7 +1309,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     // update state
     state = {...state, layer, renderer, bgColor, legend}
     return {layer, renderer};
-  }
+  } // end autoStyle
 
   //
   // STYLING UTILITY FUNCTIONS
@@ -1333,6 +1328,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           size: '14px',
         }
       }
+      // these ArcGIS label class properties don't exist in the JSAPI ... yet
+      // removeDuplicates: "all",
+      // removeDuplicatesDistance: 0,
+      // repeatLabel: false,
+      // repeatLabelDistance: 500,
     });
   }
 
