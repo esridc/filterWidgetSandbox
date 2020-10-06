@@ -329,57 +329,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return histogram.widget;
   }
 
-  // make and place a value list of checkboxes
-  async function makeStringWidget({ fieldName, container = null, slider = true }) {
-    // const listContainer = document.createElement('div');
-    // const listContainer = document.createElement('div');
-    container.classList.add('valueListWidget');
-    const field = getDatasetField(fieldName);
-
-    // Build filter/where clause and update layer
-    const onCheckboxChange = ({ checkboxes }) => {
-      let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
-      let whereClause = '1=1';
-      if (checked.length > 0) {
-        const hasNull = checked.find(c => c.value == null) ? true : false;
-        checked = checked.filter(c => c.value != null);
-
-        let whereVals;
-        if (field.simpleType === 'date') {
-          whereVals = checked.map(c => +new Date(c.value));
-          whereClause = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
-        } else {
-          whereVals = checked.map(c => {
-            if (typeof c.value === 'string') {
-              return `'${c.value}'`
-            } else {
-              return c.value;
-            }
-          });
-          whereClause = `${fieldName} IN (${whereVals.join(', ')})`;
-        }
-
-        if (hasNull) {
-          whereClause = whereVals ? `${whereClause} OR ` : '';
-          whereClause = `${fieldName} IS NULL`; // need special SQL handling for null vales
-        }
-      }
-
-      container.setAttribute('whereClause', whereClause);
-      const where = concatWheres({ server: false });
-      updateLayerViewEffect({ where });
-    };
-
-    const { fieldStats } = await createValueList({ fieldName, container, onUpdateValues: onCheckboxChange });
-
-    fieldStats.container = container;
-
-    // register widget
-    state.widgets.push(fieldStats)
-
-    return fieldStats;
-  }
-
+  // create a value list of checkboxes
   async function createValueList ({ fieldName, container, onUpdateValues }) {
     var {dataset, layer} = state;
     container.classList.add('filter');
@@ -557,6 +507,59 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     return { checkboxes, fieldStats: stats };
   }
+
+  // make and place a value list of checkboxes
+  async function makeStringWidget({ fieldName, container = null, slider = true }) {
+    container.classList.add('valueListWidget');
+    const field = getDatasetField(fieldName);
+
+    // Build filter/where clause and update layer
+    const onCheckboxChange = ({ checkboxes }) => {
+      let checked = checkboxes.filter(c => c.checked).map(c => JSON.parse(c.value));
+      let whereClause = '1=1';
+      if (checked.length > 0) {
+        const hasNull = checked.find(c => c.value == null) ? true : false;
+        checked = checked.filter(c => c.value != null);
+
+        let whereVals;
+        if (field.simpleType === 'date') {
+          whereVals = checked.map(c => +new Date(c.value));
+          whereClause = whereVals.map(v => `${fieldName} = ${v}`).join(' OR ');
+        } else {
+          whereVals = checked.map(c => {
+            if (typeof c.value === 'string') {
+              return `'${c.value}'`
+            } else {
+              return c.value;
+            }
+          });
+          whereClause = `${fieldName} IN (${whereVals.join(', ')})`;
+        }
+
+        if (hasNull) {
+          whereClause = whereVals ? `${whereClause} OR ` : '';
+          whereClause = `${fieldName} IS NULL`; // need special SQL handling for null vales
+        }
+      }
+
+      container.setAttribute('whereClause', whereClause);
+      const where = concatWheres({ server: false });
+      updateLayerViewEffect({ where });
+    };
+
+    const { fieldStats } = await createValueList({ fieldName, container, onUpdateValues: onCheckboxChange });
+
+    fieldStats.container = container;
+
+    // register widget
+    state.widgets.push(fieldStats)
+
+    return fieldStats;
+  }
+
+    //
+    // UDPATE THINGS
+    //
 
   // update layerview filter based on widget, throttled
   const updateLayerView = _.throttle(
