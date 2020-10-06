@@ -726,6 +726,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (state.view) {
       // update existing view, then exit
       state.view.map = map;
+      state.bgColor = await getBgColor();
       return;
     }
     var view = new MapView({
@@ -766,6 +767,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
     state.view = view;
     state.layerView = layerView;
+    state.bgColor = await getBgColor();
     return view;
   }
 
