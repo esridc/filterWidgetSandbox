@@ -1089,7 +1089,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           // this will be more likely to show a visual change when switching between
           // two fields which both have a single value
           if (fieldStats.values.length == 1 ||
-              fieldStats.values.min == fieldStats.values.max) {
+                ((fieldStats.values.min && fieldStats.values.max) &&
+                 (fieldStats.values.min === fieldStats.values.max))
+              ) {
             var indexOffset = getHash(fieldName) % numColors; // pick an offset
             // replace the entire ramp with a single color
             rampColors = [rampColors[indexOffset]];
