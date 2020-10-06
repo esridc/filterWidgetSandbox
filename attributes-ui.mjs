@@ -79,6 +79,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     bgColor: null,
     legend: null,
     categoricalMax: 13,
+    fieldName: null,
   }
   // zoomToDataCheckbox,
 
@@ -747,6 +748,12 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       drawMap();
     });
 
+    view.ui.add('labels', 'top-right');
+    const labelsCheckbox = document.querySelector('#labels calcite-checkbox');
+    labelsCheckbox.addEventListener('calciteCheckboxChange', e => {
+      autoStyle({fieldName: state.fieldName})
+    });
+
     // put vars on window for debugging
     Object.assign(window, { state, map, getDatasetField, getDatasetFieldUniqueValues, /*histogram, histogramValues,*/ generateHistogram, HistogramRangeSlider, uniqueValues });
 
@@ -984,6 +991,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     // if there's a fieldName then style it by field
     fieldStyle: // label this block so we can break out of it if necessary
     if (fieldName) {
+      state.fieldName = fieldName; // used by toggle checkboxes
       var field = getDatasetField(fieldName);
       var fieldStats = field.statistics;
       if (fieldStats.values.length == 0) { // it happens
@@ -1142,23 +1150,17 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
       // if it's neither categorical nor number-like, use default styling but add labels
       } else {
-        var labels = new LabelClass({
-          labelExpressionInfo: { expression: "$feature."+fieldName },
-          symbol: {
-            type: "text",  // autocasts as new TextSymbol()
-            color: bgColor == "light" ? "#1e4667" : "black",
-            haloSize: 1.5,
-            haloColor: bgColor == "light" ? "white" : "black",
-            font: {
-              size: '14px',
-            }
-          }
-        });
-        layer.labelingInfo = [ labels ];
+        layer.labelingInfo = [ addLabels(fieldName) ];
       }
     } // end if (fieldName)
 
+    // also add labels if the "Labels on" toggle is checked
+    if (document.querySelector('#labels calcite-checkbox')?.checked) {
+      layer.labelingInfo = [ addLabels(fieldName) ];
+    }
+
     // SET SCALE
+
 
     if (geotype == "point") {
       renderer.visualVariables.push({
@@ -1261,6 +1263,27 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return {layer, renderer};
   }
 
+  //
+  // STYLING UTILITY FUNCTIONS
+  //
+
+  // add labels to a layer
+  function addLabels(fieldName) {
+    return new LabelClass({
+      labelExpressionInfo: { expression: "$feature."+fieldName },
+      symbol: {
+        type: "text",  // autocasts as new TextSymbol()
+        color: state.bgColor == "light" ? "#1e4667" : "white",
+        haloSize: 1.5,
+        haloColor: state.bgColor == "light" ? "white" : "black",
+        font: {
+          size: '14px',
+        }
+      }
+    });
+  }
+
+  // get geometrical extent of dataset features
   function getDatasetExtent (dataset) {
     const extent = dataset.attributes.extent;
     return {
