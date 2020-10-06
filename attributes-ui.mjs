@@ -133,7 +133,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     filter.appendChild(container);
 
     if (!view) {
-      view = await drawMap(layer)
+      view = await drawMap()
       layerView = await view.whenLayerView(layer);
     }
 
@@ -144,11 +144,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     if ((field.simpleType === 'string' && !numberLike)) {
       // value list
-      widget = await makeStringWidget({ fieldName, container, slider: true });
+      var widget = await makeStringWidget({ fieldName, container, slider: true });
     }
     // numerics and dates
     else {
-      var widget = await makeHistogramWidget({ fieldName, container, slider: true });
+      widget = await makeHistogramWidget({ fieldName, container, slider: true });
       container.classList.add('histogramWidget');
       // set whereClause attribute
       let whereClause = widget.generateWhereClause(fieldName);
@@ -762,7 +762,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     view.ui.add('labels', 'top-right');
     const labelsCheckbox = document.querySelector('#labels calcite-checkbox');
-    labelsCheckbox.addEventListener('calciteCheckboxChange', e => {
+    labelsCheckbox.addEventListener('calciteCheckboxChange', () => {
       autoStyle({fieldName: state.fieldName})
     });
 
@@ -850,7 +850,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     state.usePredefinedStyle = false; // disable for now
     // draw map once before autoStyling because getBgColor() requires an initialized layerView object
-    state.view = await drawMap(layer);
+    state.view = await drawMap();
     if (state.view) { // actually wait for view
       autoStyle({});  // guess at a style for this field
     }
@@ -896,7 +896,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     } catch(e) {
       try {
         if (!state.view) {
-          state.view = await drawMap(layer)
+          state.view = await drawMap()
         }
         if (!state.layerView) {
           state.layerView = await view.whenLayerView(layer);
@@ -1687,7 +1687,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       let field = x.getAttribute('data-field');
       let fieldName = getDatasetField(field).alias.toLowerCase();
       x.style.display = 'flex';
-  });
+    });
   }
 
   // clear filters list and reset filters UI
