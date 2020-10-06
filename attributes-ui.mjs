@@ -793,6 +793,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   async function loadDataset (args) {
     var {dataset, layer} = state;
+    state.view = null; // invalidate any existing view
     // clear any existing dataset info
     dataset = null;
     if (args.url) { // dataset url provided directly
@@ -853,8 +854,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     state.usePredefinedStyle = false; // disable for now
     // draw map once before autoStyling because theme detection requires an initialized layerView object
     state.view = await drawMap(layer);
-    // guess at a style for this field
-    autoStyle({});
+    if (state.view) { // actually wait for view
+      autoStyle({});  // guess at a style for this field
+    }
   }
 
   // manually reconstruct a feature values array from unique values and their counts
