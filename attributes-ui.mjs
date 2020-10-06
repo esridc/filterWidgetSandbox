@@ -776,9 +776,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     document.querySelector('#datasetName').innerHTML = dataset.attributes.name;
     document.querySelector('#orgName').innerHTML = dataset.attributes.orgName || '';
     document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
-    state.view = view;
-    state.layerView = layerView;
-    state.bgColor = await getBgColor();
+
+    // update state
+    state = {...state, view, layerView, bgColor: await getBgColor()};
     return view;
   }
 
@@ -852,7 +852,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     styleAttributeSearchElement.setAttribute('placeholder', stylePlaceholderText);
 
     state.usePredefinedStyle = false; // disable for now
-    // draw map once before autoStyling because theme detection requires an initialized layerView object
+    // draw map once before autoStyling because getBgColor() requires an initialized layerView object
     state.view = await drawMap(layer);
     if (state.view) { // actually wait for view
       autoStyle({});  // guess at a style for this field
@@ -895,25 +895,27 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // determine whether the map background is dark or light
   async function getBgColor() {
+    // error handling is probably vestigial at this point
     try {
       var bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
     } catch(e) {
-        try {
-          if (!view) {
-            view = await drawMap(layer)
-          }
-          if (!layerView) {
-            layerView = await view.whenLayerView(layer);
-          }
-          if (view && layerView) {
-            bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
-          }
-        } catch(e) {
-          console.warn('Problem getting bgColor:', e)
+      try {
+        if (!state.view) {
+          state.view = await drawMap(layer)
         }
-
-      console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
-      bgColor = "light";
+        if (!state.layerView) {
+          state.layerView = await view.whenLayerView(layer);
+        }
+        if (state.view && state.layerView) {
+          bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
+          if (bgColor) {
+            state = {...state, view, layerView}
+          }
+        }
+      } catch(e) {
+        console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
+        bgColor = "light"; // set default
+      }
     }
     return bgColor;
   }
@@ -1085,7 +1087,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           let rampColors = ramp.colors;
           const numColors = rampColors.length;
 
-          // if only a single value, pick a single color, hashing by fieldName –
+          // if the field has only a single value, pick a single color, hashing by fieldName –
           // this will be more likely to show a visual change when switching between
           // two fields which both have a single value
           if (fieldStats.values.length == 1 ||
