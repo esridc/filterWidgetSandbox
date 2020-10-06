@@ -828,12 +828,14 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     })
 
     let filterAttributeSearchElement = document.getElementById("filterAttributeSearch")
-    filterAttributeSearchElement.addEventListener("input", filterAttributeSearchChange);
+    filterAttributeSearchElement.addEventListener("input", filterAttributeSearchInput);
+    filterAttributeSearchElement.addEventListener("change", filterAttributeSearchChange); // clear input button
     let filterPlaceholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
     filterAttributeSearchElement.setAttribute('placeholder', filterPlaceholderText);
 
     let styleAttributeSearchElement = document.getElementById("styleAttributeSearch")
-    styleAttributeSearchElement.addEventListener("input", styleAttributeSearchChange);
+    styleAttributeSearchElement.addEventListener("input", styleAttributeSearchInput);
+    styleAttributeSearchElement.addEventListener("change", styleAttributeSearchChange); // clear input button
     let stylePlaceholderText = `Search ${dataset.attributes.fields.length} Attributes by Name`;
     styleAttributeSearchElement.setAttribute('placeholder', stylePlaceholderText);
 
@@ -1587,6 +1589,16 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return fieldTypes[fieldType] || '';
   }
 
+  // filter attribute entries by search
+  function filterAttributeSearchInput(e) {
+    Array.from(document.getElementById('filterAttributeList').children)
+    .map(x => {
+      let field = x.getAttribute('data-field');
+      let fieldName = getDatasetField(field).alias.toLowerCase();
+      x.style.display = fieldName.indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
+    });
+}
+  // only triggered by the clear search x button
   function filterAttributeSearchChange(e) {
     Array.from(document.getElementById('filterAttributeList').children)
       .map(x => {
