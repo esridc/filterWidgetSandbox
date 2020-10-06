@@ -1220,8 +1220,15 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       }
       if (fieldName) {
         var expression = "$feature."+fieldName;
-        // don't label if field is numeric or if there's only one value
-        if (!numberLike && uniqueValues.length > 1) {
+        // label if field matches a few conditions:
+        if (
+          // there's more than one value
+          uniqueValues.length > 1 &&
+          (
+            (simpleFieldType == "string" && !numberLike) ||  // it's a non-numberlike string, or
+            (field.statistics.values.count == uniqueValues.length) // every value is unique
+          )
+        ){
           // TODO: don't violate DRY (labels also set above)
           const labels = new LabelClass({
             labelExpressionInfo: expression ? { expression } : null,
