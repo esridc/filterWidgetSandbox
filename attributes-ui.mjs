@@ -1615,12 +1615,24 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       });
   }
 
-  function styleAttributeSearchChange(e) {
+  // filter attribute entries by search
+  // TODO: combine these two with the above two, by passing list as a param?
+  function styleAttributeSearchInput(e) {
     Array.from(document.getElementById('styleAttributeList').children)
     .map(x => {
       let field = x.getAttribute('data-field');
       let fieldName = getDatasetField(field).alias.toLowerCase();
       x.style.display = fieldName.indexOf(e.srcElement.value) == -1 ? 'none' : 'flex';
+    });
+  }
+
+  // only triggered by the clear search x button
+  function styleAttributeSearchChange(e) {
+    Array.from(document.getElementById('styleAttributeList').children)
+    .map(x => {
+      let field = x.getAttribute('data-field');
+      let fieldName = getDatasetField(field).alias.toLowerCase();
+      x.style.display = 'flex';
   });
   }
 
