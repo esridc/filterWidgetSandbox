@@ -98,6 +98,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     await loadDataset({ datasetId, env });
   }
 
+  //
+  // FILTERING
+  //
+
+  // add a filter, choosing the appropriate widget based on fieldType and various properties
   async function addFilter({event = null, fieldName = null, fieldStats = null}) {
     let {view, layer, layerView} = state;
     // if no fieldName is passed directly, get it from the attribute selection event
@@ -155,12 +160,17 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     //   widget = await makeTimeSliderWidget({ fieldName, container, slider: true });
     // }
 
+    // scroll the sidebar down to show the most recent filter and keep the attribute search visible
     let sidebar = document.getElementById('sidebar')
     sidebar.scrollTop = sidebar.scrollHeight;
     widget.container.setAttribute('fieldName', fieldName);
     widget.container.setAttribute('numberLike', numberLike);
     state = {...state, view, layer, layerView};
   }
+
+  //
+  // WIDGETS
+  //
 
   // create a histogram
   async function makeHistogram ({fieldName, container, slider = false, where = null, features = null }) {
@@ -675,6 +685,10 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   }
   const throttledUpdateOthers = _.throttle(updateOthers, 100, {trailing: false});
 
+  //
+  // UTILITY FUNCTIONS
+  //
+
   // list all known widget DOM elements
   function listWidgetElements() {
     return [...document.getElementById('filtersList').querySelectorAll('[whereClause]')];
@@ -702,9 +716,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     }
     return whereClause;
   }
-
-  // update the map view with a new where clause
-
 
   async function removeFilter(event, fieldName = null) {
     fieldName = fieldName ? fieldName : event.currentTarget.dataset.field;
@@ -862,6 +873,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return arr;
   }
 
+  //
+  // STYLING
+  //
+
+  // determine whether the map background is dark or light
   async function getBgColor() {
     try {
       var bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
@@ -900,7 +916,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     var opacity = 1;
 
     // choose default colors based on background theme – dark on light, light on dark
-    // use rgb values so the CIMSymbols can read them
+    // use rgb values because CIMSymbols don't understand web color names
     var color = bgColor == "dark" ? [173,216,230,255] : [70,130,180,255]; // lightblue and steelblue
     var outlineColor = bgColor == "dark" ? [70,130,180,255] : [255,255,255,255]; // steelblue and white
 
@@ -1000,6 +1016,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (fieldName) {
       state.fieldName = fieldName; // used by toggle checkboxes
       var field = getDatasetField(fieldName);
+      // TODO: don't use cached statistics, as they're frequently out-of-date and incomplete
       var fieldStats = field.statistics;
       if (fieldStats.values.length == 0) { // it happens
         console.warn("Couldn't get statistics values for field '"+fieldName+"'.");
@@ -1309,6 +1326,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     };
   }
 
+  // get a field object from a field name
   function getDatasetField (fieldName) {
     let lc_fieldName = fieldName.toLowerCase();
     const field = state.dataset.attributes.fields.find(f => f.name.toLowerCase() === lc_fieldName);
@@ -1389,7 +1407,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     const stats = await getDatasetFieldUniqueValues(fieldName);
 
     const categorical = stats.uniqueCount <= categoricalMax;
-    const pseudoCategoricalMin = 50; // categoricalMax N values must cover at least this % of total records
+    const pseudoCategoricalMin = 50; // the proportion of unique values to total values is < 50%
     // add up the coverage percentages of the top values
     const coverage = Object.values(stats.values.slice(0, categoricalMax)).reduce((sum, {pct}) => sum + pct, 0);
     const pseudoCategorical = coverage * 100 >= pseudoCategoricalMin;
@@ -1417,6 +1435,10 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       return stats.values.every(v => v.value == null || !isNaN(Number(v.value)));
     }
   }
+
+  //
+  // UI MAINTENANCE
+  //
 
   // Add an entry to the attribute dropdown
   function updateAttributeList (list, callback) {
@@ -1485,7 +1507,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return attributeList;
   }
 
-  // find the number of significant digits of a numberic valeue, for truncation in generateLabel()
+  // find the number of significant digits of a numeric value, for truncation in generateLabel()
   function getDigits(num) {
     var s = num.toString();
     s = s.split('.');
@@ -1496,6 +1518,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     return [s[0].length, Math.min(s[1].length, 4)];
   }
 
+  // make a data annotation, eg (3 values) or (5.5 - 13.2) for an entry in the attributes list
   async function generateLabel(field, fieldStats) {
     var label = `${field.alias || field.name}`;
     if (!fieldStats) {
@@ -1647,6 +1670,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   // clear filters list and reset filters UI
   function clearFilters() {
     let filtersList = document.getElementById('filtersList');
+    // as many entries as are in the list,
     for (var i = filtersList.children.length; i > 0 ; i--) {
       // remove the top one in the list
       filtersList.children[0].remove();
