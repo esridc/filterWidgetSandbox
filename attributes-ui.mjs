@@ -1325,14 +1325,22 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     }
   }
 
+  // get the unique values of a field
   async function getDatasetFieldUniqueValues (fieldName) {
+    var {layer} = state;
     if (!DATASET_FIELD_UNIQUE_VALUES[fieldName]) {
       const field = getDatasetField(fieldName);
       let stats;
-      if (field.statistics && field.statistics.uniqueCount) {
-        stats = { ...field.statistics };
-      } else {
-        const uniqueValueInfos = (await uniqueValues({ layer: state.layer, field: fieldName }))
+    if (!layer) { // wait for layer
+      layer = await (async() => {
+        while(!state.layer) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        return state.layer;
+      })();
+    }
+    if (layer) {
+      const uniqueValueInfos = (await uniqueValues({ layer: state.layer, field: fieldName }))
         .uniqueValueInfos
         .sort((a, b) => a.count > b.count ? -1 : 1);
         const count = uniqueValueInfos.reduce((count, f) => count + f.count, 0);
