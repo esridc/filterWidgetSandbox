@@ -1094,62 +1094,71 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
             rampColors = [rampColors[indexOffset]];
           }
 
-          // sort by values - if only pseudocategorical leave it sorted by the default: prevalence
-          if (categorical) {
-            uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
-          }
-          // TODO: sort before assigning color values? currently values are assigned color by frequency
+        // sort by values - if only pseudocategorical leave it sorted by the default: prevalence
+        if (categorical) {
+          uniqueValues.sort((a, b) => a.value !== b.value ? a.value < b.value ? -1 : 1 : 0);
+        }
+        // TODO: sort before assigning color values? currently values are assigned color by frequency
 
-          // generate categorical colors for field
-          var uniqueValueInfos = [];
-          const rampMaxColors = Math.min(uniqueValues.length, categoricalMax);
-          for (let x = 0; x < uniqueValues.length; x++) {
-            if (x < rampMaxColors) {
-              // set strokeColor/outline
-              var strokeColor = [
-                // rollover calculation
-                // TODO: switch to proportional interpolation
-                rampColors[(x % numColors)%numColors].r * .5, // same as fillColor but half as bright
-                rampColors[(x % numColors)%numColors].g * .5,
-                rampColors[(x % numColors)%numColors].b * .5,
-                255 //alpha is always opaque
-              ];
-            } // else use the default color for the long tail of categories
-            if (symbol.type == 'cim') {
-              // clone symbol
-              var uniqueSymbol = symbol.clone();
-              // set stroke color to half the value of current ramp color
-              uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
-            } else {
-              uniqueSymbol = Object.assign({}, symbol);
-              if (geotype !== "line") {
-                uniqueSymbol.outline.color = strokeColor;
-              }
+        // generate categorical colors for field
+        var uniqueValueInfos = [];
+        // pick a limit to the number of legend entries
+        const numEntries = categorical ? Math.min(uniqueValues.length, categoricalMax) : // the top categories
+                           pseudoCategorical <= categoricalMax ? pseudoCategorical : // the top pseudocategories
+                           5; // just show the top 5
+        for (let x = 0; x < numEntries; x++) {
+          // set strokeColor/outline
+          var strokeColor = [
+            // rollover calculation
+            // TODO: switch to proportional interpolation
+            rampColors[(x % numColors)%numColors].r * .5, // same as fillColor but half as bright
+            rampColors[(x % numColors)%numColors].g * .5,
+            rampColors[(x % numColors)%numColors].b * .5,
+            255 //alpha is always opaque
+          ];
+          if (symbol.type == 'cim') {
+            // clone symbol
+            var uniqueSymbol = symbol.clone();
+            // set stroke color to half the value of current ramp color
+            uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
+          } else {
+            uniqueSymbol = Object.assign({}, symbol);
+            if (geotype !== "line") {
+              uniqueSymbol.outline.color = strokeColor;
             }
-            // set fillColor
-            let fillColor = [
-              rampColors[(x % numColors)%numColors].r,
-              rampColors[(x % numColors)%numColors].g,
-              rampColors[(x % numColors)%numColors].b,
-              255 //alpha is always opaque
-            ];
-            if (symbol.type == 'cim') {
-              cimSymbolUtils.applyCIMSymbolColor(uniqueSymbol, fillColor);
-            } else {
-              uniqueSymbol.color = fillColor;
-            }
-            uniqueValueInfos.push( {
-              value: uniqueValues[x].value,
-              label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) : uniqueValues[x].value,
-              symbol: uniqueSymbol,
-            });
           }
-          renderer = {
-            type: "unique-value",
-            field: fieldName,
-            uniqueValueInfos,
-            visualVariables: []
-          };
+          // set fillColor
+          let fillColor = [
+            rampColors[(x % numColors)%numColors].r,
+            rampColors[(x % numColors)%numColors].g,
+            rampColors[(x % numColors)%numColors].b,
+            255 //alpha is always opaque
+          ];
+          if (symbol.type == 'cim') {
+            cimSymbolUtils.applyCIMSymbolColor(uniqueSymbol, fillColor);
+          } else {
+            uniqueSymbol.color = fillColor;
+          }
+          uniqueValueInfos.push( {
+            value: uniqueValues[x].value,
+            label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) : uniqueValues[x].value,
+            symbol: uniqueSymbol,
+          });
+        }
+
+        // debugger
+        if (uniqueValues.length > numEntries) {
+          // use default color for the long tail of categories
+          defaultSymbol = symbol;
+        }
+        renderer = {
+          type: "unique-value",
+          field: fieldName,
+          defaultSymbol,
+          defaultLabel: uniqueValues.length - numEntries + " others",
+          uniqueValueInfos,
+          visualVariables: []
+        };
       } else if (numberLike) { // number-like and non-categorical
         // SET RAMP
         // custom ramp - pink to blue
@@ -1589,7 +1598,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     // calculate where if isn't passed as an argument
     where = concatWheres(),
     updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
-    var {view, layer, layerView} = state;
+    var {view, layer, layerView, bgColor} = state;
     if (!layerView) {
       layerView = await view.whenLayerView(layer);
       // update state
