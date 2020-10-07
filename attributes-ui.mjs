@@ -81,7 +81,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     categoricalMax: 7,
     fieldName: null,
   }
-  // zoomToDataCheckbox,
 
   const DATASET_FIELD_UNIQUE_VALUES = {}; // cache by field name
 
@@ -1078,21 +1077,22 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       let {categoricalMax} = state;
       if (categorical || (pseudoCategorical && !numberLike)) {
         // your basic categorical field
-          let ramp = colorRamps.byName("Mushroom Soup");
-          let rampColors = ramp.colors;
-          const numColors = rampColors.length;
+        let ramp = colorRamps.byName("Mushroom Soup");
+        let rampColors = ramp.colors;
+        const numColors = rampColors.length;
+        var defaultSymbol = null; // set later if needed
 
-          // if the field has only a single value, pick a single color, hashing by fieldName –
-          // this will be more likely to show a visual change when switching between
-          // two fields which both have a single value
-          if (fieldStats.values.length == 1 ||
-                ((fieldStats.values.min && fieldStats.values.max) &&
-                 (fieldStats.values.min === fieldStats.values.max))
-              ) {
-            var indexOffset = getHash(fieldName) % numColors; // pick an offset
-            // replace the entire ramp with a single color
-            rampColors = [rampColors[indexOffset]];
-          }
+        // if the field has only a single value, pick a single color, hashing by fieldName –
+        // this will be more likely to show a visual change when switching between
+        // two fields which both have a single value
+        if (fieldStats.values.length == 1 ||
+              ((fieldStats.values.min && fieldStats.values.max) &&
+                (fieldStats.values.min === fieldStats.values.max))
+            ) {
+          var indexOffset = getHash(fieldName) % numColors; // pick an offset
+          // replace the entire ramp with a single color
+          rampColors = [rampColors[indexOffset]];
+        }
 
         // sort by values - if only pseudocategorical leave it sorted by the default: prevalence
         if (categorical) {
