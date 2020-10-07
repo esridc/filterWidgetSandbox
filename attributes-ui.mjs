@@ -1600,7 +1600,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       filter: {
         where,
       },
-      excludedEffect: 'grayscale(100%) contrast(50%) brightness(200%) opacity(5%)'
+      excludedEffect: bgColor == "dark" ?
+        'grayscale(100%) contrast(50%) brightness(200%)' :
+        'grayscale(100%) contrast(80%) brightness(60%)',
     };
     layerView.queryFeatureCount({
       where: where || '1=1',
