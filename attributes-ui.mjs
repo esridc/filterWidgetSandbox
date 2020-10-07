@@ -925,8 +925,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     // choose default colors based on background theme – dark on light, light on dark
     // use rgb values because CIMSymbols don't understand web color names
-    var color = bgColor == "dark" ? [173,216,230,255] : [70,130,180,255]; // lightblue and steelblue
-    var outlineColor = bgColor == "dark" ? [70,130,180,255] : [255,255,255,255]; // steelblue and white
+    var color = bgColor == "dark" ? [192,192,192,255] : [128,128,128,255]; // grey and grey
+    var outlineColor = bgColor == "dark" ? [128,128,128,255] : [64,64,64,255]; // steelblue and dark grey
 
     var symbol;
     var renderer = {
