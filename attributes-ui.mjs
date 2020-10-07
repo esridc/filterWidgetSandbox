@@ -78,7 +78,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     attributeList: [],
     bgColor: null,
     legend: null,
-    categoricalMax: 13,
+    categoricalMax: 7,
     fieldName: null,
   }
   // zoomToDataCheckbox,
@@ -1428,12 +1428,19 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     var {categoricalMax} = state;
     const field = await getDatasetField(fieldName);
     const stats = await getDatasetFieldUniqueValues(fieldName);
-
     const categorical = stats.uniqueCount <= categoricalMax;
-    const pseudoCategoricalMin = 50; // the proportion of unique values to total values is < 50%
-    // add up the coverage percentages of the top values
-    const coverage = Object.values(stats.values.slice(0, categoricalMax)).reduce((sum, {pct}) => sum + pct, 0);
-    const pseudoCategorical = coverage * 100 >= pseudoCategoricalMin;
+    const pseudoCategoricalMin = .8; // the proportion of unique values to total values is < 80%
+    // sum the values until you reach at least pseudoCategoricalMin
+    const coverage = Object.values(stats.values).reduce(
+      // accumulator obj, pull .pct from each object
+      ({sum, i}, {pct}) =>
+        (sum < pseudoCategoricalMin ? // still not there?
+        {sum: sum + pct, i: i + 1} : // keep adding
+        {sum, i}), // otherwise just keep returning the current value
+          // TODO: break once the value is reached
+        {sum: 0, i: 0}); // init value
+    // return the number of unique values which comprise pseudoCategoricalMin% of the features, or false
+    const pseudoCategorical = coverage.sum >= pseudoCategoricalMin ? coverage.i : false;
     return { categorical, pseudoCategorical };
   }
 
