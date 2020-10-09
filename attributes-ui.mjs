@@ -924,8 +924,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     // choose default colors based on background theme – dark on light, light on dark
     // use rgb values because CIMSymbols don't understand web color names
-    var color = bgColor == "dark" ? [192,192,192,255] : [128,128,128,255]; // grey and grey
-    var outlineColor = bgColor == "dark" ? [128,128,128,255] : [64,64,64,255]; // steelblue and dark grey
+    var color = bgColor == "dark" ? [173,216,230,255] : [173,216,230,255]; // lightblue and steelblue
+    var outlineColor = bgColor == "dark" ? [70,130,180,255] : [70,130,180,255]; // steelblue and white
 
     var symbol;
     var renderer = {
@@ -957,8 +957,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
                 frame: {
                   xmin: 0,
                   ymin: 0,
-                  xmax: 16,
-                  ymax: 16
+                  xmax: 14,
+                  ymax: 14
                 },
                 markerGraphics: [{
                   type: "CIMMarkerGraphic",
@@ -974,7 +974,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
                     symbolLayers: [
                       {
                         type: "CIMSolidStroke",
-                        width: .5,
+                        width: .45,
                         color: outlineColor,
                         opacity
                       },
@@ -1071,27 +1071,33 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       // clear any existing labelingInfo sent from the server
       layer.labelingInfo = [ ];
       var uniqueValues = (await getDatasetFieldUniqueValues(fieldName)).values;
+      var numGoodValues = uniqueValues.filter(i => !isBadValue(i.value)).length;
 
-      // GET RAMP
+      // Styling
+
+      // reset colors – these will be used as "No value" symbols
+      color = [255,255,255,255]; // white
+      outlineColor = [64,64,64,255] // dark grey
+
       // a more exhaustive exploration in auto-style.html
       let {categoricalMax} = state;
       if (categorical || (pseudoCategorical && !numberLike)) {
         // your basic categorical field
+        // GET RAMP
         let ramp = colorRamps.byName("Mushroom Soup");
         let rampColors = ramp.colors;
-        const numColors = rampColors.length;
-        var defaultSymbol = null; // set later if needed
+        var numColors = rampColors.length;
 
-        // if the field has only a single value, pick a single color, hashing by fieldName –
-        // this will be more likely to show a visual change when switching between
-        // two fields which both have a single value
-        if (fieldStats.values.length == 1 ||
-              ((fieldStats.values.min && fieldStats.values.max) &&
+        // if the field has only a single unique non-bad value, pick a single color, hashing by fieldName –
+        // this will be more likely to show a visual change when switching between two fields which both have a single value
+        if ( (numGoodValues == 1) ||
+            ((fieldStats.values.min && fieldStats.values.max) &&
                 (fieldStats.values.min === fieldStats.values.max))
             ) {
           var indexOffset = getHash(fieldName) % numColors; // pick an offset
           // replace the entire ramp with a single color
           rampColors = [rampColors[indexOffset]];
+          numColors = 1;
         }
 
         // sort by values - if only pseudocategorical leave it sorted by the default: prevalence
@@ -1107,57 +1113,58 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
                            pseudoCategorical <= categoricalMax ? pseudoCategorical : // the top pseudocategories
                            5; // just show the top 5
         for (let x = 0; x < numEntries; x++) {
-          // set strokeColor/outline
-          var strokeColor = [
+          if (isBadValue(uniqueValues[x].value)) {
+            // style any bad entries as white rings
+            var strokeColor = [128,128,128,255];
+            var fillColor = [255,255,255,255];
+          } else {
             // rollover calculation
-            // TODO: switch to proportional interpolation
-            rampColors[(x % numColors)%numColors].r * .5, // same as fillColor but half as bright
-            rampColors[(x % numColors)%numColors].g * .5,
-            rampColors[(x % numColors)%numColors].b * .5,
-            255 //alpha is always opaque
-          ];
-          if (symbol.type == 'cim') {
-            // clone symbol
-            var uniqueSymbol = symbol.clone();
-            // set stroke color to half the value of current ramp color
-            uniqueSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
-          } else {
-            uniqueSymbol = Object.assign({}, symbol);
-            if (geotype !== "line") {
-              uniqueSymbol.outline.color = strokeColor;
-            }
+            var indexOffset = x % numColors;
+            var strokeColor = [
+              // TODO: switch to proportional interpolation
+              rampColors[indexOffset].r * .5, // same as fillColor but half as bright
+              rampColors[indexOffset].g * .5,
+              rampColors[indexOffset].b * .5,
+              255 //alpha is always opaque
+            ];
+            // set fillColor
+            var fillColor = [
+              rampColors[indexOffset].r,
+              rampColors[indexOffset].g,
+              rampColors[indexOffset].b,
+              255 // alpha is always opaque
+            ];
           }
-          // set fillColor
-          let fillColor = [
-            rampColors[(x % numColors)%numColors].r,
-            rampColors[(x % numColors)%numColors].g,
-            rampColors[(x % numColors)%numColors].b,
-            255 //alpha is always opaque
-          ];
-          if (symbol.type == 'cim') {
-            cimSymbolUtils.applyCIMSymbolColor(uniqueSymbol, fillColor);
-          } else {
-            uniqueSymbol.color = fillColor;
-          }
+
+          // clone and color symbol
+          let uniqueSymbol = copyAndColor(symbol, strokeColor, fillColor);
+          // add symbol to the stack
           uniqueValueInfos.push( {
-            value: uniqueValues[x].value,
-            label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) : uniqueValues[x].value,
+            value: uniqueValues[x].value || "",
+            label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) :
+                    isBadValue(uniqueValues[x].value) ? "No value" :
+                    uniqueValues[x].value,
             symbol: uniqueSymbol,
           });
         }
 
-        // debugger
-        if (uniqueValues.length > numEntries) {
+        let numOthers = uniqueValues.length - numEntries;
+        // set defaults
+        if (numOthers > 0) {
           // use default color for the long tail of categories
-          defaultSymbol = symbol;
+          // others color
+          strokeColor = [128,128,128,255];
+          fillColor = [192,192,192,255];
+
+          var defaultSymbol = copyAndColor(symbol, strokeColor, fillColor);
         }
-        renderer = {
+
+        // set renderer
+        renderer = {...renderer,
           type: "unique-value",
-          field: fieldName,
           defaultSymbol,
-          defaultLabel: uniqueValues.length - numEntries + " others",
+          defaultLabel: numOthers + " other" + numOthers > 1 ? "s" : "",
           uniqueValueInfos,
-          visualVariables: []
         };
       } else if (numberLike) { // number-like and non-categorical
         // SET RAMP
@@ -1325,6 +1332,31 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   // STYLING UTILITY FUNCTIONS
   //
 
+  // check for weirdness
+  function isBadValue(value) {
+    return (value == null ||          // null
+            value == "" ||            // empty string
+            (/^\s+$/.test(value)));   // all whitespace
+  }
+
+  // copy a symbol and apply colors
+  function copyAndColor(symbol, strokeColor, fillColor) {
+    if (symbol.type == 'cim') {
+      // clone symbol
+      var newSymbol = symbol.clone();
+      cimSymbolUtils.applyCIMSymbolColor(newSymbol, fillColor);
+      newSymbol.data.symbol.symbolLayers[0].markerGraphics[0].symbol.symbolLayers[0].color = strokeColor;
+    } else {
+      newSymbol = Object.assign({}, symbol);
+      newSymbol.color = fillColor;
+      if (geotype !== "line") {
+        newSymbol.outline.color = strokeColor;
+      }
+    }
+    return newSymbol;
+  }
+
+
   // add labels to a layer
   function addLabels(fieldName) {
     return new LabelClass({
@@ -1400,11 +1432,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           values: uniqueValueInfos
         }
       }
-      // filter bad stats values & update count
-      stats.values = stats.values.filter(a =>
-        a.value != null &&          // not null
-        a.value != "" &&            // not the empty string
-        !(/^\s+$/.test(a.value)));  // not all whitespace
       stats.uniqueCount = stats.values.length;
       // add percent of records
       stats.values = stats.values
@@ -1611,7 +1638,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       },
       excludedEffect: bgColor == "dark" ?
         'grayscale(100%) contrast(50%) brightness(200%)' :
-        'grayscale(100%) contrast(80%) brightness(60%)',
+        'grayscale(100%) contrast(40%) brightness(150%)',
     };
     layerView.queryFeatureCount({
       where: where || '1=1',
