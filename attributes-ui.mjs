@@ -903,12 +903,12 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         if (state.view && state.layerView) {
           bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
           if (bgColor) {
-            state = {...state, view, layerView}
+            state = {...state, view, layerView} // TODO: wat is ths
           }
         }
       } catch(e) {
         console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
-        bgColor = "light"; // set default
+        bgColor = "light"; // set default bgColor
       }
     }
     return bgColor;
@@ -1015,7 +1015,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (!fieldName) { fieldName = event?.currentTarget?.getAttribute('data-field'); }
     // a displayField specified in the dataset,
     if (!fieldName) { fieldName = dataset?.attributes?.displayField; }
-    // or just default to "NAME"
+    // or just set default fieldName to "NAME"
     if (!fieldName && dataset.attributes.fieldNames.includes("NAME")) { fieldName = "NAME"; }
 
     // if there's a fieldName then style it by field
@@ -1205,12 +1205,15 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
             });
           }
         }
-
+        // set default label
+        renderer.label = numGoodValues < uniqueValues.length ? "No value" : "Feature";
       // if it's neither categorical nor number-like, use default styling but add labels
       } else {
         layer.labelingInfo = [ addLabels(fieldName) ];
       }
     } // end if (fieldName)
+
+    renderer = {...renderer, symbol, field: fieldName};
 
     // also add labels if the "Labels on" toggle is checked
     if (document.querySelector('#labels calcite-checkbox')?.checked) {
@@ -1298,8 +1301,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       }
     }
 
-    renderer = {...renderer, symbol: symbol};
-
     // ADD LEGEND
 
     var {legend} = state;
@@ -1311,8 +1312,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       })
       legend.layerInfos = [{
         layer: layer,
-        // avoid duplicating fieldName
-        // title: (!pseudoCategorical && !numberLike) ? fieldName : null,
       }]
       view.ui.add(legend, "bottom-right");
     } else {
