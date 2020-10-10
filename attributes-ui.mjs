@@ -1349,7 +1349,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     } else {
       newSymbol = Object.assign({}, symbol);
       newSymbol.color = fillColor;
-      if (geotype !== "line") {
+      if (symbol.type !== "simple-line") {
         newSymbol.outline.color = strokeColor;
       }
     }
