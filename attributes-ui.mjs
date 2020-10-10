@@ -1078,6 +1078,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       // reset colors – these will be used as "No value" symbols
       color = [255,255,255,255]; // white
       outlineColor = [64,64,64,255] // dark grey
+      symbol = copyAndColor(symbol, outlineColor, color);
 
       // a more exhaustive exploration in auto-style.html
       let {categoricalMax} = state;
