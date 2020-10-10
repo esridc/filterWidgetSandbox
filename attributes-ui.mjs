@@ -1333,8 +1333,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // check for weirdness
   function isBadValue(value) {
-    return (value == null ||          // null
-            value == "" ||            // empty string
+    return (value === null ||          // null
+            value === "" ||            // empty string
             (/^\s+$/.test(value)));   // all whitespace
   }
 
