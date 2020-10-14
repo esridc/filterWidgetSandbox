@@ -1076,7 +1076,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       // Styling
 
       // reset colors – these will be used as "No value" symbols
-      color = [255,255,255,255]; // white
+      color = [128,128,128,255]; // white
       outlineColor = [64,64,64,255] // dark grey
       symbol = copyAndColor(symbol, outlineColor, color);
 
@@ -1115,9 +1115,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
                            5; // just show the top 5
         for (let x = 0; x < numEntries; x++) {
           if (isBadValue(uniqueValues[x].value)) {
-            // style any bad entries as white rings
+            // style any bad points as white rings and lines as grey
             var strokeColor = [128,128,128,255];
-            var fillColor = [255,255,255,255];
+            var fillColor =
+              geotype == "line" ? bgColor == "dark" ? [128,128,128,255] : [64,64,64,255] :
+              [255,255,255,255];
           } else {
             // rollover calculation
             var indexOffset = x % numColors;
@@ -1171,7 +1173,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         // SET RAMP
         // custom ramp - pink to blue
         var rMin = {r:255, g:200, b:221, a:255};
-        var rMax = {r:21, g:39, b:128, a:255};
+        var rMax = bgColor == "dark" ? {r:61, g:79, b:168, a:255} : {r:21, g:39, b:128, a:255};
 
         renderer.visualVariables.push({
           type: "color",
@@ -1637,8 +1639,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         where,
       },
       excludedEffect: bgColor == "dark" ?
-        'grayscale(100%) contrast(50%) brightness(200%)' :
-        'grayscale(100%) contrast(40%) brightness(150%)',
+        'grayscale(100%) contrast(10%) brightness(200%)' :
+        'grayscale(100%) contrast(10%) brightness(150%)',
     };
     layerView.queryFeatureCount({
       where: where || '1=1',
