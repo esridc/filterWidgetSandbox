@@ -1166,7 +1166,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         renderer = {...renderer,
           type: "unique-value",
           defaultSymbol,
-          defaultLabel: numOthers + " other" + numOthers > 1 ? "s" : "",
+          defaultLabel: (numOthers + " other") + (numOthers > 1 ? "s" : ""),
           uniqueValueInfos,
         };
       } else if (numberLike) { // number-like and non-categorical
