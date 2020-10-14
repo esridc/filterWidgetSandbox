@@ -1639,8 +1639,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         where,
       },
       excludedEffect: bgColor == "dark" ?
-        'grayscale(100%) contrast(10%) brightness(200%)' :
-        'grayscale(100%) contrast(10%) brightness(150%)',
+        'grayscale(100%) contrast(10%) brightness(80%)' :
+        'grayscale(100%) contrast(10%) brightness(130%)',
     };
     layerView.queryFeatureCount({
       where: where || '1=1',
