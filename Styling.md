@@ -36,9 +36,16 @@ To detect the bgColor, the JSAPI needs to draw the map once first, so all of the
 
 - Styling Logic -
 
-In every case, symbology type follows dataset geometry type. Default colors and sizes are set. Then, if a fieldName is passed to autoStyle(), the field is analyzed and categorized, and further styling choices are made depending on its category. In certain combinations of situations, fields are displayed using a categorical "unique-value" renderer, but in others, a color ramp is chosen for use in a sequential "simple" renderer. VisualVariables are used to produce color and size stops in each case.
+In every case, symbology type follows dataset geometry type. Default colors and sizes are set, and used if none of the other conditions are met.
 
-Labels are applied in a small set of circumstances by default, namely when polygon geometry is used to display a small number of attributes values.
+If a fieldName is passed to autoStyle(), the field is analyzed and categorized, and further styling choices are made depending on whether it is determined to be categorical, pseudocategorical, or neither.
+
+In certain combinations of situations, fields are displayed using a categorical "unique-value" renderer, but in others, a color ramp is chosen for use in a sequential "simple" renderer. VisualVariables are used to produce color and size stops in each case.
 
 The general theory for styling is that where possible, a categorical renderer is used when the range of values of a field is either non-sequential or the number of possible values is low enough to give them each a different color.
 
+The definition of a "categorical" field is arbitrary, based in part on how many categories will fit comfortably in a legend. At the moment, if there are 7 or fewer unique values in a field, it is deemed categorical. In other cases, a small number of unique values account for an arbitrarily large percentage of a field's values – if 7 values or fewer account for 80% of the values, it is called "pseudo-categorical" and only those top values are assigned unique colors, the rest are lumped into another color and labeled "other".
+
+Labels are applied to polygons in a small set of circumstances by default, namely when each feature has a unique value of a given attribute .
+
+Features with "bad" or missing values are given a special symbol or color, and filtered features are turned gray. The legend currently includes the bad values, but not filtered values (though maybe it should).
