@@ -889,27 +889,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // determine whether the map background is dark or light
   async function getBgColor() {
-    // error handling is probably vestigial at this point
     try {
       var bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
     } catch(e) {
-      try {
-        if (!state.view) {
-          state.view = await drawMap()
-        }
-        if (!state.layerView) {
-          state.layerView = await view.whenLayerView(layer);
-        }
-        if (state.view && state.layerView) {
-          bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
-          if (bgColor) {
-            state = {...state, view, layerView} // TODO: wat is ths
-          }
-        }
-      } catch(e) {
-        console.warn(`Couldn't detect basemap color theme (only works if tab is visible), choosing "light."`, e)
-        bgColor = "light"; // set default bgColor
-      }
+      console.warn(`Couldn't detect basemap color theme - tab must be in foreground. Choosing "light."\n`, e)
+      bgColor = "light"; // set default bgColor
     }
     return bgColor;
   }
