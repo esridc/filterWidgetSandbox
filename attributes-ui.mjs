@@ -781,7 +781,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // update layerview filter based on histogram widget, throttled
   const updateLayerViewWithHistogram = _.throttle(
-    async (layerView, fieldName, where) => {
+    async (where) => {
       await updateLayerViewEffect({ where });
     },
     50
@@ -1615,8 +1615,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     var {view, layer, layerView, bgColor} = state;
     if (!layerView) {
       layerView = await view.whenLayerView(layer);
-      // update state
-      state = {...state, layerView};
     }
     layerView.filter = null;
     layerView.effect = {
@@ -1658,6 +1656,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         console.log('could not query or project feature extent to update viewport', e);
       }
     }
+    // update state
+    state = {...state, layerView};
   }
 
   function formatDate (timestamp) {
