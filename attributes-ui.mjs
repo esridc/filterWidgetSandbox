@@ -718,6 +718,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     updateLayerViewEffect();
   }
 
+  // draw whole map from scratch
   async function drawMap() {
     var {dataset, layer, view, layerView} = state;
     const darkModeCheckbox = document.querySelector('#darkMode calcite-checkbox');
@@ -899,7 +900,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   }
 
   // Choose symbology based on various dataset and theme attributes
-  async function autoStyle({event = null, fieldName = null}) {
+  async function autoStyle ({event = null, fieldName = null}) {
     var {dataset, layer, view, usePredefinedStyle, bgColor} = state;
 
     bgColor = await getBgColor(); // get basemap color theme: "light" or "dark"
@@ -1492,7 +1493,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   // UI MAINTENANCE
   //
 
-  // Add an entry to the attribute dropdown
+  // Add an entry to an attribute dropdown
   function updateAttributeList (list, callback) {
     var {dataset} = state;
     // create attributeitem for each attribute
