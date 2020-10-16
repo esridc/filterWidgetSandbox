@@ -730,9 +730,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (view) {
       // update existing view, then exit
       view.map = map;
-      layerView = await view.whenLayerView(layer).then((layerView) => {
-        return layerView;
-      });
+      layerView = await view.whenLayerView(layer);
       state = {...state, view, layerView, bgColor: await getBgColor()};
       updateLayerViewEffect();
       return;
@@ -743,9 +741,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       extent: getDatasetExtent(dataset),
       ui: { components: [] }
     });
-    var layerView = await view.whenLayerView(layer).then((layerView) => {
-      return layerView;
-    });
+    var layerView = await view.whenLayerView(layer);
 
     // add toggle checkboxes
 
@@ -851,9 +847,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     state.usePredefinedStyle = false; // disable for now
     // draw map once before autoStyling because getBgColor() requires an initialized layerView object
     state.view = await drawMap();
-    if (state.view) { // actually wait for view
-      autoStyle({});  // guess at a style for this field
-    }
+    autoStyle({});  // guess at a style for this field
   }
 
   // manually reconstruct a feature values array from unique values and their counts
@@ -1296,10 +1290,10 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       // remove and replace legend entirely rather than updating, to avoid dojo issues
       view.ui.remove(legend);
       legend = await new Legend({
-        view: view
+        view,
       })
       legend.layerInfos = [{
-        layer: layer,
+        layer,
       }]
       view.ui.add(legend, "bottom-right");
     } else {
@@ -1736,14 +1730,10 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
 
   // TESTS
+  // autoStyle({});
   // autoStyle({fieldName:"sensorPropertiesDevicePlatform"});
-  // autoStyle({fieldName:"sensorName"});
+  // autoStyle({fieldName:"parametersProjectObservationUID"});
   // addFilter({fieldName:"observationResult"});
-  // addFilter({fieldName="locationLongitude});
-  // addFilter({fieldName="parametersBottom});
-  // addFilter({fieldName="resultQuality});
-  // addFilter({fieldName="sensorName});
-  // addFilter({fieldName="resultTime});
   // addFilter({fieldName:"PROJECT_NUMBER"});
 
 })();
