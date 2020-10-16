@@ -1199,7 +1199,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     renderer = {...renderer, symbol, field: fieldName};
 
     // also add labels if the "Labels on" toggle is checked
-    if (document.querySelector('#labels calcite-checkbox')?.checked) {
+    if (document.querySelector('#labels calcite-checkbox')?.checked && fieldName) {
       layer.labelingInfo = [ addLabels(fieldName) ];
     }
 
