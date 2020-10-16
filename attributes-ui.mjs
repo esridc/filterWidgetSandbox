@@ -754,6 +754,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     view.ui.add('darkMode', 'top-right');
     darkModeCheckbox.addEventListener('calciteCheckboxChange', async () => {
       state.view = await drawMap();
+      autoStyle({fieldName: state.fieldName})
     });
 
     view.ui.add('labels', 'top-right');
