@@ -68,18 +68,19 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   });
 
   // track state
-  var state = {
-    timeSlider: null,
-    dataset: null,
-    layer: null,
-    view: null,
-    layerView: null,
-    widgets: [],
-    attributeList: [],
-    bgColor: null,
-    legend: null,
-    categoricalMax: 7,
-    fieldName: null,
+  var state = {};
+  function initState() {
+    state = {
+      dataset: null,
+      layer: null,
+      view: null,
+      widgets: [],
+      attributeList: [],
+      bgColor: null,
+      legend: null,
+      categoricalMax: 7,
+      fieldName: null,
+    }
   }
 
   const DATASET_FIELD_UNIQUE_VALUES = {}; // cache by field name
@@ -103,7 +104,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // add a filter, choosing the appropriate widget based on fieldType and various properties
   async function addFilter({event = null, fieldName = null, fieldStats = null}) {
-    let {view, layer, layerView} = state;
+    let {view, layer} = state;
     // if no fieldName is passed directly, get it from the attribute selection event
     if (fieldName == null) fieldName = event.currentTarget.dataset.field;
     const field = await getDatasetField(fieldName);
@@ -130,11 +131,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
     let container = document.createElement('div');
     filter.appendChild(container);
-
-    if (!view) {
-      view = await drawMap()
-      layerView = await view.whenLayerView(layer);
-    }
 
     const numberLike = await datasetFieldIsNumberLike(fieldName);
 
@@ -164,7 +160,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     sidebar.scrollTop = sidebar.scrollHeight;
     widget.container.setAttribute('fieldName', fieldName);
     widget.container.setAttribute('numberLike', numberLike);
-    state = {...state, view, layer, layerView};
+    state = {...state, view, layer};
   }
 
   //
@@ -250,7 +246,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           } catch(e) {
           // histogram generation failed with unique values, try using features in layer view
           console.warn('Histogram generation failed with unique values, try using features in layer view\n', e);
-          params.features = (await state.layerView.queryFeatures()).features;
+          let layerView = await view.whenLayerView(layer);
+          params.features = (await layerView.queryFeatures()).features;
           // const featureCount = await layer.queryFeatureCount();
           values = await generateHistogram(params);
           source = 'layerView';
@@ -730,8 +727,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (view) {
       // update existing view, then exit
       view.map = map;
-      layerView = await view.whenLayerView(layer);
-      state = {...state, view, layerView, bgColor: await getBgColor()};
+      state = {...state, view, bgColor: await getBgColor()};
       updateLayerViewEffect();
       return;
     }
@@ -741,7 +737,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       extent: getDatasetExtent(dataset),
       ui: { components: [] }
     });
-    var layerView = await view.whenLayerView(layer);
 
     // add toggle checkboxes
 
@@ -772,7 +767,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
 
     // update state
-    state = {...state, view, layerView, bgColor: await getBgColor()};
+    state = {...state, view, bgColor: await getBgColor()};
     return view;
   }
 
@@ -786,10 +781,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
 
   async function loadDataset (args) {
-    var {dataset, layer} = state;
-    state.view = null; // invalidate any existing view
-    // clear any existing dataset info
-    dataset = null;
+    // reset state
+    initState();
+    var dataset, layer;
     if (args.url) { // dataset url provided directly
       const datasetURL = args.url;
       try {
@@ -1396,6 +1390,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       const field = getDatasetField(fieldName);
       let stats;
     if (!layer) { // wait for layer
+      // TODO: use the correct watch function for this
       layer = await (async() => {
         while(!state.layer) {
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -1604,13 +1599,12 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // update the map view with a new where clause
   async function updateLayerViewEffect({
-    // calculate where if isn't passed as an argument
-    where = concatWheres(),
-    updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
-    var {view, layer, layerView, bgColor} = state;
-    if (!layerView) {
-      layerView = await view.whenLayerView(layer);
-    }
+      // calculate where if isn't passed as an argument
+      where = concatWheres(),
+      updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
+    const {view, layer, bgColor} = state;
+    // attach to the layerView
+    const layerView = await view.whenLayerView(layer);
     layerView.filter = null;
     layerView.effect = {
       filter: {
@@ -1633,7 +1627,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         let featureExtent;
 
         const queriedExtent = await layer.queryExtent({
-          // where: (layerView.effect && layerView.effect.filter && layerView.effect.filter.where) || '1=1',
           where: layerView.effect?.filter?.where ? concatWheres({ server: true }) : '1=1',
           outSpatialReference: view.spatialReference
         });
@@ -1651,8 +1644,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         console.log('could not query or project feature extent to update viewport', e);
       }
     }
-    // update state
-    state = {...state, layerView};
   }
 
   function formatDate (timestamp) {
