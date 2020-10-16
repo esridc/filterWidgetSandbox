@@ -1303,7 +1303,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     }
 
     layer.renderer = renderer;
-    updateLayerViewEffect();
+    layer.refresh(); // ensure the layer draws
 
     // update state
     state = {...state, layer, view, renderer, bgColor, legend}
