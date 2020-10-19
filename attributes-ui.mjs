@@ -910,8 +910,14 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
     // choose default colors based on background theme – dark on light, light on dark
     // use rgb values because CIMSymbols don't understand web color names
-    var color = bgColor == "dark" ? [173,216,230,255] : [173,216,230,255]; // lightblue and steelblue
-    var outlineColor = bgColor == "dark" ? [70,130,180,255] : [70,130,180,255]; // steelblue and white
+    var fillColor = bgColor == "dark" ? [0,196,210,255] : [173,216,230,255]; // lightblue and steelblue
+    var strokeColor = bgColor == "dark" ? [70,130,180,255] : [70,130,180,255]; // steelblue and white
+    // bad-value colors
+    var badStrokeColor = geotype == "line" ? bgColor == "dark" ? [128,128,128,255] : [64,64,64,255] : [128,128,128,255]; // grey outlines
+    var badFillColor = [255,255,255,255]; // white fills
+    // others color
+    var otherStrokeColor = [128,128,128,255]; // grey
+    var otherFillColor = [192,192,192,255]; // light grey
 
     var symbol;
     var renderer = {
@@ -961,13 +967,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
                       {
                         type: "CIMSolidStroke",
                         width: .45,
-                        color: outlineColor,
-                        opacity
+                        color: strokeColor,
                       },
                       {
                         type: "CIMSolidFill",
-                        color,
-                        opacity,
+                        color: fillColor,
                       },
                     ]
                   }
@@ -982,16 +986,15 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       symbol = {
         type: 'simple-line',
         width: '2px',
-        color,
-        opacity,
+        color: strokeColor,
       };
 
     } else if (geotype === 'polygon') {
       symbol = {
         type: 'simple-fill',
-        color,
+        color: fillColor,
         outline: {
-          color: outlineColor,
+          color: strokeColor,
           width: 0.5,
         },
       };
@@ -1062,9 +1065,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       // Styling
 
       // reset colors – these will be used as "No value" symbols
-      color = [128,128,128,255]; // white
-      outlineColor = [64,64,64,255] // dark grey
-      symbol = copyAndColor(symbol, outlineColor, color);
+      symbol = copyAndColor(symbol, strokeColor, fillColor);
 
       // a more exhaustive exploration in auto-style.html
       let {categoricalMax} = state;
@@ -1099,60 +1100,63 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
         const numEntries = categorical ? Math.min(uniqueValues.length, categoricalMax) : // the top categories
                            pseudoCategorical <= categoricalMax ? pseudoCategorical : // the top pseudocategories
                            5; // just show the top 5
-        for (let x = 0; x < numEntries; x++) {
-          if (isBadValue(uniqueValues[x].value)) {
-            // style any bad points as white rings and lines as grey
-            var strokeColor = [128,128,128,255];
-            var fillColor =
-              geotype == "line" ? bgColor == "dark" ? [128,128,128,255] : [64,64,64,255] :
-              [255,255,255,255];
-          } else {
-            // rollover calculation
-            var indexOffset = x % numColors;
-            var strokeColor = [
-              // TODO: switch to proportional interpolation
-              rampColors[indexOffset].r * .5, // same as fillColor but half as bright
-              rampColors[indexOffset].g * .5,
-              rampColors[indexOffset].b * .5,
-              255 //alpha is always opaque
-            ];
-            // set fillColor
-            var fillColor = [
-              rampColors[indexOffset].r,
-              rampColors[indexOffset].g,
-              rampColors[indexOffset].b,
-              255 // alpha is always opaque
-            ];
-          }
+        if (numGoodValues == 0 && uniqueValues.length == 1) { // it happens
+          var defaultSymbol = copyAndColor(symbol, badStrokeColor, badFillColor);
+          var defaultLabel = "No value";
+        } else {
+          for (let x = 0; x < numEntries; x++) {
+            if (isBadValue(uniqueValues[x].value)) {
+              console.log('?')
+              // style any bad points as white rings and lines as grey
+              var strokeColor = badStrokeColor;
+              var fillColor = badFillColor;
 
-          // clone and color symbol
-          let uniqueSymbol = copyAndColor(symbol, strokeColor, fillColor);
-          // add symbol to the stack
-          uniqueValueInfos.push( {
-            value: uniqueValues[x].value || "",
-            label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) :
-                    isBadValue(uniqueValues[x].value) ? "No value" :
-                    uniqueValues[x].value,
-            symbol: uniqueSymbol,
-          });
+            } else {
+              // rollover calculation
+              // TODO: interpolate over whole range to prevent duplicate colors
+              var indexOffset = x % numColors;
+              var strokeColor = [
+                // TODO: switch to proportional interpolation
+                rampColors[indexOffset].r * .5, // same as fillColor but half as bright
+                rampColors[indexOffset].g * .5,
+                rampColors[indexOffset].b * .5,
+                255 //alpha is always opaque
+              ];
+              // set fillColor
+              var fillColor = [
+                rampColors[indexOffset].r,
+                rampColors[indexOffset].g,
+                rampColors[indexOffset].b,
+                255 // alpha is always opaque
+              ];
+            }
+
+            // clone and color symbol
+            let uniqueSymbol = copyAndColor(symbol, strokeColor, fillColor);
+            // add symbol to the stack
+            uniqueValueInfos.push( {
+              value: uniqueValues[x].value || "",
+              label: field.simpleType == "date" ? formatDate(uniqueValues[x].value) :
+                      isBadValue(uniqueValues[x].value) ? "No value" :
+                      uniqueValues[x].value,
+              symbol: uniqueSymbol,
+            });
+          }
         }
 
         let numOthers = uniqueValues.length - numEntries;
         // set defaults
         if (numOthers > 0) {
-          // use default color for the long tail of categories
-          // others color
-          strokeColor = [128,128,128,255];
-          fillColor = [192,192,192,255];
-
-          var defaultSymbol = copyAndColor(symbol, strokeColor, fillColor);
+          // use the "other" default color for the long tail of categories
+          var defaultSymbol = copyAndColor(symbol, otherStrokeColor, otherFillColor);
+          var defaultLabel = (numOthers + " other") + (numOthers > 1 ? "s" : "");
         }
 
         // set renderer
         renderer = {...renderer,
           type: "unique-value",
           defaultSymbol,
-          defaultLabel: (numOthers + " other") + (numOthers > 1 ? "s" : ""),
+          defaultLabel,
           uniqueValueInfos,
         };
       } else if (numberLike) { // number-like and non-categorical
@@ -1166,11 +1170,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           field: fieldName,
           stops: [{
             value: minValue,
-            color: {r: rMin.r, g: rMin.g, b: rMin.b, a: opacity},
+            color: {r: rMin.r, g: rMin.g, b: rMin.b, a: 1},
             label: (field.simpleType == "date") ? formatDate(minValue) : minLabel
           },{
             value: maxValue,
-            color: {r: rMax.r, g: rMax.g, b: rMax.b, a: opacity},
+            color: {r: rMax.r, g: rMax.g, b: rMax.b, a: 1},
             label: (field.simpleType == "date") ? formatDate(maxValue) : maxLabel
           }]
         });
@@ -1189,7 +1193,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
             var rMid = {r: (rMax.r + rMin.r) * divisor, g: (rMax.g + rMin.g) * divisor, b: (rMax.b + rMin.b) * divisor};
             renderer.visualVariables[renderer.visualVariables.length-1].stops.push({
                 value: midValue,
-                color: {r: rMid.r, g: rMid.g, b: rMid.b, a: opacity},
+                color: {r: rMid.r, g: rMid.g, b: rMid.b, a: 1},
                 label: midValue,
             });
           }
