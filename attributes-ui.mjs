@@ -1715,10 +1715,10 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   // clear filters list and reset filters UI
   function clearFilters() {
     let filtersList = document.getElementById('filtersList');
-    // as many entries as are in the list,
-    for (var i = filtersList.children.length; i > 0 ; i--) {
-      // remove the top one in the list
-      filtersList.children[0].remove();
+    // while there are entries in the list,
+    while (filtersList.firstChild) {
+      // remove the last one in the list
+      filtersList.removeChild(filtersList.lastChild);
     }
     document.getElementById('filtersCount').innerHTML = `Applying ${filtersList.children.length} filters`;
     document.getElementById('featuresCount').innerHTML = '';
