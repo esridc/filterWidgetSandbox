@@ -75,7 +75,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       layer: null,
       view: null,
       widgets: [],
-      attributeList: [],
       bgColor: null,
       legend: null,
       categoricalMax: 7,
@@ -717,7 +716,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // draw whole map from scratch
   async function drawMap() {
-    var {dataset, layer, view, layerView} = state;
+    var {dataset, layer, view} = state;
     const darkModeCheckbox = document.querySelector('#darkMode calcite-checkbox');
     const map = new Map({
       // choose a light or dark background theme as default
@@ -828,10 +827,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     state.widgets = [];
 
     // update attributes lists
-    state.attributeList = updateAttributeList('#filterAttributeList', () => { addFilter({event}) });
-    updateAttributeList('#styleAttributeList', async () => {
-      autoStyle({event});
-    })
+    updateAttributeList('#filterAttributeList', () => addFilter({event}) );
+    updateAttributeList('#styleAttributeList', () => autoStyle({event}) );
 
     let filterAttributeSearchElement = document.getElementById("filterAttributeSearch")
     filterAttributeSearchElement.addEventListener("input", filterAttributeSearchInput);
@@ -1312,12 +1309,11 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
       legend = null;
     }
 
-    layer.renderer = renderer;
+    layer.renderer = renderer; // replace the old renderer
     layer.refresh(); // ensure the layer draws
 
     // update state
     state = {...state, layer, view, renderer, bgColor, legend}
-    return {layer, renderer};
   } // end autoStyle
 
   //
@@ -1405,15 +1401,6 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (!DATASET_FIELD_UNIQUE_VALUES[fieldName]) {
       const field = getDatasetField(fieldName);
       let stats;
-    if (!layer) { // wait for layer
-      // TODO: use the correct watch function for this
-      layer = await (async() => {
-        while(!state.layer) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        return state.layer;
-      })();
-    }
     if (layer) {
       const uniqueValueInfos = (await uniqueValues({ layer: state.layer, field: fieldName }))
         .uniqueValueInfos
@@ -1447,6 +1434,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
           coverage += stat.pct;
         }
       }
+      // cache
       DATASET_FIELD_UNIQUE_VALUES[fieldName] = stats;
     }
     return DATASET_FIELD_UNIQUE_VALUES[fieldName];
@@ -1615,7 +1603,7 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // update the map view with a new where clause
   async function updateLayerViewEffect({
-      // calculate where if isn't passed as an argument
+      // calculate where clause if isn't passed as an argument
       where = concatWheres(),
       updateExtent = document.querySelector('#zoomToData calcite-checkbox')?.checked } = {}) {
     const {view, layer, bgColor} = state;
