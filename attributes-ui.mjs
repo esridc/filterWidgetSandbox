@@ -727,9 +727,13 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     if (view) {
       // update existing view, then exit
       view.map = map;
-      state = {...state, view, bgColor: await getBgColor()};
-      updateLayerViewEffect();
-      return;
+      state = {...state, view}
+      // explicitly wait for bgColor to be updated, then update the layerView
+      await getBgColor().then(color => {
+        state.bgColor = color;
+        updateLayerViewEffect();
+      });
+      return view;
     }
     var view = new MapView({
       container: "viewDiv",
@@ -767,7 +771,9 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
     document.querySelector('#recordCount').innerHTML = `${dataset.attributes.recordCount} records`;
 
     // update state
-    state = {...state, view, bgColor: await getBgColor()};
+    state.view = view;
+    // bgColor needs state.view to be set first
+    state.bgColor = await getBgColor();
     return view;
   }
 
@@ -879,8 +885,12 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // determine whether the map background is dark or light
   async function getBgColor() {
+    const {view, layer} = state;
     try {
-      var bgColor = await viewColorUtils.getBackgroundColorTheme(state.view);
+      // make sure there's a layerView, then
+      var bgColor = view.whenLayerView(layer).then(
+        // get and return the theme
+        async () => await viewColorUtils.getBackgroundColorTheme(view).then(theme => theme));
     } catch(e) {
       console.warn(`Couldn't detect basemap color theme - tab must be in foreground. Choosing "light."\n`, e)
       bgColor = "light"; // set default bgColor
@@ -890,11 +900,13 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
 
   // Choose symbology based on various dataset and theme attributes
   async function autoStyle ({event = null, fieldName = null}) {
-    var {dataset, layer, view, usePredefinedStyle, bgColor} = state;
+    var {dataset, layer, view, usePredefinedStyle} = state;
 
-    bgColor = await getBgColor(); // get basemap color theme: "light" or "dark"
+    // set colors
 
-    var opacity = 1;
+    // get basemap color theme: "light" or "dark"
+    var bgColor = await getBgColor();
+    state.bgColor = bgColor;
 
     // choose default colors based on background theme – dark on light, light on dark
     // use rgb values because CIMSymbols don't understand web color names
