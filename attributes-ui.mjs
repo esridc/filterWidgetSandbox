@@ -91,8 +91,8 @@ import { loadModules, setDefaultOptions } from 'https://unpkg.com/esri-loader/di
   if (Array.from(params).length != 0) {
     var datasetId = params.get('dataset');
     const datasetSlug = params.get('slug');
-    await loadDataset({ datasetId, datasetSlug, env });
     env = params.get('env');
+    await loadDataset({ datasetId, datasetSlug, env });
   } else {
     var datasetId = datasetList.options[datasetList.selectedIndex].value;
     await loadDataset({ datasetId, env });
