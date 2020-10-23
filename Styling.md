@@ -1,7 +1,6 @@
+This document describes the functionality of the [filterWidgetSandbox/autostyle.mjs](https://esridc.github.io/filterWidgetSandbox/autoStyle.html) `autoStyle()` function.
 
-The document describes the functionality of the filterWidgetSandbox/attributes-ui.mjs autoStyle() function.
-
-- Overview -
+## Overview
 
 The goal: make a first best guess for displaying the values of a specific feature layer attribute on a map.
 
@@ -11,11 +10,11 @@ Choosing the ideal symbolization for every possible combination of characteristi
 
 It's likely that the current styling logic can be simplified, given that there are multiple paths to some results. I've left some of this work undone so as not to overfit the solutions to the idiosyncratic structure of the prototype.
 
-- Assumptions -
+## Assumptions
 
 One dataset is loaded at a time. A dataset's features are only of one geometry type. Supported geometry types are currently points, multiPoints, lines, polyLines, and polygons.
 
-- Arguments and Defaults -
+## Arguments and Defaults -
 
 The autoStyle() function takes a single argument, which is an object with two optional parameters: "event" and "fieldName".
 
@@ -23,7 +22,7 @@ It is first triggered on initial page load by the loadDataset() function, which 
 
 If an event is passed, the event's "data-field" attribute is checked for a fieldName. If nothing is passed, autoStyle checks for the dataset's "displayField" parameter, which may be set by the dataset authors. If that doesn't exist, "NAME" is tried as a default fieldName, and if that doesn't exist a simple default styling is used.
 
-- Styling Setup -
+## Styling Setup
 
 A new renderer is created, replacing any existing renderer, along with a new symbol object. Symbol types are chosen based on the geometry type of the dataset. CIMSymbols are used for points, because the simple-marker JSAPI geometry type does not support fractional outline widths.
 
@@ -34,7 +33,7 @@ The first is the bgColor property, set by viewColorUtils.getBackgroundColorTheme
 Also tracked in state are the "dataset" being visualized, the MapView as "view", and the view's "layerView".
 To detect the bgColor, the JSAPI needs to draw the map once first, so all of these properties should be set by the time styling begins.
 
-- Styling Logic -
+## Styling Logic
 
 In every case, symbology type follows dataset geometry type. Default colors and sizes are set, and used if none of the other conditions are met.
 
